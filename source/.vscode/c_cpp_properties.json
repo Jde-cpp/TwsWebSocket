@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/include/c++/8",
+					 "/home/duffyj/code/libraries/spdlog/include",
+					 "${workspaceFolder}/.vscode",
+					 "${workspaceFolder}/../../Framework/source"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/local/cuda-9.0/bin/gcc",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}
