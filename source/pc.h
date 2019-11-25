@@ -28,7 +28,7 @@
 #pragma warning( default : 4701) 
 #include <boost/asio.hpp>
 #include <boost/exception/diagnostic_information.hpp> 
-#include <boost/asio/ts/io_context.hpp>
+//#include <boost/asio/ts/io_context.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/core/noncopyable.hpp>
@@ -37,11 +37,12 @@
 
 #include <nlohmann/json.hpp>
 #include <EWrapper.h>
+#include <EClientSocket.h>
 
 #include "log/Logging.h"
 #include "../../Framework/source/TypeDefs.h"
 #include "JdeAssert.h"
-#include "Application.h"
+#include "application/Application.h"
 #include "DateTime.h"
 #include "threading/Thread.h"
 //#include "io/Buffer.h"

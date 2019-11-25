@@ -60,12 +60,13 @@ namespace Jde::Markets::TwsWebSocket
 				//boost::beast::ostream(buffer) << "\0\0\0\0";//std::array<char,4>{'\0','\0','\0','\0'};
 				//var str2 = boost::beast::buffers_to( buffer.data() );
 				pSession->read( buffers );
-				vector<google::protobuf::uint8> data;  
-				data.reserve( boost::asio::buffer_size(buffers.data()) );
-				auto pData = buffers.data();//if in for loop causes crash in release mode.
-				for( boost::asio::const_buffer buffer : boost::beast::detail::buffers_range(pData) )
-					data.insert( std::end(data), static_cast<const char*>(buffer.data()), static_cast<const char*>(buffer.data())+buffer.size() );  //static_cast<const google::protobuf::uint8*>(buffer.data()), buffer.size() );
-				google::protobuf::io::CodedInputStream input( data.data(), (int)data.size() );
+				//vector<google::protobuf::uint8> data;  
+				//data.reserve( boost::asio::buffer_size(buffers.data()) );
+				// auto pData = buffers.data();//if in for loop causes crash in release mode.
+				// for( boost::asio::const_buffer buffer : boost::beast::detail::buffers_range(pData) )
+				// 	data.insert( std::end(data), static_cast<const char*>(buffer.data()), static_cast<const char*>(buffer.data())+buffer.size() );  //static_cast<const google::protobuf::uint8*>(buffer.data()), buffer.size() );
+				var data = boost::beast::buffers_to_string( buffers.data() );
+				google::protobuf::io::CodedInputStream input( reinterpret_cast<const unsigned char*>(data.data()), (int)data.size() );
 				Proto::Requests::RequestTransmission transmission; 
 				if( !transmission.MergePartialFromCodedStream(&input) )
 					THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
@@ -81,14 +82,18 @@ namespace Jde::Markets::TwsWebSocket
 						ReceiveMarketDataSmart( sessionId, message.mrkdatasmart() );
 					else if( message.has_contractdetails() )
 						ReceiveContractDetails( sessionId, message.contractdetails() );
-					//else if( message.has_options() )
+					else if( message.has_options() )
+					{
+						WARN0( "Need to implement options request" );
+						AddError( sessionId, message.options().requestid(), 0, "Options are not implemented." );
+					}
 					//	ReceiveOptions( sessionId, message.options() );
 					else if( message.has_historicaldata() )
 						ReceiveHistoricalData( sessionId, message.historicaldata() );
 					else if( message.has_flexexecutions() )
 						ReceiveFlex( sessionId, message.flexexecutions() );
 					else
-						ERR0( "Unknown Message" );
+						ERR( "Unknown Message '{}'", message.Value_case() );
 				}
 			}
 			catch( const IOException& e )
@@ -236,16 +241,21 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		var& account = accountUpdates.accountnumber();
 		var subscribe = accountUpdates.subscribe();
-		std::unique_lock<std::shared_mutex> l( _accountRequestMutex );
+		std::unique_lock<std::shared_mutex> l{ _accountRequestMutex };
 		if( subscribe )
 		{
+			DBG( "({}) - subscribe account '{}'", sessionId, account );
 			auto [pInserted, inserted] = _accountRequests.emplace( account, unordered_set<SessionId>{} );
 			pInserted->second.emplace( sessionId );
 			if( inserted )
+			{
+				DBG( "Subscribe to account updates '{}'", account );
 				_client.reqAccountUpdates( true, account );
+			}
 		}
 		else 
 		{
+			DBG( "({}) - unsubscribe from account '{}'", sessionId, account );
 			auto pAccountSessionIds = _accountRequests.find( account );
 			bool cancel = pAccountSessionIds==_accountRequests.end();
 			if( !cancel )
@@ -254,7 +264,11 @@ namespace Jde::Markets::TwsWebSocket
 				cancel = pAccountSessionIds->second.size()==0;
 			}
 			if( cancel )
+			{
+				DBG( "Unsubscribe from account '{}'", account );
+				_accountRequests.erase( account );
 				_client.reqAccountUpdates( false, account );
+			}
 		}//return & killed connection
 	}
 	void WebSocket::ReceiveAccountUpdatesMulti( SessionId sessionId, const Proto::Requests::RequestAccountUpdatesMulti& accountUpdates )noexcept

@@ -100,7 +100,9 @@ namespace Jde::Markets::TwsWebSocket
 						value.set_accountid( data.get<string>("<xmlattr>.accountId") );
 						value.set_symbol( data.get<string>("<xmlattr>.symbol") );
 						value.set_conid( data.get<uint32>("<xmlattr>.conid") );
-						value.set_ordertype( data.get<string>("<xmlattr>.orderType") );
+						var orderType = data.get_optional<string>( "<xmlattr>.orderType" );
+						if( orderType.has_value() )
+							value.set_ordertype( orderType.value() );
 						
 						value.set_date( (uint32)ToTimeT(data.get<string>("<xmlattr>.dateTime")) );
 						value.set_ordertime( (uint32)ToTimeT(data.get<string>("<xmlattr>.orderTime")) );
