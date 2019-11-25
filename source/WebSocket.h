@@ -1,6 +1,6 @@
 #pragma once
 //#include "../framework/Application.h"
-//https://www.boost.org/doc/libs/1_68_0/libs/beast/example/websocket/server/sync/websocket_server_sync.cpp
+//https://www.boost.org/doc/libs/1_71_0/libs/beast/example/websocket/server/sync/websocket_server_sync.cpp
 
 //------------------------------------------------------------------------------
 namespace boost::asio::ip{ class tcp; }
@@ -12,7 +12,7 @@ namespace TwsWebSocket
 {
 	//enum class EWebReceive : short;
 	namespace Messages{ struct Message; struct Application; struct Strings; }
-	class WebSocket : Threading::Interrupt, public Application::IShutdown
+	class WebSocket : Threading::Interrupt, public IShutdown
 	{
 		typedef boost::beast::websocket::stream<boost::asio::ip::tcp::socket> Stream;
 	public:

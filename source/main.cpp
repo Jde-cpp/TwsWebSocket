@@ -2,6 +2,10 @@
 #include "WebSocket.h"
 #include "Flex.h"
 
+#ifndef _MSC_VER
+	#include "../../Framework/source/application/ApplicationLinux.h"
+#endif
+
 #define var const auto
 namespace Jde::Markets::TwsWebSocket
 {
@@ -13,7 +17,7 @@ int main( int argc, char** argv )
 	int result = EXIT_SUCCESS;
 	try
 	{
-		Jde::Application::Startup( argc, argv, "TwsWebSocket" );
+		Jde::OSApp::Startup( argc, argv, "TwsWebSocket" );
 
 		Jde::Markets::TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
 		var webSocketPort = Jde::Markets::TwsWebSocket::SettingsPtr->Get<Jde::uint16>( "webSocketPort" );
@@ -23,7 +27,8 @@ int main( int argc, char** argv )
 
 		Jde::Markets::TwsWebSocket::WebSocket::Create( webSocketPort );
 
-		Jde::Application::Pause();
+		Jde::IApplication::Pause();
+		Jde::IApplication::CleanUp();
 	}
 	catch( const Jde::EnvironmentException& e )
 	{

@@ -20,14 +20,14 @@ namespace Jde::Markets::TwsWebSocket
 		_port{ port },
 		_pAcceptor{ make_shared<Threading::InterruptibleThread>("wsAcceptor",[&](){Accept();}) }
 	{
-		Application::AddThread( _pAcceptor );
+		IApplication::AddThread( _pAcceptor );
 	}
 
 	WebSocket& WebSocket::Create( uint16 port )noexcept
 	{
 		ASSERT( !_pInstance );
 		_pInstance = shared_ptr<WebSocket>{ new WebSocket(port) };
-		Application::AddShutdown( _pInstance );
+		IApplication::AddShutdown( _pInstance );
 		return *_pInstance;
 	}
 
@@ -76,7 +76,7 @@ namespace Jde::Markets::TwsWebSocket
 				DBG0( "Accepted Connection." );
 				auto pSession = make_shared<websocket::stream<tcp::socket>>( std::move(socket) );
 				pSession->binary( true );
-				Application::AddThread( make_shared<Threading::InterruptibleThread>("WebSession", [&,pSession](){DoSession(pSession);}) );
+				IApplication::AddThread( make_shared<Threading::InterruptibleThread>("WebSession", [&,pSession](){DoSession(pSession);}) );
 			}
 			catch( boost::system::system_error& e )
 			{

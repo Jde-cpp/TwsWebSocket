@@ -20,7 +20,7 @@ else
 	OUT_DIR=$(OUT_DIR_BASE)release
 	CXXFLAGS= $(CXXFLAGS_BASE) -DNDEBUG -O3 -I$(OUT_DIR)
 	BIN_DIR=$(BIN_DIR_BASE)release
-	LIBS = $(LIBS_BASE)
+	LIBS = $(LIBS_BASE) -ldl
 endif
 
 OUTPUT = $(BIN_DIR)/TwsWebSocket
@@ -33,10 +33,10 @@ all: $(OUTPUT)
 OBJECTS = $(OUT_DIR)/main.o $(OUT_DIR)/WebSocket.o $(OUT_DIR)/WebSocketReceive.o $(OUT_DIR)/WebSocketSend.o $(OUT_DIR)/WrapperWeb.o $(OUT_DIR)/Flex.o 
 
 $(OUTPUT): $(OUT_DIR)/stdafx.h.gch $(OBJECTS)
-	$(CXX) $(LIBFLAGS) -L/home/duffyj/code/libraries/boostorg/boost_1_68_0/stage/lib $(OBJECTS) -o$(OUTPUT) $(LIBS)
+	$(CXX) $(LIBFLAGS) $(OBJECTS) -o$(OUTPUT) $(LIBS)
 
 $(OUT_DIR)/stdafx.h.gch: pc.h
-	$(CXX) $(CXXFLAGS) ./pc.h -o $(OUT_DIR)/stdafx.h.gch -I../../Framework/source -I../../MarketLibrary/source -I/home/duffyj/code/libraries/spdlog/include -I/home/duffyj/code/libraries/boostorg/boost_1_68_0 -I/home/duffyj/code/libraries/json/include -I/home/duffyj/code/libraries/eigen
+	$(CXX) $(CXXFLAGS) ./pc.h -o $(OUT_DIR)/stdafx.h.gch -I../../Framework/source -I../../MarketLibrary/source -I/home/duffyj/code/libraries/spdlog/include -I$$BOOST_ROOT -I/home/duffyj/code/libraries/json/include -I/home/duffyj/code/libraries/eigen
 
 $(OUT_DIR)/main.o: main.cpp pc.h
 	$(CXX) $(CXXFLAGS) $< -o$@  $(INCLUDE)

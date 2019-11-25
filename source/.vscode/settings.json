@@ -61,5 +61,6 @@
 		"unordered_set": "cpp",
 		"numeric": "cpp",
 		"string": "cpp"
-	}
+	},
+	"window.title": "WebSocketTws"
 }
