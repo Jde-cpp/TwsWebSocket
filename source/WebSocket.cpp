@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "WebSocket.h"
 #include <EClient.h>
 #include "WrapperWeb.h"

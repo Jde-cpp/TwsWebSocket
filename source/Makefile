@@ -9,21 +9,21 @@ CXXFLAGS_BASE = -c -g -pthread -fPIC -std=c++17 -Wall -Wno-unknown-pragmas -Wno-
 
 BIN_DIR_BASE:=../../bin/
 OUT_DIR_BASE := .obj/
-LIBS_BASE = -lMy -lMarkets -lboost_system -lIb -lprotobuf -lstdc++fs
+LIBS_BASE = -lJde -lJde.Markets -lIb -lprotobuf -lstdc++fs
 
 ifeq ($(DEBUG), 1)
-	OUT_DIR=$(OUT_DIR_BASE)debug
+	OUT_DIR=$(OUT_DIR_BASE)debug2
 	CXXFLAGS= $(CXXFLAGS_BASE) -O0 -I$(OUT_DIR) -fsanitize=address -fno-omit-frame-pointer
-	BIN_DIR=$(BIN_DIR_BASE)debug
+	BIN_DIR=$(BIN_DIR_BASE)debug2
 	LIBS = -lasan $(LIBS_BASE)
 else
-	OUT_DIR=$(OUT_DIR_BASE)release
+	OUT_DIR=$(OUT_DIR_BASE)release2
 	CXXFLAGS= $(CXXFLAGS_BASE) -DNDEBUG -O3 -I$(OUT_DIR)
-	BIN_DIR=$(BIN_DIR_BASE)release
+	BIN_DIR=$(BIN_DIR_BASE)release2
 	LIBS = $(LIBS_BASE) -ldl
 endif
 
-OUTPUT = $(BIN_DIR)/TwsWebSocket
+OUTPUT = $(BIN_DIR)/Jde.TwsWebSocket
 
 LIBFLAGS = -pthread -L$(BIN_DIR)  -Wl,-z,origin -Wl,-rpath='$$ORIGIN' 
 

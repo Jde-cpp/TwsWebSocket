@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "Flex.h"
 #include "WebSocket.h"
 #include "../../Framework/source/Cache.h"

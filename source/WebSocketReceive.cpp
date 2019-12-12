@@ -1,5 +1,4 @@
 
-#include "stdafx.h"
 #include "EWebReceive.h"
 #include "WebSocket.h"
 #include "WrapperWeb.h"
@@ -161,6 +160,7 @@ namespace Jde::Markets::TwsWebSocket
 		const DateTime endTime{ Clock::from_time_t(req.date().seconds()) };
 		const string endTimeString{ fmt::format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
 		const string durationString{ fmt::format("{} D", req.days()) };
+		DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )", reqId, sessionId, pIb->symbol );
 		try
 		{
 			_client.reqHistoricalData( reqId, *pIb, endTimeString, durationString, BarSize::ToString((BarSize::Enum)req.barsize()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.userth() ? 1 : 0, 2/*formatDate*/, req.keepuptodate(), TagValueListSPtr{} );
@@ -224,8 +224,10 @@ namespace Jde::Markets::TwsWebSocket
 		int i=0;
 		for( var reqId : requestIds )
 		{
+			var pIb = Jde::Markets::Contract{ request.contracts(i++) }.ToTws();
+			DBG( "reqContractDetails( reqId='{}' sessionId='{}', contract='{}' )", reqId, sessionId, pIb->symbol );
 			_requestSession.emplace( reqId, make_tuple(sessionId,clientRequestId) );
-			_client.reqContractDetails( reqId, *Jde::Markets::Contract{ request.contracts(i++) }.ToTws() );
+			_client.reqContractDetails( reqId, *pIb );
 		}
 	}
 
@@ -234,6 +236,7 @@ namespace Jde::Markets::TwsWebSocket
 		var reqId = _client.RequestId();
 		ibapi::Contract contract; contract.conId = request.contractid(); contract.exchange = "SMART";
 		var ticks = StringUtilities::AddCommas( request.ticklist() );
+		DBG( "receiveMarketDataSmart( reqId='{}' sessionId='{}', contract='{}' )", reqId, sessionId, contract.conId );
 		_requestSession.emplace( reqId, make_tuple(sessionId,request.requestid()) );
 		_client.reqMktData( reqId, contract, ticks, request.snapshot(), false, TagValueListSPtr() );
 	}
@@ -276,6 +279,7 @@ namespace Jde::Markets::TwsWebSocket
 		var reqId =  _client.RequestId();
 		var& account = accountUpdates.accountnumber();
 		_requestSession.emplace( reqId, make_tuple(sessionId,accountUpdates.requestid()) );
+		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )", reqId, sessionId, account, accountUpdates.requestid() );
 		_client.reqAccountUpdatesMulti( reqId, account, accountUpdates.modelcode(), accountUpdates.ledgerandnlv() );
 	}
 }

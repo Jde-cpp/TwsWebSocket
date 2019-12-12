@@ -39,26 +39,26 @@
 #include <EWrapper.h>
 #include <EClientSocket.h>
 
-#include "log/Logging.h"
+#include "../../Framework/source/log/Logging.h"
 #include "../../Framework/source/TypeDefs.h"
-#include "JdeAssert.h"
-#include "application/Application.h"
-#include "DateTime.h"
-#include "threading/Thread.h"
+#include "../../Framework/source/JdeAssert.h"
+#include "../../Framework/source/application/Application.h"
+#include "../../Framework/source/DateTime.h"
+#include "../../Framework/source/threading/Thread.h"
 //#include "io/Buffer.h"
 
-#include "io/File.h"
-#include "Settings.h"
-#include "threading/Interrupt.h"
-#include "threading/InterruptibleThread.h"
-#include "collections/Queue.h"
-#include "collections/UnorderedMap.h"
-#include "collections/UnorderedMapValue.h"
-#include "StringUtilities.h"
-#include "collections/UnorderedSet.h"
+#include "../../Framework/source/io/File.h"
+#include "../../Framework/source/Settings.h"
+#include "../../Framework/source/threading/Interrupt.h"
+#include "../../Framework/source/threading/InterruptibleThread.h"
+#include "../../Framework/source/collections/Queue.h"
+#include "../../Framework/source/collections/UnorderedMap.h"
+#include "../../Framework/source/collections/UnorderedMapValue.h"
+#include "../../Framework/source/StringUtilities.h"
+#include "../../Framework/source/collections/UnorderedSet.h"
 
 #include "../../MarketLibrary/source/TypeDefs.h"
-#include "TwsProcessor.h"
+#include "../../MarketLibrary/source/TwsProcessor.h"
 //#include "markets/types/messages/IBEnums.h"
 
 //#include <Eigen/Dense>
@@ -67,14 +67,9 @@
 
 #pragma warning(disable:4127)
 #pragma warning(disable:4244)
-#include "types/proto/ib.pb.h"
-#include "types/proto/requests.pb.h"
-#include "types/proto/results.pb.h"
+#include "../../Framework/source/types/proto/ib.pb.h"
+#include "../../Framework/source/types/proto/requests.pb.h"
+#include "../../Framework/source/types/proto/results.pb.h"
 #pragma warning(default:4127)
 #pragma warning(default:4244)
 #include "TypeDefs.h"
-
-namespace Jde::Markets::TwsWebSocket
-{
-	extern shared_ptr<Settings::Container> SettingsPtr;
-}

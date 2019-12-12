@@ -4,7 +4,7 @@
 	{
 		"label": "build",
 		"type": "shell",
-		"command": "tput reset;./build.sh 1 1",
+		"command": "tput reset;./buildc.sh",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
@@ -16,7 +16,7 @@
 	{
 		"label": "rebuild",
 		"type": "shell",
-		"command": "tput reset;./build.sh 1 0 1",
+		"command": "tput reset;./buildc.sh asan 1 0",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
@@ -27,7 +27,7 @@
 	{
 		"label": "rebuildAll",
 		"type": "shell",
-		"command": "tput reset;./build.sh 1 1 1",
+		"command": "tput reset;./buildc.sh asan 1 1",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
@@ -38,29 +38,29 @@
 	{
 		"label": "release",
 		"type": "shell",
-		"command": "tput reset;./build.sh 0 1 0",
+		"command": "tput reset;./buildc.sh RelWithDebInfo 0 1",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
 				"file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
 			}
 		}
-	},	
+	},
 	{
 		"label": "rebuildRelease",
 		"type": "shell",
-		"command": "tput reset;./build.sh 0 1 1",
+		"command": "tput reset;./buildc.sh RelWithDebInfo 1 1",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
 				"file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
 			}
 		}
-	},	
+	},
 	{
 		"label": "clean",
 		"type": "shell",
-		"command": "tput reset; make clean",
+		"command": "tput reset; cd .obj/debug;make clean",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
