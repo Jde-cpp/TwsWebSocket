@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "WrapperWeb.h"
 #include <thread>
 #include <EReaderOSSignal.h>
