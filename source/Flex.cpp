@@ -20,7 +20,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			var day = Chrono::DaysSinceEpoch( date );
 			auto pData = Load();
-			
+
 			shared_lock l{ _cacheMutex };
 			auto pConfirms = pData->find( day );
 			var haveDay = pConfirms!=pData->end();
@@ -42,7 +42,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( date.size()==15 )
 		{
 			var easternTime = DateTime( stoi(date.substr(0,4)), (uint8)stoi(date.substr(4,2)), (uint8)stoi(date.substr(6,2)), (uint8)stoi(date.substr(9,2)), (uint8)stoi(date.substr(11,2)), (uint8)stoi(date.substr(13,2)) ).GetTimePoint();
-			var utcTime = easternTime-TimeZone::EasternTimeZoneDifference( easternTime );
+			var utcTime = easternTime-Timezone::EasternTimezoneDifference( easternTime );
 			value = Clock::to_time_t( utcTime );
 		}
 		else
@@ -102,7 +102,7 @@ namespace Jde::Markets::TwsWebSocket
 						var orderType = data.get_optional<string>( "<xmlattr>.orderType" );
 						if( orderType.has_value() )
 							value.set_ordertype( orderType.value() );
-						
+
 						value.set_date( (uint32)ToTimeT(data.get<string>("<xmlattr>.dateTime")) );
 						value.set_ordertime( (uint32)ToTimeT(data.get<string>("<xmlattr>.orderTime")) );
 						value.set_buysell( data.get<string>("<xmlattr>.buySell") );
