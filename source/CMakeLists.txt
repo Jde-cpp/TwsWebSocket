@@ -28,8 +28,8 @@ target_precompile_headers(Jde.TwsWebSocket
 		<boost/crc.hpp> 
 		<boost/asio.hpp>
 		<boost/exception/diagnostic_information.hpp> 
+		<boost/beast/core.hpp>
 		<boost/beast/websocket.hpp>
-		<boost/beast/core/buffers_to_string.hpp>
 		<boost/core/noncopyable.hpp>
 		<boost/property_tree/ptree.hpp>
 		<boost/property_tree/xml_parser.hpp>

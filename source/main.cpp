@@ -1,9 +1,6 @@
 #include "WebSocket.h"
 #include "Flex.h"
 
-#ifndef _MSC_VER
-	#include "../../Framework/source/application/ApplicationLinux.h"
-#endif
 
 #define var const auto
 namespace Jde::Markets::TwsWebSocket
@@ -20,7 +17,7 @@ int main( int argc, char** argv )
 
 		Jde::Markets::TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
 		var webSocketPort = Jde::Markets::TwsWebSocket::SettingsPtr->Get<Jde::uint16>( "webSocketPort" );
-		
+
 		//Jde::Markets::TwsWebSocket::Flex::SendTrades( 0, 0, "", Jde::DateTime(2019,10,25).GetTimePoint() );//get trades.
 		//Jde::Markets::TwsWebSocket::Flex::SendTrades( 0, 0, "", Jde::DateTime(2019,10,25).GetTimePoint() );//get cache.
 

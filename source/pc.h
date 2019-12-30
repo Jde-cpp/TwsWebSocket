@@ -28,7 +28,7 @@
 #pragma warning( default : 4701) 
 #include <boost/asio.hpp>
 #include <boost/exception/diagnostic_information.hpp> 
-//#include <boost/asio/ts/io_context.hpp>
+#include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/core/noncopyable.hpp>
