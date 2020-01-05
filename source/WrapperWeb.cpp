@@ -36,7 +36,7 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::nextValidId( orderId );
 		TwsClient::Instance().SetRequestId( orderId );
 	}
-	
+
 	void WrapperWeb::managedAccounts( const std::string& accountsList )noexcept
 	{
 		WrapperLog::managedAccounts( accountsList );
@@ -47,7 +47,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		_socket.PushAllocated( pAccountList );
 	}
-	
+
 	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
@@ -75,7 +75,7 @@ namespace Jde::Markets::TwsWebSocket
 		auto pBar = pData->add_bars();
 		l.unlock();
 		var time = bar.time.size()==8 ? DateTime{ (uint16)stoi(bar.time.substr(0,4)), (uint8)stoi(bar.time.substr(4,2)), (uint8)stoi(bar.time.substr(6,2)) } : DateTime( stoi(bar.time) );
-		pBar->mutable_time()->set_seconds( time.TimeT() );
+		pBar->set_time( time.TimeT() );
 
 		pBar->set_high( bar.high );
 		pBar->set_low( bar.low );
@@ -86,7 +86,7 @@ namespace Jde::Markets::TwsWebSocket
 		pBar->set_count( bar.count );
 	}
 	void WrapperWeb::historicalDataEnd( int reqId, const std::string& startDateStr, const std::string& endDateStr )noexcept
-	{ 
+	{
 		WrapperLog::historicalDataEnd( reqId, startDateStr, endDateStr );
 		unique_lock l{ _historicalDataMutex };
 		auto& pData = _historicalData.emplace( reqId, make_unique<Proto::Results::HistoricalData>() ).first->second;
