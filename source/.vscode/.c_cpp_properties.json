@@ -13,7 +13,7 @@
 				"forcedInclude": [
 					"${workspaceFolder}/pc.h"
 				],
-            "compilerPath": "/usr/bin/g++-8",
+            "compilerPath": "/usr/local/clang_9.0.0/bin/clang",
             "cppStandard": "c++17",
             "intelliSenseMode": "gcc-x64"
         }
