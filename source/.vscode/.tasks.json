@@ -58,6 +58,20 @@
 		}
 	},
 	{
+		"label": "echo",
+		"type": "shell",
+		"command": "clear;echo compile ${fileBasename}"
+	},
+	{
+		"type": "shell",
+		"label": "compile",
+		"command": "ccache",
+		"args": ["g++-8", "-O0","-g","-I${env:REPO_DIR}/boostorg/boost_1_72_0","-I../../Framework/source/log/server/proto","-I${env:REPO_DIR}/tws-api/source/cppclient/client","-I${env:REPO_DIR}/spdlog/include/","-I${env:REPO_DIR}/json/include","-I${env:REPO_DIR}/matio/src", "-Wall","-Wno-unknown-pragmas","-fsanitize=address","-fno-omit-frame-pointer","-pthread","-std=c++17","-include","${workspaceFolder}/.obj/asan/CMakeFiles/Jde.TwsWebSocket.dir/CMakeFiles/Jde.TwsWebSocket.dir/cmake_pch.hxx","-o","${workspaceFolder}/.obj/asan/CMakeFiles/Jde.TwsWebSocket.dir/${fileBasename}.o","-c", "${file}"],
+		"problemMatcher": ["$gcc"],
+		"dependsOrder": "sequence",
+		"dependsOn": ["echo"],
+	},
+	{
 		"label": "clean",
 		"type": "shell",
 		"command": "tput reset; cd .obj/debug;make clean",

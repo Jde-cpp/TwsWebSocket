@@ -30,6 +30,8 @@
 *.exe
 *.out
 *.app
+source/.vscode/tasks.json
+source/.vscode/c_cpp_properties.json
 /source/.bin
 /source/.vs
 *.user

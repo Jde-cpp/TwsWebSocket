@@ -24,7 +24,7 @@ namespace Jde::Markets::TwsWebSocket
 		var sessionId = ++_sessionId;
 		{
 			Threading::SetThreadDescription( fmt::format("webReceive - {}", sessionId) );
-			//IO::OStreamBuffer buffer( std::make_unique<std::vector<char>>(8192) ); 
+			//IO::OStreamBuffer buffer( std::make_unique<std::vector<char>>(8192) );
 			//td::ostream os( &buffer );
 			try
 			{
@@ -59,14 +59,14 @@ namespace Jde::Markets::TwsWebSocket
 				//boost::beast::ostream(buffer) << "\0\0\0\0";//std::array<char,4>{'\0','\0','\0','\0'};
 				//var str2 = boost::beast::buffers_to( buffer.data() );
 				pSession->read( buffers );
-				//vector<google::protobuf::uint8> data;  
+				//vector<google::protobuf::uint8> data;
 				//data.reserve( boost::asio::buffer_size(buffers.data()) );
 				// auto pData = buffers.data();//if in for loop causes crash in release mode.
 				// for( boost::asio::const_buffer buffer : boost::beast::detail::buffers_range(pData) )
 				// 	data.insert( std::end(data), static_cast<const char*>(buffer.data()), static_cast<const char*>(buffer.data())+buffer.size() );  //static_cast<const google::protobuf::uint8*>(buffer.data()), buffer.size() );
 				var data = boost::beast::buffers_to_string( buffers.data() );
 				google::protobuf::io::CodedInputStream input( reinterpret_cast<const unsigned char*>(data.data()), (int)data.size() );
-				Proto::Requests::RequestTransmission transmission; 
+				Proto::Requests::RequestTransmission transmission;
 				if( !transmission.MergePartialFromCodedStream(&input) )
 					THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
 				for( var& message : transmission.messages() )
@@ -104,7 +104,7 @@ namespace Jde::Markets::TwsWebSocket
 				auto code = se.code();
 				if(  code == websocket::error::closed )
 					DBG( "se.code()==websocket::error::closed, id={}", sessionId );
-				else 
+				else
 				{
 					if( code.value()==104 )//reset by peer
 						DBG( "system_error returned: '{}' - closing connection - {}", se.code().message(), sessionId );
@@ -156,8 +156,8 @@ namespace Jde::Markets::TwsWebSocket
 		var reqId = _client.RequestId();
 		_requestSession.emplace( reqId, make_tuple(sessionId,req.requestid()) );
 		var pIb = Jde::Markets::Contract{ req.contract() }.ToTws();
-		
-		const DateTime endTime{ Clock::from_time_t(req.date().seconds()) };
+
+		const DateTime endTime{ Clock::from_time_t(req.date())  };
 		const string endTimeString{ fmt::format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
 		const string durationString{ fmt::format("{} D", req.days()) };
 		DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )", reqId, sessionId, pIb->symbol );
@@ -256,7 +256,7 @@ namespace Jde::Markets::TwsWebSocket
 				_client.reqAccountUpdates( true, account );
 			}
 		}
-		else 
+		else
 		{
 			DBG( "({}) - unsubscribe from account '{}'", sessionId, account );
 			auto pAccountSessionIds = _accountRequests.find( account );
