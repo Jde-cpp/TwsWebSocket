@@ -64,12 +64,13 @@
 //#include <Eigen/Dense>
 //#include <Eigen/Sparse>
 
-
+#pragma warning(disable:4100)
 #pragma warning(disable:4127)
 #pragma warning(disable:4244)
-#include "../../Framework/source/types/proto/ib.pb.h"
-#include "../../Framework/source/types/proto/requests.pb.h"
-#include "../../Framework/source/types/proto/results.pb.h"
+#include "../../MarketLibrary/source/types/proto/ib.pb.h"
+#include "../../MarketLibrary/source/types/proto/requests.pb.h"
+#include "../../MarketLibrary/source/types/proto/results.pb.h"
+#pragma warning(default:4100)
 #pragma warning(default:4127)
 #pragma warning(default:4244)
 #include "TypeDefs.h"
