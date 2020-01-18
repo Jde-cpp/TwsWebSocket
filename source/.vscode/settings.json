@@ -60,7 +60,8 @@
 		"*.ipp": "cpp",
 		"unordered_set": "cpp",
 		"numeric": "cpp",
-		"string": "cpp"
+		"string": "cpp",
+		"valarray": "cpp"
 	},
 	"window.title": "WebSocketTws"
 }

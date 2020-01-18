@@ -7,6 +7,8 @@
 #include "WebSocket.h"
 #include "../../MarketLibrary/source/TwsClient.h"
 #include "../../MarketLibrary/source/types/Contract.h"
+#include "../../MarketLibrary/source/types/MyOrder.h"
+#include "../../MarketLibrary/source/types/OrderEnums.h"
 #include <TickAttrib.h>
 
 #define var const auto
@@ -37,6 +39,35 @@ namespace Jde::Markets::TwsWebSocket
 		TwsClient::Instance().SetRequestId( orderId );
 	}
 
+	void WrapperWeb::orderStatus( ibapi::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice )noexcept
+	{
+		WrapperLog::orderStatus( orderId, status, filled,	remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice );
+		auto p = new Proto::Results::OrderStatus{};
+		p->set_order_id( orderId );
+		p->set_status( ToOrderStatus(status) );
+		p->set_filled( filled );
+		p->set_remaining( remaining );
+		p->set_average_fill_price( avgFillPrice );
+		p->set_perm_id( permId );
+		p->set_parent_id( parentId );
+		p->set_last_fill_price( lastFillPrice );
+		p->set_client_id( clientId );
+		p->set_why_held( whyHeld );
+		p->set_market_cap_price( mktCapPrice );
+
+		if( !_socket.PushAllocated(orderId, [p](MessageType msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_order_status( p );}) )
+			delete p;
+	}
+	void WrapperWeb::openOrder( ibapi::OrderId orderId, const ibapi::Contract& contract, const ibapi::Order& order, const ibapi::OrderState& state )noexcept
+	{
+		auto p = new Proto::Results::OpenOrder{};
+		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
+		p->set_allocated_order( MyOrder{order}.ToProto(true).get() );
+		p->set_allocated_state( MyOrder::ToAllocatedProto(state) );
+
+		if( !_socket.PushAllocated(orderId, [p](MessageType msg, ClientRequestId id){p->set_web_id(id); msg.set_allocated_open_order( p );}) )
+			delete p;
+	}
 	void WrapperWeb::managedAccounts( const std::string& accountsList )noexcept
 	{
 		WrapperLog::managedAccounts( accountsList );
