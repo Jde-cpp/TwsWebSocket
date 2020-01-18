@@ -32,6 +32,7 @@ namespace TwsWebSocket
 		void Push( const Proto::Results::Position& pPosition )noexcept;
 		void Push( Proto::Results::PortfolioUpdate& pMessage )noexcept;
 		void Push( Proto::Results::AccountUpdate& accountUpdate )noexcept;
+		bool PushAllocated( TickerId id, function<void(MessageType&, ClientRequestId)> set )noexcept;
 		void PushAllocated( Proto::Results::AccountList* pPosition )noexcept;
 		void PushAllocated( Proto::Results::AccountUpdateMulti* pMessage )noexcept;
 		void PushAllocated( TickerId reqId, Proto::Results::HistoricalData* pMessage )noexcept;
@@ -57,9 +58,10 @@ namespace TwsWebSocket
 		void ReceiveMarketDataSmart( SessionId sessionId, const Proto::Requests::RequestMrkDataSmart& request )noexcept;
 		void ReceiveHistoricalData( SessionId sessionId, const Proto::Requests::RequestHistoricalData& options )noexcept;
 		//void ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& options )noexcept;
-		void ReceiveRequest( SessionId sessionId, const Proto::Requests::GenericRequest& request )noexcept;
+		void ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept;
 		void ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept;
-
+		void ReceiveOrder( SessionId sessionId, ClientRequestId clientId, const Proto::Order& order, const Proto::Contract& contract )noexcept;
+		TickerId FindRequestId( SessionId sessionId, ClientRequestId clientId )const noexcept;
 		std::atomic<SessionId> _sessionId{0};
 		Collections::UnorderedMap<SessionId,Stream> _sessions;
 
@@ -68,7 +70,7 @@ namespace TwsWebSocket
 		WebSocket( const WebSocket& )=delete;
 		WebSocket& operator=( const WebSocket& )=delete;
 		WebSocket( uint16 port );
-		
+
 		Collections::UnorderedMap<SessionId,Jde::Queue<MessageType>> _outgoing;
 		Collections::UnorderedMap<Proto::Results::EResults,Collections::UnorderedSet<SessionId>> _requestSessions;
 		UnorderedMapValue<TickerId,tuple<SessionId,ClientRequestId>> _requestSession;

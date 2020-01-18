@@ -38,7 +38,7 @@ namespace Jde::Markets::TwsWebSocket
 		for( var& [id, buffer] : buffers )
 		{
 			auto pSession = _sessions.Find( id );
-			if( !pSession ) 
+			if( !pSession )
 			{
 				_outgoing.erase( id );
 				continue;
@@ -60,7 +60,7 @@ namespace Jde::Markets::TwsWebSocket
 		for( var id : brokenIds )
 			EraseSession( id );
 	}
-	
+
 	void WebSocket::AddError( TickerId id, int errorCode, const std::string& errorString )noexcept
 	{
 		var [sessionId,clientId] = GetClientRequest( id );
@@ -78,7 +78,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WebSocket::AddOutgoing( SessionId id, MessageTypePtr pUnion )noexcept
 	{
-		function<void(Queue<MessageType>&)> afterInsert = [&pUnion]( Queue<MessageType>& queue ){ queue.Push( pUnion ); };		
+		function<void(Queue<MessageType>&)> afterInsert = [&pUnion]( Queue<MessageType>& queue ){ queue.Push( pUnion ); };
 		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
 	}
 	void WebSocket::AddOutgoing( SessionId id, const vector<MessageTypePtr>& outgoing )noexcept
@@ -115,6 +115,20 @@ namespace Jde::Markets::TwsWebSocket
 				});
 		};
 		_requestSessions.Where( Proto::Results::EResults::PositionData, addMessage );
+	}
+
+	bool WebSocket::PushAllocated( TickerId id, function<void(MessageType&, ClientRequestId)> set )noexcept
+	{
+		var [sessionId, clientReqId] = _requestSession.Find( id, make_tuple(0,0) );
+		if( sessionId )
+		{
+			auto pUnion = make_shared<MessageType>();
+			set( *pUnion, clientReqId );
+			AddOutgoing( sessionId, pUnion );
+		}
+		else
+			DBG( "request {} not found", id );
+		return sessionId;
 	}
 	void WebSocket::PushAllocatedRequest( TickerId reqId, Proto::Results::MessageValue* pMessage )noexcept
 	{
