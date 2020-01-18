@@ -47,14 +47,14 @@ namespace Jde::Markets::TwsWebSocket
 	void WebSocket::Accept()noexcept
 	{
 		Threading::SetThreadDescription( "wsAcceptor" );
-		
+
 		try
 		{
 			std::call_once( SingleClient, [&]()
-			{ 
-				TwsConnectionSettings settings; 
-				from_json( Jde::Settings::Global().SubContainer("tws")->Json(), settings ); 
-				WrapperWeb::CreateInstance( settings ); 
+			{
+				TwsConnectionSettings settings;
+				from_json( Jde::Settings::Global().SubContainer("tws")->Json(), settings );
+				WrapperWeb::CreateInstance( settings );
 			});
 		}
 		catch( const Exception& e )
@@ -116,5 +116,11 @@ namespace Jde::Markets::TwsWebSocket
 			else
 				++pAccountSessionIds;
 		}
+	}
+
+	TickerId WebSocket::FindRequestId( SessionId sessionId, ClientRequestId clientId )const noexcept
+	{
+		auto values = _requestSession.Find( [sessionId, clientId]( const tuple<SessionId,ClientRequestId>& value ){ return get<0>(value)==sessionId && get<1>(value)==clientId; } );
+		return values.size() ? values.begin()->first : 0;
 	}
 }

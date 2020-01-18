@@ -74,7 +74,7 @@ namespace Jde::Markets::TwsWebSocket
 				return pCache;
 		}
 		map<string,Proto::Results::Trade> trades;
-		map<uint,Proto::Results::Order> orders;
+		map<uint,Proto::Results::FlexOrder> orders;
 		DBG( "Flex::Load( '{}' )", root.string() );
 		try
 		{
@@ -115,7 +115,7 @@ namespace Jde::Markets::TwsWebSocket
 					{
 						if( orders.find(orderId)!=orders.end() )
 							continue;
-						auto& value = orders.emplace( orderId, Proto::Results::Order{} ).first->second;
+						auto& value = orders.emplace( orderId, Proto::Results::FlexOrder{} ).first->second;
 						value.set_id( orderId );
 						setValues( value );
 					}

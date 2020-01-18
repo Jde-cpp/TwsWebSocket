@@ -3,11 +3,11 @@
 #include "WebSocket.h"
 #include "WrapperWeb.h"
 
-//#include "markets/data/OptionData.h"
+#include "../../MarketLibrary/source/TwsClient.h"
 #include "../../MarketLibrary/source/types/Bar.h"
 #include "../../MarketLibrary/source/types/Contract.h"
 #include "../../MarketLibrary/source/types/Exchanges.h"
-#include "../../MarketLibrary/source/TwsClient.h"
+#include "../../MarketLibrary/source/types/MyOrder.h"
 #include "../../MarketLibrary/source/types/proto/requests.pb.h"
 #include "Flex.h"
 #define var const auto
@@ -71,16 +71,16 @@ namespace Jde::Markets::TwsWebSocket
 					THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
 				for( var& message : transmission.messages() )
 				{
-					if( message.has_accountupdates() )
-						ReceiveAccountUpdates( sessionId, message.accountupdates() );
-					else if( message.has_accountupdatesmulti() )
-						ReceiveAccountUpdatesMulti( sessionId, message.accountupdatesmulti() );
-					else if( message.has_genericrequest() )
-						ReceiveRequest( sessionId, message.genericrequest() );
+					if( message.has_account_updates() )
+						ReceiveAccountUpdates( sessionId, message.account_updates() );
+					else if( message.has_account_updates_multi() )
+						ReceiveAccountUpdatesMulti( sessionId, message.account_updates_multi() );
+					else if( message.has_generic_requests() )
+						ReceiveRequests( sessionId, message.generic_requests() );
 					else if( message.has_mrkdatasmart() )
 						ReceiveMarketDataSmart( sessionId, message.mrkdatasmart() );
-					else if( message.has_contractdetails() )
-						ReceiveContractDetails( sessionId, message.contractdetails() );
+					else if( message.has_contract_details() )
+						ReceiveContractDetails( sessionId, message.contract_details() );
 					else if( message.has_options() )
 					{
 						WARN0( "Need to implement options request" );
@@ -91,6 +91,8 @@ namespace Jde::Markets::TwsWebSocket
 						ReceiveHistoricalData( sessionId, message.historicaldata() );
 					else if( message.has_flexexecutions() )
 						ReceiveFlex( sessionId, message.flexexecutions() );
+					else if( message.has_place_order() )
+						ReceiveOrder( sessionId, message.place_order().id(), message.place_order().order(), message.place_order().contract() );
 					else
 						ERR( "Unknown Message '{}'", message.Value_case() );
 				}
@@ -134,22 +136,35 @@ namespace Jde::Markets::TwsWebSocket
 			_requestSessions.Insert( afterInsert, sendMessage, shared_ptr<Collections::UnorderedSet<SessionId>>{new Collections::UnorderedSet<SessionId>{}} );
 	}
 
-	void WebSocket::ReceiveRequest( SessionId sessionId, const Proto::Requests::GenericRequest& request )noexcept
+	void WebSocket::ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept
 	{
-		switch( request.type() )
+		if( request.type()==ERequests::Positions )
 		{
-		case ERequests::Positions://reqPositions does not work on paper account
 			AddRequestSessions( sessionId, {EResults::PositionEnd, EResults::PositionData} );
 			if( _requests.emplace(ERequests::Positions) )
 				_client.reqPositions();
-			break;
-		case ERequests::ManagedAccounts:
+		}
+		else if( request.type()==ERequests::ManagedAccounts )
+		{
 			AddRequestSessions( sessionId, {EResults::ManagedAccounts} );
 			_client.reqManagedAccts();
-			break;
-		default:
-			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws.", request.type(), sessionId );
 		}
+		else if( request.type()==ERequests::CancelMarketData )
+		{
+			for( auto i=0; i<request.ids_size(); ++i )
+			{
+				auto ibId = FindRequestId( sessionId, request.ids(i) );
+				if( ibId )
+				{
+					_client.cancelMktData( ibId );
+					_requestSession.erase( ibId );
+				}
+				else
+					WARN( "({})Could not find MktData clientID='{}'", sessionId, request.ids(i) );
+			}
+		}
+		else
+			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws.", request.type(), sessionId );
 	}
 	void WebSocket::ReceiveHistoricalData( SessionId sessionId, const Proto::Requests::RequestHistoricalData& req )noexcept
 	{
@@ -157,7 +172,7 @@ namespace Jde::Markets::TwsWebSocket
 		_requestSession.emplace( reqId, make_tuple(sessionId,req.requestid()) );
 		var pIb = Jde::Markets::Contract{ req.contract() }.ToTws();
 
-		const DateTime endTime{ Clock::from_time_t(req.date())  };
+		const DateTime endTime{ Clock::from_time_t(req.date()) };
 		const string endTimeString{ fmt::format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
 		const string durationString{ fmt::format("{} D", req.days()) };
 		DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )", reqId, sessionId, pIb->symbol );
@@ -179,6 +194,15 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			Flex::SendTrades( sessionId, clientId, accountNumber, date );
 		}).detach();
+	}
+
+	void WebSocket::ReceiveOrder( SessionId sessionId, ClientRequestId clientId, const Proto::Order& order, const Proto::Contract& contract )noexcept
+	{
+		var reqId = _client.RequestId();
+		_requestSession.emplace( reqId, make_tuple(sessionId,clientId) );
+		var pIbContract = Jde::Markets::Contract{ contract }.ToTws();
+		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )", reqId, sessionId, pIbContract->symbol, order.limit(), order.quantity() );
+		_client.placeOrder( *pIbContract, Jde::Markets::MyOrder{reqId, order} );
 	}
 /*
 	void WebSocket::ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& options )noexcept
@@ -231,7 +255,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void WebSocket::ReceiveMarketDataSmart(SessionId sessionId, const Proto::Requests::RequestMrkDataSmart& request)noexcept
+	void WebSocket::ReceiveMarketDataSmart( SessionId sessionId, const Proto::Requests::RequestMrkDataSmart& request )noexcept
 	{
 		var reqId = _client.RequestId();
 		ibapi::Contract contract; contract.conId = request.contractid(); contract.exchange = "SMART";
