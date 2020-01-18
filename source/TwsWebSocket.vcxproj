@@ -47,15 +47,15 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir).bin\$(Configuration)\</OutDir>
     <IntDir>.obj\$(Configuration)\</IntDir>
-    <IncludePath>C:\code\libraries\spdlog\include;C:\code\libraries\boost_1_69_0;C:\code\libraries\json\include;C:\code\libraries\tws-api\source\cppclient\client\;C:\code\libraries\protobuf\src\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(OutDir);C:\code\libraries\boost_1_69_0\stage\lib;C:\code\libraries\protobuf\cmake\build\solution\Debug;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(OutDir);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir).bin\$(Configuration)\</OutDir>
     <IntDir>.obj\$(Configuration)\</IntDir>
-    <IncludePath>C:\code\libraries\spdlog\include;C:\code\libraries\boost_1_69_0;C:\code\libraries\json\include;C:\code\libraries\tws-api\source\cppclient\client\;C:\code\libraries\protobuf\src\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(OutDir);C:\code\libraries\boost_1_69_0\stage\lib;C:\code\libraries\protobuf\cmake\build\solution\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(OutDir);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
