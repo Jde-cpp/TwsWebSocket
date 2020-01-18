@@ -21,13 +21,13 @@
 	#include <spdlog/fmt/ostr.h>
 #endif
 
-#pragma warning( disable : 4245) 
-#pragma warning( disable : 4701) 
-#include <boost/crc.hpp> 
-#pragma warning( default : 4245) 
-#pragma warning( default : 4701) 
+#pragma warning( disable : 4245)
+#pragma warning( disable : 4701)
+#include <boost/crc.hpp>
+#pragma warning( default : 4245)
+#pragma warning( default : 4701)
 #include <boost/asio.hpp>
-#include <boost/exception/diagnostic_information.hpp> 
+#include <boost/exception/diagnostic_information.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
@@ -38,6 +38,7 @@
 #include <nlohmann/json.hpp>
 #include <EWrapper.h>
 #include <EClientSocket.h>
+#include <Order.h>
 
 #include "../../Framework/source/log/Logging.h"
 #include "../../Framework/source/TypeDefs.h"

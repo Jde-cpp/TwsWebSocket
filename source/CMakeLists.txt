@@ -25,9 +25,9 @@ target_precompile_headers(Jde.TwsWebSocket
 		<spdlog/spdlog.h>
 		<spdlog/sinks/basic_file_sink.h>
 		<spdlog/fmt/ostr.h>
-		<boost/crc.hpp> 
+		<boost/crc.hpp>
 		<boost/asio.hpp>
-		<boost/exception/diagnostic_information.hpp> 
+		<boost/exception/diagnostic_information.hpp>
 		<boost/beast/core.hpp>
 		<boost/beast/websocket.hpp>
 		<boost/core/noncopyable.hpp>
@@ -36,6 +36,7 @@ target_precompile_headers(Jde.TwsWebSocket
 		<nlohmann/json.hpp>
 		<EWrapper.h>
 		<EClientSocket.h>
+		<Order.h>
 		"../../Framework/source/log/Logging.h"
 		"../../Framework/source/TypeDefs.h"
 		"../../Framework/source/JdeAssert.h"
