@@ -35,9 +35,6 @@
     <ClCompile Include="WebSocket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pc.h">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="WebSocketReceive.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,6 +45,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Flex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pc.h">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
