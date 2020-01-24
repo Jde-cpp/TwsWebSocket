@@ -14,21 +14,34 @@ namespace Jde::Markets::TwsWebSocket
 	atomic<uint32> DirectoryCrc{0};
 
 	sp<CacheType> Load()noexcept(false);
-	void Flex::SendTrades( SessionId sessionId, ClientRequestId clientId, string accountNumber, TimePoint date )noexcept
+	void Flex::SendTrades( SessionId sessionId, ClientRequestId clientId, string accountNumber, TimePoint startTime, TimePoint endTime )noexcept
 	{
 		try
 		{
-			var day = Chrono::DaysSinceEpoch( date );
+			var startDay = Chrono::DaysSinceEpoch( startTime );
+			var endDay = Chrono::DaysSinceEpoch( endTime );
 			auto pData = Load();
 
 			shared_lock l{ _cacheMutex };
-			auto pConfirms = pData->find( day );
-			var haveDay = pConfirms!=pData->end();
-			auto pResults = haveDay ? new Proto::Results::Flex( pConfirms->second ) : new Proto::Results::Flex();
-			pResults->set_requestid( clientId );
-			DBG( "({})Flex '{}' orders='{}' trades='{}'", sessionId, ToIsoString(date), pResults->orders_size(), pResults->trades_size() );
-			auto pMsg = make_shared<Proto::Results::MessageUnion>();
-			pMsg->set_allocated_flex( pResults );
+			auto pResults = new Proto::Results::Flex(); pResults->set_id( clientId );
+			ofstream os("/tmp/trades.csv");
+			for( auto day=startDay; day<=endDay; ++day )
+			{
+				auto pConfirms = pData->find( day );
+				if( pConfirms==pData->end() )
+					continue;
+				auto& flex = pConfirms->second;
+				for( int i=0; i< flex.orders_size(); ++i )
+					*pResults->add_orders() = flex.orders( i );
+
+				for( int i=0; i< flex.trades_size(); ++i )
+				{
+					*pResults->add_trades() = flex.trades( i );
+					os << flex.trades( i ).quantity() << "," << flex.trades( i ).commission() << std::endl;
+				}
+			}
+			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'", sessionId, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
+			auto pMsg = make_shared<Proto::Results::MessageUnion>(); pMsg->set_allocated_flex( pResults );
 			_socket.AddOutgoing( sessionId, pMsg );
 		}
 		catch( const Exception& e )
@@ -59,7 +72,7 @@ namespace Jde::Markets::TwsWebSocket
 		ostringstream crcStream;
 		for( var& entry : *pEntries )
 		{
-			if (entry.is_regular_file())
+			if( entry.is_regular_file() )
 #ifdef _MSC_VER
 				crcStream << entry.path().string() << ";"; //TODO:  << entry.last_write_time();
 #else

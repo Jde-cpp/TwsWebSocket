@@ -16,6 +16,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 #define _socket WebSocket::Instance()
+	using Proto::Results::EResults;
 	sp<WrapperWeb> WrapperWeb::_pInstance{nullptr};
 	WrapperWeb::WrapperWeb()noexcept(false):
 		_pReaderSignal{ make_shared<EReaderOSSignal>() }
@@ -54,29 +55,34 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_client_id( clientId );
 		p->set_why_held( whyHeld );
 		p->set_market_cap_price( mktCapPrice );
-
-		if( !_socket.PushAllocated(orderId, [p](MessageType msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_order_status( p );}) )
+		_socket.Push( EResults::OrderStatus_, [p](MessageType& msg){msg.set_allocated_order_status(new Proto::Results::OrderStatus{*p});} );
+		if( !_socket.PushAllocated(orderId, [p](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_order_status( p );}) )
 			delete p;
 	}
 	void WrapperWeb::openOrder( ibapi::OrderId orderId, const ibapi::Contract& contract, const ibapi::Order& order, const ibapi::OrderState& state )noexcept
 	{
+		WrapperLog::openOrder( orderId, contract, order, state );
 		auto p = new Proto::Results::OpenOrder{};
 		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
 		p->set_allocated_order( MyOrder{order}.ToProto(true).get() );
 		p->set_allocated_state( MyOrder::ToAllocatedProto(state) );
-
-		if( !_socket.PushAllocated(orderId, [p](MessageType msg, ClientRequestId id){p->set_web_id(id); msg.set_allocated_open_order( p );}) )
+		_socket.Push( EResults::OpenOrder_, [p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
+		if( !_socket.PushAllocated(orderId, [p](MessageType& msg, ClientRequestId id){p->set_web_id(id); msg.set_allocated_open_order( p );}) )
 			delete p;
+	}
+	void WrapperWeb::openOrderEnd()noexcept
+	{
+		_socket.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
 	}
 	void WrapperWeb::managedAccounts( const std::string& accountsList )noexcept
 	{
 		WrapperLog::managedAccounts( accountsList );
-		auto pAccountList = new Proto::Results::AccountList();
+		Proto::Results::AccountList accountList;
 		var accounts = StringUtilities::Split( accountsList );
 		for( var& account : accounts )
-			pAccountList->add_numbers( account );
+			accountList.add_numbers( account );
 
-		_socket.PushAllocated( pAccountList );
+		_socket.Push( EResults::ManagedAccounts, [&accountList]( auto type ){ type.set_allocated_account_list(new Proto::Results::AccountList{accountList});  } );
 	}
 
 	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
@@ -95,7 +101,7 @@ namespace Jde::Markets::TwsWebSocket
 	void WrapperWeb::accountUpdateMultiEnd( int reqId )noexcept
 	{
 		WrapperLog::accountUpdateMultiEnd( reqId );
-		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::PositionMultiEnd ); pValue->set_intvalue( reqId );
+		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::PositionMultiEnd ); pValue->set_int_value( reqId );
 		_socket.PushAllocated( reqId, pValue );
 	}
 	void WrapperWeb::historicalData( TickerId reqId, const ibapi::Bar& bar )noexcept
@@ -151,7 +157,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		auto pAttributes = new Proto::Results::TickAttrib(); pAttributes->set_canautoexecute( attrib.canAutoExecute ); pAttributes->set_pastlimit( attrib.pastLimit ); pAttributes->set_preopen( attrib.preOpen );
 		auto pPrice = new Proto::Results::TickPrice(); pPrice->set_requestid( clientId ); pPrice->set_ticktype( (Proto::Results::ETickType)field ); pPrice->set_price( price ); pPrice->set_allocated_attributes( pAttributes );
-		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_tickprice( pPrice );
+		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_tick_price( pPrice );
 		_socket.AddOutgoing( sessionId, pMessage );
 	}
 	void WrapperWeb::tickSize( TickerId ibReqId, TickType field, int size )noexcept
@@ -165,7 +171,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 
 		auto pMessage = new Proto::Results::TickSize(); pMessage->set_requestid( clientId ); pMessage->set_ticktype( (Proto::Results::ETickType)field ); pMessage->set_size( size );
-		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_ticksize( pMessage );
+		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_tick_size( pMessage );
 		_socket.AddOutgoing( sessionId, pUnion );
 	}
 
@@ -180,7 +186,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 
 		auto pMessage = new Proto::Results::TickGeneric(); pMessage->set_requestid( clientId ); pMessage->set_ticktype( (Proto::Results::ETickType)field ); pMessage->set_value( value );
-		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_tickgeneric( pMessage );
+		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_tick_generic( pMessage );
 		_socket.AddOutgoing( sessionId, pUnion );
 	}
 	void WrapperWeb::tickString( TickerId ibReqId, TickType field, const std::string& value )noexcept
@@ -194,7 +200,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 
 		auto pMessage = new Proto::Results::TickString(); pMessage->set_requestid( clientId ); pMessage->set_ticktype( (Proto::Results::ETickType)field ); pMessage->set_value( value );
-		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_tickstring( pMessage );
+		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_tick_string( pMessage );
 		_socket.AddOutgoing( sessionId, pUnion );
 	}
 

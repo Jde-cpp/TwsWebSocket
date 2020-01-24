@@ -27,13 +27,14 @@ namespace TwsWebSocket
 
 		tuple<SessionId,TickerId> GetClientRequest( ReqId ibReqId )noexcept{return _requestSession.Find( ibReqId, make_tuple(0,0) ); }
 		void ContractDetailsEnd( ReqId reqId );
-		void Push( Proto::Results::EResults webSend, sp<MessageType> pMessageUnion )noexcept;
+		//void Push( Proto::Results::EResults webSend, sp<MessageType> pMessageUnion )noexcept;
 		void Push( TickerId ibReqId, Proto::Results::EResults messageId )noexcept;
 		void Push( const Proto::Results::Position& pPosition )noexcept;
 		void Push( Proto::Results::PortfolioUpdate& pMessage )noexcept;
 		void Push( Proto::Results::AccountUpdate& accountUpdate )noexcept;
+		void Push( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
+		void PushAllocated( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
 		bool PushAllocated( TickerId id, function<void(MessageType&, ClientRequestId)> set )noexcept;
-		void PushAllocated( Proto::Results::AccountList* pPosition )noexcept;
 		void PushAllocated( Proto::Results::AccountUpdateMulti* pMessage )noexcept;
 		void PushAllocated( TickerId reqId, Proto::Results::HistoricalData* pMessage )noexcept;
 		void PushAllocated( Proto::Results::StringResult* pMessage )noexcept;

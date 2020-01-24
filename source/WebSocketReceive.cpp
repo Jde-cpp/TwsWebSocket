@@ -45,7 +45,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		if( !_sessions.Find(sessionId) )
 			return;
-		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_type( Proto::Results::EResults::Accept ); pMessage->set_intvalue( sessionId );
+		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_type( Proto::Results::EResults::Accept ); pMessage->set_int_value( sessionId );
 		PushAllocated( sessionId, pMessage );
 		DBG( "Listening to session #{}", sessionId );
 		UnPause();
@@ -84,13 +84,13 @@ namespace Jde::Markets::TwsWebSocket
 					else if( message.has_options() )
 					{
 						WARN0( "Need to implement options request" );
-						AddError( sessionId, message.options().requestid(), 0, "Options are not implemented." );
+						AddError( sessionId, message.options().id(), 0, "Options are not implemented." );
 					}
 					//	ReceiveOptions( sessionId, message.options() );
 					else if( message.has_historicaldata() )
 						ReceiveHistoricalData( sessionId, message.historicaldata() );
-					else if( message.has_flexexecutions() )
-						ReceiveFlex( sessionId, message.flexexecutions() );
+					else if( message.has_flex_executions() )
+						ReceiveFlex( sessionId, message.flex_executions() );
 					else if( message.has_place_order() )
 						ReceiveOrder( sessionId, message.place_order().id(), message.place_order().order(), message.place_order().contract() );
 					else
@@ -149,6 +149,16 @@ namespace Jde::Markets::TwsWebSocket
 			AddRequestSessions( sessionId, {EResults::ManagedAccounts} );
 			_client.reqManagedAccts();
 		}
+		else if( request.type()==ERequests::RequestOpenOrders )
+		{
+			AddRequestSessions( sessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
+			_client.reqOpenOrders();
+		}
+		else if( request.type()==ERequests::RequestAllOpenOrders )
+		{
+			AddRequestSessions( sessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
+			_client.reqAllOpenOrders();
+		}
 		else if( request.type()==ERequests::CancelMarketData )
 		{
 			for( auto i=0; i<request.ids_size(); ++i )
@@ -187,12 +197,11 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WebSocket::ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept
 	{
-		var date = Chrono::BeginningOfDay( Clock::from_time_t(req.date()) );
-		var clientId = req.requestid();
-		string accountNumber = req.accountnumber();
-		std::thread( [sessionId, clientId, date, accountNumber]()
+		var start = Chrono::BeginningOfDay( Clock::from_time_t(req.start()) );
+		var end = Chrono::EndOfDay( Clock::from_time_t(req.end()) );
+		std::thread( [sessionId, clientId=req.id(), start, end, accountNumber=req.account_number()]()
 		{
-			Flex::SendTrades( sessionId, clientId, accountNumber, date );
+			Flex::SendTrades( sessionId, clientId, accountNumber, start, end );
 		}).detach();
 	}
 
@@ -266,7 +275,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WebSocket::ReceiveAccountUpdates( SessionId sessionId, const Proto::Requests::RequestAccountUpdates& accountUpdates )noexcept
 	{
-		var& account = accountUpdates.accountnumber();
+		var& account = accountUpdates.account_number();
 		var subscribe = accountUpdates.subscribe();
 		std::unique_lock<std::shared_mutex> l{ _accountRequestMutex };
 		if( subscribe )
@@ -301,9 +310,9 @@ namespace Jde::Markets::TwsWebSocket
 	void WebSocket::ReceiveAccountUpdatesMulti( SessionId sessionId, const Proto::Requests::RequestAccountUpdatesMulti& accountUpdates )noexcept
 	{
 		var reqId =  _client.RequestId();
-		var& account = accountUpdates.accountnumber();
-		_requestSession.emplace( reqId, make_tuple(sessionId,accountUpdates.requestid()) );
-		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )", reqId, sessionId, account, accountUpdates.requestid() );
-		_client.reqAccountUpdatesMulti( reqId, account, accountUpdates.modelcode(), accountUpdates.ledgerandnlv() );
+		var& account = accountUpdates.account_number();
+		_requestSession.emplace( reqId, make_tuple(sessionId,accountUpdates.id()) );
+		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )", reqId, sessionId, account, accountUpdates.id() );
+		_client.reqAccountUpdatesMulti( reqId, account, accountUpdates.model_code(), accountUpdates.ledger_and_nlv() );
 	}
 }
