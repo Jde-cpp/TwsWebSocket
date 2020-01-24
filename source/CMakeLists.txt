@@ -5,7 +5,7 @@ set( CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../../Framework/cmake )
 include(SetUpConfigurations)
 link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 #Custom######################################################
-include_directories( "/home/duffyj/code/libraries/tws-api/source/cppclient/client" )
+include_directories( "$ENV{REPO_DIR}/tws-api/source/cppclient/client" )
 #######################################################
 add_executable( Jde.TwsWebSocket main.cpp WebSocket.cpp WebSocketReceive.cpp WebSocketSend.cpp WrapperWeb.cpp Flex.cpp )
 #######################################################
