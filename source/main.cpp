@@ -28,7 +28,7 @@ int main( int argc, char** argv )
 	}
 	catch( const Jde::EnvironmentException& e )
 	{
-		CRITICAL0( e.what() );
+		CRITICAL0( string(e.what()) );
 		result = EXIT_FAILURE;
 	}
 	return result;

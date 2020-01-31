@@ -72,6 +72,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::openOrderEnd()noexcept
 	{
+		WrapperLog::openOrderEnd();
 		_socket.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
 	}
 	void WrapperWeb::managedAccounts( const std::string& accountsList )noexcept
@@ -82,7 +83,10 @@ namespace Jde::Markets::TwsWebSocket
 		for( var& account : accounts )
 			accountList.add_numbers( account );
 
-		_socket.Push( EResults::ManagedAccounts, [&accountList]( auto type ){ type.set_allocated_account_list(new Proto::Results::AccountList{accountList});  } );
+		_socket.Push( EResults::ManagedAccounts, [&accountList]( auto& type )
+		{
+			type.set_allocated_account_list(new Proto::Results::AccountList{accountList});
+		} );
 	}
 
 	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
@@ -142,7 +146,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	void HandleBadTicker( TickerId ibReqId )
 	{
-		DBG( "Could not find session for ticker req:  '{}'.", ibReqId );
+		DBG( "Could not find session for ticker req:  '{}'."sv, ibReqId );
 		TwsClient::Instance().cancelMktData( ibReqId );
 	}
 	void WrapperWeb::tickPrice( TickerId ibReqId, TickType field, double price, const TickAttrib& attrib )noexcept

@@ -34,20 +34,20 @@ namespace Jde::Markets::TwsWebSocket
 			catch( const boost::system::system_error& se )
 			{
 				if( se.code()==websocket::error::closed )
-					DBG( "Socket Closed on session {} when sending acceptance.", sessionId );
+					DBG( "Socket Closed on session {} when sending acceptance."sv, sessionId );
 				if( se.code() != websocket::error::closed )
-					ERR( "Error sending app - {}. ", se.code().message() );
+					ERR( "Error sending app - {}."sv, se.code().message() );
 			}
 			catch( const std::exception& e )
 			{
-				ERR0( e.what() );
+				ERR0( string(e.what()) );
 			}
 		}
 		if( !_sessions.Find(sessionId) )
 			return;
 		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_type( Proto::Results::EResults::Accept ); pMessage->set_int_value( sessionId );
 		PushAllocated( sessionId, pMessage );
-		DBG( "Listening to session #{}", sessionId );
+		DBG( "Listening to session #{}"sv, sessionId );
 		UnPause();
 		while( !Threading::GetThreadInterruptFlag().IsSet() )
 		{
@@ -83,7 +83,7 @@ namespace Jde::Markets::TwsWebSocket
 						ReceiveContractDetails( sessionId, message.contract_details() );
 					else if( message.has_options() )
 					{
-						WARN0( "Need to implement options request" );
+						WARN0( "Need to implement options request"sv );
 						AddError( sessionId, message.options().id(), 0, "Options are not implemented." );
 					}
 					//	ReceiveOptions( sessionId, message.options() );
@@ -94,39 +94,39 @@ namespace Jde::Markets::TwsWebSocket
 					else if( message.has_place_order() )
 						ReceiveOrder( sessionId, message.place_order().id(), message.place_order().order(), message.place_order().contract() );
 					else
-						ERR( "Unknown Message '{}'", message.Value_case() );
+						ERR( "Unknown Message '{}'"sv, message.Value_case() );
 				}
 			}
 			catch( const IOException& e )
 			{
-				ERR( "IOExeption returned: '{}'", e.what() );
+				ERR( "IOExeption returned: '{}'"sv, e.what() );
 			}
 			catch(boost::system::system_error const& se)
 			{
 				auto code = se.code();
 				if(  code == websocket::error::closed )
-					DBG( "se.code()==websocket::error::closed, id={}", sessionId );
+					DBG( "se.code()==websocket::error::closed, id={}"sv, sessionId );
 				else
 				{
 					if( code.value()==104 )//reset by peer
-						DBG( "system_error returned: '{}' - closing connection - {}", se.code().message(), sessionId );
+						DBG( "system_error returned: '{}' - closing connection - {}"sv, se.code().message(), sessionId );
 					else
-						DBG( "system_error returned: '{}' - closing connection - {}", se.code().message(), sessionId );
+						DBG( "system_error returned: '{}' - closing connection - {}"sv, se.code().message(), sessionId );
 					EraseSession( sessionId );
 					break;
 				}
 			}
 			catch( std::exception const& e )
 			{
-				ERR( "std::exception returned: '{}'", e.what() );
+				ERR( "std::exception returned: '{}'"sv, e.what() );
 			}
 			if( !_sessions.Find(sessionId) )
 			{
-				DBG( "Could not find session id {} exiting thread.", sessionId );
+				DBG( "Could not find session id {} exiting thread."sv, sessionId );
 				break;
 			}
 		}
-		DBG0( "Leaving WebSocket::DoSession" );
+		DBG0( "Leaving WebSocket::DoSession"sv );
 	}
 
 	void WebSocket::AddRequestSessions( SessionId id, const vector<Proto::Results::EResults>& webSendMessages )noexcept
@@ -170,11 +170,11 @@ namespace Jde::Markets::TwsWebSocket
 					_requestSession.erase( ibId );
 				}
 				else
-					WARN( "({})Could not find MktData clientID='{}'", sessionId, request.ids(i) );
+					WARN( "({})Could not find MktData clientID='{}'"sv, sessionId, request.ids(i) );
 			}
 		}
 		else
-			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws.", request.type(), sessionId );
+			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, request.type(), sessionId );
 	}
 	void WebSocket::ReceiveHistoricalData( SessionId sessionId, const Proto::Requests::RequestHistoricalData& req )noexcept
 	{
@@ -185,7 +185,7 @@ namespace Jde::Markets::TwsWebSocket
 		const DateTime endTime{ Clock::from_time_t(req.date()) };
 		const string endTimeString{ fmt::format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
 		const string durationString{ fmt::format("{} D", req.days()) };
-		DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )", reqId, sessionId, pIb->symbol );
+		DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, pIb->symbol );
 		try
 		{
 			_client.reqHistoricalData( reqId, *pIb, endTimeString, durationString, BarSize::ToString((BarSize::Enum)req.barsize()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.userth() ? 1 : 0, 2/*formatDate*/, req.keepuptodate(), TagValueListSPtr{} );
@@ -210,7 +210,7 @@ namespace Jde::Markets::TwsWebSocket
 		var reqId = _client.RequestId();
 		_requestSession.emplace( reqId, make_tuple(sessionId,clientId) );
 		var pIbContract = Jde::Markets::Contract{ contract }.ToTws();
-		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )", reqId, sessionId, pIbContract->symbol, order.limit(), order.quantity() );
+		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, sessionId, pIbContract->symbol, order.limit(), order.quantity() );
 		_client.placeOrder( *pIbContract, Jde::Markets::MyOrder{reqId, order} );
 	}
 /*
@@ -258,7 +258,7 @@ namespace Jde::Markets::TwsWebSocket
 		for( var reqId : requestIds )
 		{
 			var pIb = Jde::Markets::Contract{ request.contracts(i++) }.ToTws();
-			DBG( "reqContractDetails( reqId='{}' sessionId='{}', contract='{}' )", reqId, sessionId, pIb->symbol );
+			DBG( "reqContractDetails( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, pIb->symbol );
 			_requestSession.emplace( reqId, make_tuple(sessionId,clientRequestId) );
 			_client.reqContractDetails( reqId, *pIb );
 		}
@@ -269,7 +269,7 @@ namespace Jde::Markets::TwsWebSocket
 		var reqId = _client.RequestId();
 		ibapi::Contract contract; contract.conId = request.contractid(); contract.exchange = "SMART";
 		var ticks = StringUtilities::AddCommas( request.ticklist() );
-		DBG( "receiveMarketDataSmart( reqId='{}' sessionId='{}', contract='{}' )", reqId, sessionId, contract.conId );
+		DBG( "receiveMarketDataSmart( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, contract.conId );
 		_requestSession.emplace( reqId, make_tuple(sessionId,request.requestid()) );
 		_client.reqMktData( reqId, contract, ticks, request.snapshot(), false, TagValueListSPtr() );
 	}
@@ -280,18 +280,18 @@ namespace Jde::Markets::TwsWebSocket
 		std::unique_lock<std::shared_mutex> l{ _accountRequestMutex };
 		if( subscribe )
 		{
-			DBG( "({}) - subscribe account '{}'", sessionId, account );
+			DBG( "({}) - subscribe account '{}'"sv, sessionId, account );
 			auto [pInserted, inserted] = _accountRequests.emplace( account, unordered_set<SessionId>{} );
 			pInserted->second.emplace( sessionId );
 			if( inserted )
 			{
-				DBG( "Subscribe to account updates '{}'", account );
+				DBG( "Subscribe to account updates '{}'"sv, account );
 				_client.reqAccountUpdates( true, account );
 			}
 		}
 		else
 		{
-			DBG( "({}) - unsubscribe from account '{}'", sessionId, account );
+			DBG( "({}) - unsubscribe from account '{}'"sv, sessionId, account );
 			auto pAccountSessionIds = _accountRequests.find( account );
 			bool cancel = pAccountSessionIds==_accountRequests.end();
 			if( !cancel )
@@ -301,7 +301,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			if( cancel )
 			{
-				DBG( "Unsubscribe from account '{}'", account );
+				DBG( "Unsubscribe from account '{}'"sv, account );
 				_accountRequests.erase( account );
 				_client.reqAccountUpdates( false, account );
 			}
@@ -312,7 +312,7 @@ namespace Jde::Markets::TwsWebSocket
 		var reqId =  _client.RequestId();
 		var& account = accountUpdates.account_number();
 		_requestSession.emplace( reqId, make_tuple(sessionId,accountUpdates.id()) );
-		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )", reqId, sessionId, account, accountUpdates.id() );
+		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )"sv, reqId, sessionId, account, accountUpdates.id() );
 		_client.reqAccountUpdatesMulti( reqId, account, accountUpdates.model_code(), accountUpdates.ledger_and_nlv() );
 	}
 }
