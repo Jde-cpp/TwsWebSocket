@@ -40,7 +40,7 @@ namespace Jde::Markets::TwsWebSocket
 					os << flex.trades( i ).quantity() << "," << flex.trades( i ).commission() << std::endl;
 				}
 			}
-			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'", sessionId, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
+			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, sessionId, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
 			auto pMsg = make_shared<Proto::Results::MessageUnion>(); pMsg->set_allocated_flex( pResults );
 			_socket.AddOutgoing( sessionId, pMsg );
 		}
@@ -59,7 +59,7 @@ namespace Jde::Markets::TwsWebSocket
 			value = Clock::to_time_t( utcTime );
 		}
 		else
-			ERR( "Could not parse date '{}'.", date );
+			ERR( "Could not parse date '{}'."sv, date );
 		return value;
 	}
 	sp<CacheType> Load()noexcept(false)
@@ -88,7 +88,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		map<string,Proto::Results::Trade> trades;
 		map<uint,Proto::Results::FlexOrder> orders;
-		DBG( "Flex::Load( '{}' )", root.string() );
+		DBG( "Flex::Load( '{}' )"sv, root.string() );
 		try
 		{
 			for( var& entry : *pEntries )
@@ -97,7 +97,7 @@ namespace Jde::Markets::TwsWebSocket
 				if( path.extension()!=".xml" )
 					continue;
 				var& strPath = path.string();
-				TRACE( "Flex::read_xml( '{}' )", strPath );
+				TRACE( "Flex::read_xml( '{}' )"sv, strPath );
 				ptree pt;
 				read_xml( path.string(), pt );
 

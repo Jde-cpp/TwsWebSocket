@@ -67,7 +67,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( sessionId )
 			AddError( sessionId, clientId, errorCode, errorString );
 		else if( id>0 )
-			DBG( "Could not find session for error req:  '{}'.", id );
+			DBG( "Could not find session for error req:  '{}'."sv, id );
 	}
 	void WebSocket::AddError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept
 	{
@@ -95,7 +95,7 @@ namespace Jde::Markets::TwsWebSocket
 		var [sessionId,clientId] = GetClientRequest( ibReqId );
 		if( !sessionId )
 		{
-			DBG( "Could not find session for messageId:  '{}' req:  '{}'.", messageId, ibReqId );
+			DBG( "Could not find session for messageId:  '{}' req:  '{}'."sv, messageId, ibReqId );
 			return;
 		}
 
@@ -124,6 +124,7 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				auto pMessageUnion = make_shared<MessageType>();
 				set( *pMessageUnion );
+				ASSERT( pMessageUnion->Value_case()!=MessageType::ValueCase::VALUE_NOT_SET );
 				AddOutgoing( sessionId, pMessageUnion );
 			});
 		});
@@ -138,7 +139,7 @@ namespace Jde::Markets::TwsWebSocket
 			AddOutgoing( sessionId, pUnion );
 		}
 		else
-			DBG( "request {} not found", id );
+			DBG( "request {} not found"sv, id );
 		return sessionId;
 	}
 	void WebSocket::PushAllocatedRequest( TickerId reqId, Proto::Results::MessageValue* pMessage )noexcept
@@ -150,7 +151,7 @@ namespace Jde::Markets::TwsWebSocket
 			PushAllocated( sessionId, pMessage );
 		}
 		else
-			DBG( "Could not find session for req:  '{}'.", reqId );
+			DBG( "Could not find session for req:  '{}'."sv, reqId );
 	}
 	void WebSocket::PushAllocated( TickerId reqId, Proto::Results::ContractDetails* pDetails )noexcept
 	{
@@ -162,14 +163,14 @@ namespace Jde::Markets::TwsWebSocket
 			AddOutgoing( sessionId, pMessageUnion );
 		}
 		else
-			DBG( "Could not find session for req:  '{}'.", reqId );
+			DBG( "Could not find session for req:  '{}'."sv, reqId );
 	}
 	void WebSocket::ContractDetailsEnd( ReqId reqId )
 	{
 		var [sessionId, clientReqId] = _requestSession.Find( reqId, make_tuple(0,0) );
 		if( !sessionId )
 		{
-			DBG( "Could not find session for ContractDetailsEnd req:  '{}'.", reqId );
+			DBG( "Could not find session for ContractDetailsEnd req:  '{}'."sv, reqId );
 			return;
 		}
 		bool multi=false;
@@ -205,7 +206,7 @@ namespace Jde::Markets::TwsWebSocket
 			AddOutgoing( sessionId, pMessageUnion );
 		}
 		else
-			DBG( "Could not find session for req:  '{}'.", reqId );
+			DBG( "Could not find session for req:  '{}'."sv, reqId );
 	}
 	void WebSocket::PushAllocated( SessionId sessionId, Proto::Results::MessageValue* pMessage )noexcept
 	{
@@ -239,7 +240,7 @@ namespace Jde::Markets::TwsWebSocket
 		else
 		{
 			delete pMessage;
-			DBG( "request {} not found", requestId );
+			DBG( "request {} not found"sv, requestId );
 			TwsClient::Instance().cancelPositionsMulti( requestId );
 		}
 	}
@@ -251,7 +252,7 @@ namespace Jde::Markets::TwsWebSocket
 		var pAccountNumberSessions = _accountRequests.find( accountNumber );
 		if( pAccountNumberSessions==_accountRequests.end() )
 		{
-			WARN( "No listeners for account update '{}'", accountNumber );
+			WARN( "No listeners for account update '{}'"sv, accountNumber );
 			TwsClient::Instance().reqAccountUpdates( false, accountNumber );
 		}
 		else
@@ -270,7 +271,7 @@ namespace Jde::Markets::TwsWebSocket
 		var pAccountNumberSessions = _accountRequests.find( accountNumber );
 		if( pAccountNumberSessions==_accountRequests.end() )
 		{
-			WARN( "No listeners for account update '{}'", accountNumber );
+			WARN( "No listeners for account update '{}'"sv, accountNumber );
 			TwsClient::Instance().reqAccountUpdates( false, accountNumber );
 		}
 		else

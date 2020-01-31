@@ -37,11 +37,11 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WebSocket::Shutdown()noexcept
 	{
-		DBG0( "WebSocket::Shutdown" );
+		DBG0( "WebSocket::Shutdown"sv );
 		if( _pAcceptObject )
 			_pAcceptObject->close();
 		_pAcceptObject = nullptr;
-		DBG0( "WebSocket::Shutdown - Leaving" );
+		DBG0( "WebSocket::Shutdown - Leaving"sv );
 	}
 	std::once_flag SingleClient;
 	void WebSocket::Accept()noexcept
@@ -59,36 +59,36 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const Exception& e )
 		{
-			ERR0( e.what() );
+			ERR0( string(e.what()) );
 			return;
 		}
 
 		boost::asio::io_context ioc{1};
 		_pAcceptObject =  shared_ptr<tcp::acceptor>( new tcp::acceptor(ioc, {boost::asio::ip::tcp::v4(), (short unsigned int)_port}) );
-		INFO( "Accepting web sockets on port {}.", _port );
+		INFO( "Accepting web sockets on port {}."sv, _port );
 		while( !Threading::GetThreadInterruptFlag().IsSet() )
 		{
 			try
 			{
 				tcp::socket socket{ioc};// This will receive the new connection
 				_pAcceptObject->accept(socket);// Block until we get a connection
-				DBG0( "Accepted Connection." );
+				DBG0( "Accepted Connection."sv );
 				auto pSession = make_shared<websocket::stream<tcp::socket>>( std::move(socket) );
 				pSession->binary( true );
 				IApplication::AddThread( make_shared<Threading::InterruptibleThread>("WebSession", [&,pSession](){DoSession(pSession);}) );
 			}
 			catch( boost::system::system_error& e )
 			{
-				DBG( "Accept failed:  {}", e.what() );
+				DBG( "Accept failed:  {}"sv, e.what() );
 			}
 		}
 		TwsProcessor::Stop();
-		DBG0( "Leaving WebSocket::Accept()" );
+		DBG0( "Leaving WebSocket::Accept()"sv );
 	}
 
 	void WebSocket::EraseSession( SessionId id )noexcept
 	{
-		DBG( "Removing session '{}'", id );
+		DBG( "Removing session '{}'"sv, id );
 		_sessions.erase( id );
 		std::function<void(const Proto::Results::EResults&, Collections::UnorderedSet<SessionId>& )> func = [&]( const Proto::Results::EResults& messageId, Collections::UnorderedSet<SessionId>& sessions )
 		{
