@@ -116,7 +116,7 @@ namespace Jde::Markets::TwsWebSocket
 		auto pBar = pData->add_bars();
 		l.unlock();
 		var time = bar.time.size()==8 ? DateTime{ (uint16)stoi(bar.time.substr(0,4)), (uint8)stoi(bar.time.substr(4,2)), (uint8)stoi(bar.time.substr(6,2)) } : DateTime( stoi(bar.time) );
-		pBar->set_time( time.TimeT() );
+		pBar->set_time( (int)time.TimeT() );
 
 		pBar->set_high( bar.high );
 		pBar->set_low( bar.low );
