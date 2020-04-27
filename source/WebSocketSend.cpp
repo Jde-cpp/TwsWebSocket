@@ -1,6 +1,7 @@
 #include "WebSocket.h"
 #include "EWebSend.h"
 #include "../../MarketLibrary/source/TwsClient.h"
+#include "../../Framework/source/Cache.h"
 
 
 #define var const auto
@@ -63,11 +64,21 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WebSocket::AddError( TickerId id, int errorCode, const std::string& errorString )noexcept
 	{
-		var [sessionId,clientId] = GetClientRequest( id );
-		if( sessionId )
-			AddError( sessionId, clientId, errorCode, errorString );
-		else if( id>0 )
-			DBG( "Could not find session for error req:  '{}'."sv, id );
+		if( id>0 )
+		{
+			var [sessionId,clientId] = GetClientRequest( id );
+			if( sessionId )
+				AddError( sessionId, clientId, errorCode, errorString );
+			else
+				DBG( "Could not find session for error req:  '{}'."sv, id );
+		}
+		else if( errorCode==504 )
+		{
+			_requestSession.ForEach( [&](auto key, const auto& value)
+			{
+				AddError( get<0>(value), get<1>(value), errorCode, errorString );
+			});
+		}
 	}
 	void WebSocket::AddError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept
 	{
@@ -196,8 +207,16 @@ namespace Jde::Markets::TwsWebSocket
 		else if( !multi )
 			Push( reqId, Proto::Results::EResults::ContractDataEnd );
 	}
-	void WebSocket::PushAllocated( TickerId reqId, Proto::Results::HistoricalData* pMessage )noexcept
+	void WebSocket::PushAllocated( TickerId reqId, Proto::Results::HistoricalData* pMessage, bool saveCache )noexcept
 	{
+		if( saveCache )
+		{
+			std::lock_guard l{ _historicalCacheMutex };
+			var crc = _historicalCrcs.Find( reqId, 0 );
+			_historicalCrcs.erase( reqId );
+			if( crc>0 )
+				Cache::Set<Proto::Results::HistoricalData>( fmt::format("HistoricalData.{}",crc), make_shared<Proto::Results::HistoricalData>(*pMessage) );
+		}
 		var [sessionId, clientReqId] = _requestSession.Find( reqId, make_tuple(0,0) );
 		if( sessionId )
 		{

@@ -2,8 +2,9 @@
 #include "EWebReceive.h"
 #include "WebSocket.h"
 #include "WrapperWeb.h"
-
-#include "../../MarketLibrary/source/TwsClient.h"
+#include "../../Framework/source/Cache.h"
+#include "../../MarketLibrary/source/TwsClientSync.h"
+#include "../../MarketLibrary/source/data/OptionData.h"
 #include "../../MarketLibrary/source/types/Bar.h"
 #include "../../MarketLibrary/source/types/Contract.h"
 #include "../../MarketLibrary/source/types/Exchanges.h"
@@ -13,7 +14,7 @@
 #define var const auto
 
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
-#define _client TwsClient::Instance()
+#define _client TwsClientSync::Instance()
 namespace Jde::Markets::TwsWebSocket
 {
 	using Proto::Requests::ERequests;
@@ -82,17 +83,13 @@ namespace Jde::Markets::TwsWebSocket
 					else if( message.has_contract_details() )
 						ReceiveContractDetails( sessionId, message.contract_details() );
 					else if( message.has_options() )
-					{
-						WARN0( "Need to implement options request"sv );
-						AddError( sessionId, message.options().id(), 0, "Options are not implemented." );
-					}
-					//	ReceiveOptions( sessionId, message.options() );
+						ReceiveOptions( sessionId, message.options() );
 					else if( message.has_historicaldata() )
 						ReceiveHistoricalData( sessionId, message.historicaldata() );
 					else if( message.has_flex_executions() )
 						ReceiveFlex( sessionId, message.flex_executions() );
 					else if( message.has_place_order() )
-						ReceiveOrder( sessionId, message.place_order().id(), message.place_order().order(), message.place_order().contract() );
+						ReceiveOrder( sessionId, message.place_order() );
 					else
 						ERR( "Unknown Message '{}'"sv, message.Value_case() );
 				}
@@ -164,13 +161,25 @@ namespace Jde::Markets::TwsWebSocket
 			for( auto i=0; i<request.ids_size(); ++i )
 			{
 				auto ibId = FindRequestId( sessionId, request.ids(i) );
-				if( ibId )
+				if( ibId && WrapperWeb::Instance().AddCanceled(ibId) )
 				{
 					_client.cancelMktData( ibId );
 					_requestSession.erase( ibId );
+					std::unique_lock<std::shared_mutex> l{ _mktDataRequestsMutex };
+					_mktDataRequests.erase( ibId );
 				}
 				else
 					WARN( "({})Could not find MktData clientID='{}'"sv, sessionId, request.ids(i) );
+			}
+		}
+		else if( request.type()==ERequests::CancelOrder )
+		{
+			for( auto i=0; i<request.ids_size(); ++i )
+			{
+				var reqId = request.ids(i);
+				if( !_requestSession.emplace( reqId, make_tuple(sessionId,reqId) ) )
+					DBG( "Cancel could not subscribe to orderId {}, already subscribed."sv, reqId );
+				_client.cancelOrder( reqId );
 			}
 		}
 		else
@@ -179,7 +188,17 @@ namespace Jde::Markets::TwsWebSocket
 	void WebSocket::ReceiveHistoricalData( SessionId sessionId, const Proto::Requests::RequestHistoricalData& req )noexcept
 	{
 		var reqId = _client.RequestId();
-		_requestSession.emplace( reqId, make_tuple(sessionId,req.requestid()) );
+		_requestSession.emplace( reqId, make_tuple(sessionId,req.id()) );
+		Proto::Requests::RequestHistoricalData copy{ req }; copy.set_id( 0 );
+		var crc = IO::Crc::Calc32( copy.SerializeAsString() );
+		var id = fmt::format( "HistoricalData.{}", crc );
+		if( Cache::Has(id) )
+		{
+			PushAllocated( reqId, new Proto::Results::HistoricalData{*Cache::Get<Proto::Results::HistoricalData>(id)}, false );
+			return;
+		}
+		_historicalCrcs.emplace( reqId, crc );
+
 		var pIb = Jde::Markets::Contract{ req.contract() }.ToTws();
 
 		const DateTime endTime{ Clock::from_time_t(req.date()) };
@@ -188,7 +207,7 @@ namespace Jde::Markets::TwsWebSocket
 		DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, pIb->symbol );
 		try
 		{
-			_client.reqHistoricalData( reqId, *pIb, endTimeString, durationString, BarSize::ToString((BarSize::Enum)req.barsize()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.userth() ? 1 : 0, 2/*formatDate*/, req.keepuptodate(), TagValueListSPtr{} );
+			_client.reqHistoricalData( reqId, *pIb, endTimeString, durationString, BarSize::ToString((BarSize::Enum)req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
 		}
 		catch( const Exception& e )//bar size, etc.
 		{
@@ -205,48 +224,65 @@ namespace Jde::Markets::TwsWebSocket
 		}).detach();
 	}
 
-	void WebSocket::ReceiveOrder( SessionId sessionId, ClientRequestId clientId, const Proto::Order& order, const Proto::Contract& contract )noexcept
+	void WebSocket::ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& proto )noexcept
 	{
 		var reqId = _client.RequestId();
-		_requestSession.emplace( reqId, make_tuple(sessionId,clientId) );
-		var pIbContract = Jde::Markets::Contract{ contract }.ToTws();
-		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, sessionId, pIbContract->symbol, order.limit(), order.quantity() );
-		_client.placeOrder( *pIbContract, Jde::Markets::MyOrder{reqId, order} );
+		_requestSession.emplace( reqId, make_tuple(sessionId,proto.id()) );
+		var pIbContract = Jde::Markets::Contract{ proto.contract() }.ToTws();
+		Jde::Markets::MyOrder order{ reqId, proto.order() };
+		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, sessionId, pIbContract->symbol, order.lmtPrice, order.totalQuantity );
+		_client.placeOrder( *pIbContract, order );
+		if( proto.stop()>0 )
+		{
+			var parentId = _client.RequestId();
+			_requestSession.emplace( parentId, make_tuple(sessionId, proto.id()) );
+			Jde::Markets::MyOrder parent{ parentId, proto.order() };
+			parent.IsBuy( !order.IsBuy() );
+			parent.OrderType( Proto::EOrderType::StopLimit );
+			parent.totalQuantity = order.totalQuantity;
+			parent.auxPrice = proto.stop();
+			parent.lmtPrice = proto.stop_limit();
+			parent.parentId = reqId;
+			_client.placeOrder( *pIbContract, parent );
+		}
 	}
-/*
+
 	void WebSocket::ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& options )noexcept
 	{
 		std::thread( [sessionId,options]()
 		{
 			Threading::SetThreadDescription( "ReceiveOptions" );
+			var underlyingId = options.id();
 			try
 			{
-				auto currentTradingDay = Clock::now();
-				for( ; IsHoliday(currentTradingDay); currentTradingDay-=24h );
-				var last = PreviousTradingDay( currentTradingDay );
-				Proto::Results::OptionValues* pResults = nullptr;
-				for( auto lastLast = PreviousTradingDay(last); !pResults && lastLast>last-7*24h; lastLast = PreviousTradingDay(lastLast) )
-					pResults =  OptionData::LoadDiff( options.contractid(), options.iscall(), lastLast, last );
+				//see if I have.
+				//else try getting from tws. (make sure have date.)
+				var currentTradingDay = CurrentTradingDay();
+				var pDetails = _client.ReqContractDetails(underlyingId).get();
+				if( pDetails->size()!=1 )
+					THROW( Exception("'{} had {} contracts", underlyingId, pDetails->size()) );
+				var contract = Contract{ pDetails->front() };
+				var previous = PreviousTradingDay( currentTradingDay );
+				var pResults = OptionData::LoadDiff( contract, options.is_call(), currentTradingDay, PreviousTradingDay(previous), previous );
 				if( pResults )
 				{
-					pResults->set_requestid( options.requestid() );
+					pResults->set_id( underlyingId );
 					auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_options( pResults );
 					WebSocket::Instance().AddOutgoing( sessionId, pUnion );
 				}
 				else
-					WebSocket::Instance().AddError( sessionId, options.requestid(), -2, "No previous dates found" );
-
+					WebSocket::Instance().AddError( sessionId, underlyingId, -2, "No previous dates found" );
 			}
 			catch( const RuntimeException& e )
 			{
-				WebSocket::Instance().AddError( sessionId, options.requestid(), -1, e.what() );
+				WebSocket::Instance().AddError( sessionId, underlyingId, -1, e.what() );
 			}
 		} ).detach();
 	}
-	*/
+
 	void WebSocket::ReceiveContractDetails( SessionId sessionId, const Proto::Requests::RequestContractDetails& request )noexcept
 	{
-		var clientRequestId = request.requestid();
+		var clientRequestId = request.id();
 		unordered_set<TickerId> requestIds;
 		for( int i=0; i<request.contracts_size(); ++i )
 			requestIds.emplace( _client.RequestId() );
@@ -267,10 +303,17 @@ namespace Jde::Markets::TwsWebSocket
 	void WebSocket::ReceiveMarketDataSmart( SessionId sessionId, const Proto::Requests::RequestMrkDataSmart& request )noexcept
 	{
 		var reqId = _client.RequestId();
-		ibapi::Contract contract; contract.conId = request.contractid(); contract.exchange = "SMART";
-		var ticks = StringUtilities::AddCommas( request.ticklist() );
+		ibapi::Contract contract; contract.conId = request.contract_id(); contract.exchange = "SMART";
+		var ticks = StringUtilities::AddCommas( request.tick_list() );
 		DBG( "receiveMarketDataSmart( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, contract.conId );
-		_requestSession.emplace( reqId, make_tuple(sessionId,request.requestid()) );
+
+		_requestSession.emplace( reqId, make_tuple(sessionId,request.id()) );
+		{
+			std::unique_lock<std::shared_mutex> l{ _mktDataRequestsMutex };
+			auto insert = _mktDataRequests.emplace( reqId, unordered_set<SessionId>{sessionId} );
+			if( !insert.second )
+				insert.first->second.emplace( sessionId );
+		}
 		_client.reqMktData( reqId, contract, ticks, request.snapshot(), false, TagValueListSPtr() );
 	}
 	void WebSocket::ReceiveAccountUpdates( SessionId sessionId, const Proto::Requests::RequestAccountUpdates& accountUpdates )noexcept

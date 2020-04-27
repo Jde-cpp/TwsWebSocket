@@ -12,6 +12,8 @@ add_executable( Jde.TwsWebSocket main.cpp WebSocket.cpp WebSocketReceive.cpp Web
 target_link_libraries(Jde.TwsWebSocket Threads::Threads)
 target_link_libraries(Jde.TwsWebSocket Jde)
 target_link_libraries(Jde.TwsWebSocket Jde.Markets)
+target_link_libraries(Jde.TwsWebSocket Jde.XZ)
+target_link_libraries(Jde.TwsWebSocket lzma)
 target_link_libraries(Jde.TwsWebSocket Ib)
 target_link_libraries(Jde.TwsWebSocket protobuf)
 target_link_libraries(Jde.TwsWebSocket stdc++fs)

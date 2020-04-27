@@ -7,10 +7,10 @@
 
 
 #define var const auto
+#define _client TwsClient::Instance()
 
 using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
-
 namespace Jde::Markets::TwsWebSocket
 {
 	shared_ptr<WebSocket> WebSocket::_pInstance{nullptr};
@@ -115,6 +115,19 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			else
 				++pAccountSessionIds;
+		}
+		{
+			std::unique_lock<std::shared_mutex> l{ _mktDataRequestsMutex };
+			for( auto pRequestSession = _mktDataRequests.begin(); pRequestSession!=_mktDataRequests.end(); )
+			{
+				if( pRequestSession->second.erase(id) && pRequestSession->second.size()==0 )
+				{
+					_client.cancelMktData( pRequestSession->first );
+					pRequestSession = _mktDataRequests.erase( pRequestSession );
+				}
+				else
+					++pRequestSession;
+			}
 		}
 	}
 
