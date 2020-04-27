@@ -1,12 +1,12 @@
 #pragma once
-#include "../../MarketLibrary/source/WrapperLog.h"
+#include "../../MarketLibrary/source/wrapper/WrapperSync.h"
 #include "../../MarketLibrary/source/types/TwsConnectionSettings.h"
 struct EReaderSignal;
 namespace Jde::Markets::TwsWebSocket
 {
 	enum class EWebReceive : short;
 
-	struct WrapperWeb : public WrapperLog
+	struct WrapperWeb : public WrapperSync
 	{
 		static void CreateInstance( const TwsConnectionSettings& settings )noexcept;
 		static WrapperWeb& Instance()noexcept;
@@ -35,11 +35,16 @@ namespace Jde::Markets::TwsWebSocket
 		void updateAccountValue( const std::string& key, const std::string& val, const std::string& currency, const std::string& accountName )noexcept override;
 		void updatePortfolio( const ibapi::Contract& contract, double position, double marketPrice, double marketValue, double /*averageCost*/, double /*unrealizedPNL*/, double /*realizedPNL*/, const std::string& /*accountName*/)noexcept  override;
 		void updateAccountTime( const std::string& timeStamp )noexcept override;
+
+		bool AddCanceled( TickerId id )noexcept{ return _canceledItems.emplace(id); }
 	private:
+		void HandleBadTicker( TickerId ibReqId )noexcept;
 		WrapperWeb()noexcept(false);
 		static sp<WrapperWeb> _pInstance;
 
 		shared_ptr<EReaderSignal> _pReaderSignal;
 		map<TickerId,up<Proto::Results::HistoricalData>> _historicalData; mutex _historicalDataMutex;
+		const map<string,string> _accounts;
+		Collections::UnorderedSet<TickerId> _canceledItems;
 	};
 }

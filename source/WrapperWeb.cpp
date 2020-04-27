@@ -2,6 +2,7 @@
 #include <thread>
 #include <EReaderOSSignal.h>
 #include "../../Framework/source/Settings.h"
+#include "../../Framework/source/collections/UnorderedSet.h"
 #include "EWebReceive.h"
 #include "EWebSend.h"
 #include "WebSocket.h"
@@ -19,8 +20,11 @@ namespace Jde::Markets::TwsWebSocket
 	using Proto::Results::EResults;
 	sp<WrapperWeb> WrapperWeb::_pInstance{nullptr};
 	WrapperWeb::WrapperWeb()noexcept(false):
-		_pReaderSignal{ make_shared<EReaderOSSignal>() }
-	{}
+		_pReaderSignal{ make_shared<EReaderOSSignal>() },
+		_accounts{ SettingsPtr->Map<string>("accounts") }
+	{
+
+	}
 
 	void WrapperWeb::CreateInstance( const TwsConnectionSettings& settings )noexcept
 	{
@@ -81,12 +85,12 @@ namespace Jde::Markets::TwsWebSocket
 		Proto::Results::AccountList accountList;
 		var accounts = StringUtilities::Split( accountsList );
 		for( var& account : accounts )
-			accountList.add_numbers( account );
+			(*accountList.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second : account;
 
 		_socket.Push( EResults::ManagedAccounts, [&accountList]( auto& type )
 		{
-			type.set_allocated_account_list(new Proto::Results::AccountList{accountList});
-		} );
+			type.set_allocated_account_list( new Proto::Results::AccountList{accountList} );
+		});
 	}
 
 	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
@@ -131,7 +135,7 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::historicalDataEnd( reqId, startDateStr, endDateStr );
 		unique_lock l{ _historicalDataMutex };
 		auto& pData = _historicalData.emplace( reqId, make_unique<Proto::Results::HistoricalData>() ).first->second;
-		_socket.PushAllocated( reqId, pData.release() );
+		_socket.PushAllocated( reqId, pData.release(), true );
 		_historicalData.erase( reqId );
 	}
 
@@ -141,13 +145,21 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::error( id, errorCode, errorString );
 		auto p = WebSocket::InstancePtr();
 		if( p )
-			p->AddError( id, errorCode, errorString );
+		{
+			if( errorCode==162 && p->HasHistoricalRequest(id) )// _historicalCrcs.Has(id)
+				p->PushAllocated( id, new Proto::Results::HistoricalData{}, true );
+			else
+				p->AddError( id, errorCode, errorString );
+		}
 	}
 
-	void HandleBadTicker( TickerId ibReqId )
+	void WrapperWeb::HandleBadTicker( TickerId ibReqId )noexcept
 	{
-		DBG( "Could not find session for ticker req:  '{}'."sv, ibReqId );
-		TwsClient::Instance().cancelMktData( ibReqId );
+		if( _canceledItems.emplace(ibReqId) )
+		{
+			DBG( "Could not find session for ticker req:  '{}'."sv, ibReqId );
+			TwsClient::Instance().cancelMktData( ibReqId );
+		}
 	}
 	void WrapperWeb::tickPrice( TickerId ibReqId, TickType field, double price, const TickAttrib& attrib )noexcept
 	{
@@ -229,7 +241,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		WrapperLog::updatePortfolio( contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountNumber );
 		Proto::Results::PortfolioUpdate update;
-		Contract myContract{contract};
+		Contract myContract{ contract };
 		update.set_allocated_contract( myContract.ToProto(true).get() );
 		update.set_position( position );
 		update.set_marketprice( marketPrice );

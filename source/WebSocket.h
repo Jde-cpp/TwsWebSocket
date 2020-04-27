@@ -36,7 +36,7 @@ namespace TwsWebSocket
 		void PushAllocated( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
 		bool PushAllocated( TickerId id, function<void(MessageType&, ClientRequestId)> set )noexcept;
 		void PushAllocated( Proto::Results::AccountUpdateMulti* pMessage )noexcept;
-		void PushAllocated( TickerId reqId, Proto::Results::HistoricalData* pMessage )noexcept;
+		void PushAllocated( TickerId reqId, Proto::Results::HistoricalData* pMessage, bool saveCache )noexcept;
 		void PushAllocated( Proto::Results::StringResult* pMessage )noexcept;
 		void PushAllocated( SessionId sessionId, Proto::Results::MessageValue* pMessage )noexcept;
 
@@ -48,6 +48,7 @@ namespace TwsWebSocket
 		void AddError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept;
 		void AddError( SessionId sessionId, ClientRequestId clientId, const Exception& e )noexcept{ AddError( sessionId, clientId, -1, e.what() );}
 		void Shutdown()noexcept override;
+		bool HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
 	private:
 		void EraseSession( SessionId id )noexcept;
 		void AddRequestSessions( SessionId id, const vector<Proto::Results::EResults>& webSendMessages )noexcept;
@@ -56,12 +57,12 @@ namespace TwsWebSocket
 		void ReceiveAccountUpdates( SessionId sessionId, const Proto::Requests::RequestAccountUpdates& request )noexcept;
 		void ReceiveAccountUpdatesMulti( SessionId sessionId, const Proto::Requests::RequestAccountUpdatesMulti& accountUpdates )noexcept;
 		void ReceiveContractDetails( SessionId sessionId, const Proto::Requests::RequestContractDetails& request )noexcept;
+		void ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& request )noexcept;
 		void ReceiveMarketDataSmart( SessionId sessionId, const Proto::Requests::RequestMrkDataSmart& request )noexcept;
 		void ReceiveHistoricalData( SessionId sessionId, const Proto::Requests::RequestHistoricalData& options )noexcept;
-		//void ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& options )noexcept;
 		void ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept;
 		void ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept;
-		void ReceiveOrder( SessionId sessionId, ClientRequestId clientId, const Proto::Order& order, const Proto::Contract& contract )noexcept;
+		void ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& order )noexcept;
 		TickerId FindRequestId( SessionId sessionId, ClientRequestId clientId )const noexcept;
 		std::atomic<SessionId> _sessionId{0};
 		Collections::UnorderedMap<SessionId,Stream> _sessions;
@@ -78,7 +79,8 @@ namespace TwsWebSocket
 		unordered_map<ClientRequestId,unordered_set<TickerId>> _multiRequests; mutable std::mutex _multiRequestMutex;
 		Collections::UnorderedSet<Proto::Requests::ERequests> _requests;
 		unordered_map<string,unordered_set<SessionId>> _accountRequests; mutable std::shared_mutex _accountRequestMutex;
-
+		unordered_map<TickerId,unordered_set<SessionId>> _mktDataRequests; mutable std::shared_mutex _mktDataRequestsMutex;
+		UnorderedMapValue<TickerId,uint32> _historicalCrcs; mutable std::mutex _historicalCacheMutex;
 		uint16 _port;
 		shared_ptr<Threading::InterruptibleThread> _pAcceptor;
 		shared_ptr<boost::asio::ip::tcp::acceptor> _pAcceptObject;
