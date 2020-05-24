@@ -6,7 +6,7 @@
 namespace boost::asio::ip{ class tcp; }
 namespace Jde::Markets
 {
-	struct TwsClient;
+	//struct TwsClient;
 
 namespace TwsWebSocket
 {
@@ -42,6 +42,8 @@ namespace TwsWebSocket
 
 		void PushAllocatedRequest( TickerId tickerId, Proto::Results::MessageValue* pMessage )noexcept;
 		void PushAllocated( TickerId tickerId, Proto::Results::ContractDetails* pDetails )noexcept;
+		void PushAllocated( TickerId tickerId, Proto::Results::OptionParams* pDetails )noexcept;
+
 		void AddOutgoing( SessionId id, MessageTypePtr pAllocated )noexcept;
 		void AddOutgoing( SessionId id, const vector<MessageTypePtr>& outgoing )noexcept;
 		void AddError( TickerId id, int errorCode, const std::string& errorString )noexcept;
@@ -63,6 +65,8 @@ namespace TwsWebSocket
 		void ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept;
 		void ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept;
 		void ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& order )noexcept;
+		void RequestOptionParams( SessionId sessionId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
+
 		TickerId FindRequestId( SessionId sessionId, ClientRequestId clientId )const noexcept;
 		std::atomic<SessionId> _sessionId{0};
 		Collections::UnorderedMap<SessionId,Stream> _sessions;

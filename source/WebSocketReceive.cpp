@@ -3,7 +3,7 @@
 #include "WebSocket.h"
 #include "WrapperWeb.h"
 #include "../../Framework/source/Cache.h"
-#include "../../MarketLibrary/source/TwsClientSync.h"
+#include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../MarketLibrary/source/data/OptionData.h"
 #include "../../MarketLibrary/source/types/Bar.h"
 #include "../../MarketLibrary/source/types/Contract.h"
@@ -14,7 +14,8 @@
 #define var const auto
 
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
-#define _client TwsClientSync::Instance()
+#define _sync TwsClientSync::Instance()
+#define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
 	using Proto::Requests::ERequests;
@@ -78,14 +79,14 @@ namespace Jde::Markets::TwsWebSocket
 						ReceiveAccountUpdatesMulti( sessionId, message.account_updates_multi() );
 					else if( message.has_generic_requests() )
 						ReceiveRequests( sessionId, message.generic_requests() );
-					else if( message.has_mrkdatasmart() )
-						ReceiveMarketDataSmart( sessionId, message.mrkdatasmart() );
+					else if( message.has_market_data_smart() )
+						ReceiveMarketDataSmart( sessionId, message.market_data_smart() );
 					else if( message.has_contract_details() )
 						ReceiveContractDetails( sessionId, message.contract_details() );
 					else if( message.has_options() )
 						ReceiveOptions( sessionId, message.options() );
-					else if( message.has_historicaldata() )
-						ReceiveHistoricalData( sessionId, message.historicaldata() );
+					else if( message.has_historical_data() )
+						ReceiveHistoricalData( sessionId, message.historical_data() );
 					else if( message.has_flex_executions() )
 						ReceiveFlex( sessionId, message.flex_executions() );
 					else if( message.has_place_order() )
@@ -178,12 +179,39 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				var reqId = request.ids(i);
 				if( !_requestSession.emplace( reqId, make_tuple(sessionId,reqId) ) )
-					DBG( "Cancel could not subscribe to orderId {}, already subscribed."sv, reqId );
+					DBG( "Cancel orderId {} 2x."sv, reqId );
 				_client.cancelOrder( reqId );
 			}
 		}
+		else if( request.type()==ERequests::RequestOptionParams )
+			RequestOptionParams( sessionId, request.ids() );
 		else
 			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, request.type(), sessionId );
+	}
+	void WebSocket::RequestOptionParams( SessionId sessionId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept
+	{
+		std::thread( [this,sessionId, ids=underlyingIds]()
+		{
+			try
+			{
+				for( auto i=0; i<ids.size(); ++i )
+				{
+					var underlyingId = ids[i];
+					if( !underlyingId )
+						THROW( Exception("Requested underlyingId=='{}'.", underlyingId) );
+					var pDetails = _sync.ReqContractDetails(underlyingId).get();
+					if( pDetails->size()!=1 )
+						THROW( Exception("'{}' had '{}' contracts", underlyingId, pDetails->size()) );
+					var requestId = _client.RequestId();
+					_requestSession.emplace( requestId, make_tuple(sessionId,underlyingId) );
+					_client.reqSecDefOptParams( requestId, underlyingId, pDetails->front().contract.localSymbol );
+				}
+			}
+			catch( const Exception& e )
+			{
+				WebSocket::Instance().AddError( sessionId, 0, -1, e.what() );
+			}
+		}).detach();
 	}
 	void WebSocket::ReceiveHistoricalData( SessionId sessionId, const Proto::Requests::RequestHistoricalData& req )noexcept
 	{
@@ -252,28 +280,64 @@ namespace Jde::Markets::TwsWebSocket
 		std::thread( [sessionId,options]()
 		{
 			Threading::SetThreadDescription( "ReceiveOptions" );
-			var underlyingId = options.id();
+			var underlyingId = options.contract_id();
 			try
 			{
-				//see if I have.
+				//TODO see if I have, if not download it.
 				//else try getting from tws. (make sure have date.)
-				var currentTradingDay = CurrentTradingDay();
-				var pDetails = _client.ReqContractDetails(underlyingId).get();
+				var pDetails = _sync.ReqContractDetails( underlyingId ).get();
 				if( pDetails->size()!=1 )
-					THROW( Exception("'{} had {} contracts", underlyingId, pDetails->size()) );
+					THROW( Exception("'{}' had '{}' contracts", underlyingId, pDetails->size()) );
 				var contract = Contract{ pDetails->front() };
-				var previous = PreviousTradingDay( currentTradingDay );
-				var pResults = OptionData::LoadDiff( contract, options.is_call(), currentTradingDay, PreviousTradingDay(previous), previous );
-				if( pResults )
+				if( contract.SecType=="OPT" )
+					THROW( Exception("passed in option contract ({})'{}'", underlyingId, contract.LocalSymbol) );
+
+				//var isCall = options.security_type()==1 || options.security_type()==2  ? options.security_type()==1 : optional<bool>{};
+				var right = (SecurityRight)options.security_type();
+				const std::array<string_view,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
+				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !options.start_expiration() )
+					THROW( Exception("'{}' - {} has no date.", contract.Symbol, ToString(right)) );
+
+				auto pResults = new Proto::Results::OptionValues(); pResults->set_id( options.id() );
+				auto fetch = [&]( DayIndex expiration )
 				{
-					pResults->set_id( underlyingId );
+					auto pContracts = _sync.ReqContractDetails( TwsClientCache::ToContract(contract.Symbol, expiration, right) ).get();
+					if( pContracts->size()<2 )
+						THROW( Exception("'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size()) );
+					var start = options.start_srike(); var end = options.end_strike();
+					if( start!=0 || end!=0 )
+					{
+						auto pContracts2 = make_shared<vector<ibapi::ContractDetails>>();
+						for( var& details : *pContracts )
+						{
+							if( (start==0 || start<=details.contract.strike) && (end==0 || end>=details.contract.strike) )
+								pContracts2->push_back( details );
+						}
+						pContracts = pContracts2;
+					}
+
+					OptionData::LoadDiff( contract, *pContracts, *pResults );
+				};
+				if( options.start_expiration()==options.end_expiration() )
+					fetch( options.start_expiration() );
+				else
+				{
+					var optionParams = _sync.ReqSecDefOptParamsSmart( underlyingId, contract.Symbol );
+					for( var expiration : optionParams.expirations() )
+					{
+						if( expiration>=options.start_expiration() && expiration<=options.end_expiration() )
+							fetch( expiration );
+					}
+				}
+				if( pResults->option_days_size() )
+				{
 					auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_options( pResults );
 					WebSocket::Instance().AddOutgoing( sessionId, pUnion );
 				}
 				else
 					WebSocket::Instance().AddError( sessionId, underlyingId, -2, "No previous dates found" );
 			}
-			catch( const RuntimeException& e )
+			catch( const Exception& e )
 			{
 				WebSocket::Instance().AddError( sessionId, underlyingId, -1, e.what() );
 			}
@@ -293,10 +357,13 @@ namespace Jde::Markets::TwsWebSocket
 		int i=0;
 		for( var reqId : requestIds )
 		{
-			var pIb = Jde::Markets::Contract{ request.contracts(i++) }.ToTws();
-			DBG( "reqContractDetails( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, pIb->symbol );
+			const Jde::Markets::Contract contract{ request.contracts(i++) };//
+			DBG( "reqContractDetails( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, contract.Symbol );
 			_requestSession.emplace( reqId, make_tuple(sessionId,clientRequestId) );
-			_client.reqContractDetails( reqId, *pIb );
+			if( contract.SecType=="OPT" )
+				_client.ReqContractDetails( reqId, TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right) );
+			else
+				_client.ReqContractDetails( reqId, *contract.ToTws() );
 		}
 	}
 

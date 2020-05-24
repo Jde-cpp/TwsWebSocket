@@ -61,7 +61,14 @@
 		"unordered_set": "cpp",
 		"numeric": "cpp",
 		"string": "cpp",
-		"valarray": "cpp"
+		"valarray": "cpp",
+		"*.inc": "cpp",
+		"variant": "cpp",
+		"iterator": "cpp",
+		"map": "cpp",
+		"memory_resource": "cpp",
+		"random": "cpp",
+		"set": "cpp"
 	},
 	"window.title": "WebSocketTws"
 }
