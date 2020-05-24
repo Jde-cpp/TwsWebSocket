@@ -1,13 +1,13 @@
 #include "WebSocket.h"
 #include "EWebSend.h"
-#include "../../MarketLibrary/source/TwsClient.h"
+#include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../Framework/source/Cache.h"
-
-
-#define var const auto
 
 using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
+
+#define var const auto
+#define _client TwsClientSync::Instance()
 
 namespace Jde::Markets::TwsWebSocket
 {
@@ -260,10 +260,23 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			delete pMessage;
 			DBG( "request {} not found"sv, requestId );
-			TwsClient::Instance().cancelPositionsMulti( requestId );
+			_client.cancelPositionsMulti( requestId );
 		}
 	}
-
+	void WebSocket::PushAllocated( TickerId requestId, Proto::Results::OptionParams* pMessage )noexcept
+	{
+		var [sessionId, clientReqId] = _requestSession.Find( requestId, make_tuple(0,0) );
+		if( sessionId )
+		{
+			auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_option_parameters( pMessage );
+			AddOutgoing( sessionId, pUnion );
+		}
+		else
+		{
+			delete pMessage;
+			DBG( "request {} not found"sv, requestId );
+		}
+	}
 	void WebSocket::Push( Proto::Results::AccountUpdate& accountUpdate )noexcept
 	{
 		var accountNumber = accountUpdate.account();
@@ -272,7 +285,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( pAccountNumberSessions==_accountRequests.end() )
 		{
 			WARN( "No listeners for account update '{}'"sv, accountNumber );
-			TwsClient::Instance().reqAccountUpdates( false, accountNumber );
+			_client.reqAccountUpdates( false, accountNumber );
 		}
 		else
 		{
@@ -291,7 +304,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( pAccountNumberSessions==_accountRequests.end() )
 		{
 			WARN( "No listeners for account update '{}'"sv, accountNumber );
-			TwsClient::Instance().reqAccountUpdates( false, accountNumber );
+			_client.reqAccountUpdates( false, accountNumber );
 		}
 		else
 		{

@@ -6,7 +6,7 @@
 #include "EWebReceive.h"
 #include "EWebSend.h"
 #include "WebSocket.h"
-#include "../../MarketLibrary/source/TwsClient.h"
+#include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../MarketLibrary/source/types/Contract.h"
 #include "../../MarketLibrary/source/types/MyOrder.h"
 #include "../../MarketLibrary/source/types/OrderEnums.h"
@@ -17,6 +17,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 #define _socket WebSocket::Instance()
+#define _client TwsClientSync::Instance()
 	using Proto::Results::EResults;
 	sp<WrapperWeb> WrapperWeb::_pInstance{nullptr};
 	WrapperWeb::WrapperWeb()noexcept(false):
@@ -30,7 +31,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		ASSERT( !_pInstance );
 		_pInstance = sp<WrapperWeb>( new WrapperWeb() );
-		TwsClient::CreateInstance( settings, _pInstance, _pInstance->_pReaderSignal, SettingsPtr->Get<uint>("twsClientId") );
+		TwsClientSync::CreateInstance( settings, _pInstance, _pInstance->_pReaderSignal, SettingsPtr->Get<uint>("twsClientId") );
 	}
 	WrapperWeb& WrapperWeb::Instance()noexcept
 	{
@@ -41,7 +42,7 @@ namespace Jde::Markets::TwsWebSocket
 	void WrapperWeb::nextValidId( ibapi::OrderId orderId)noexcept
 	{
 		WrapperLog::nextValidId( orderId );
-		TwsClient::Instance().SetRequestId( orderId );
+		TwsClientSync::Instance().SetRequestId( orderId );
 	}
 
 	void WrapperWeb::orderStatus( ibapi::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice )noexcept
@@ -142,9 +143,8 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WrapperWeb::error( int id, int errorCode, const std::string& errorString )noexcept
 	{
-		WrapperLog::error( id, errorCode, errorString );
 		auto p = WebSocket::InstancePtr();
-		if( p )
+		if( !WrapperSync::error2(id, errorCode, errorString) && p )
 		{
 			if( errorCode==162 && p->HasHistoricalRequest(id) )// _historicalCrcs.Has(id)
 				p->PushAllocated( id, new Proto::Results::HistoricalData{}, true );
@@ -158,7 +158,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( _canceledItems.emplace(ibReqId) )
 		{
 			DBG( "Could not find session for ticker req:  '{}'."sv, ibReqId );
-			TwsClient::Instance().cancelMktData( ibReqId );
+			TwsClientSync::Instance().cancelMktData( ibReqId );
 		}
 	}
 	void WrapperWeb::tickPrice( TickerId ibReqId, TickType field, double price, const TickAttrib& attrib )noexcept
@@ -242,6 +242,7 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::updatePortfolio( contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountNumber );
 		Proto::Results::PortfolioUpdate update;
 		Contract myContract{ contract };
+//		ContractPK underlyingId{0};
 		update.set_allocated_contract( myContract.ToProto(true).get() );
 		update.set_position( position );
 		update.set_marketprice( marketPrice );
@@ -250,7 +251,41 @@ namespace Jde::Markets::TwsWebSocket
 		update.set_unrealizedpnl( unrealizedPNL );
 		update.set_realizedpnl( realizedPNL );
 		update.set_accountnumber( accountNumber );
+		if( myContract.SecType=="OPT" )
+		{
+			const string cacheId{ fmt::format("reqContractDetails.{}", myContract.Symbol) };
+			if( Cache::Has(cacheId) )
+			{
+				var details = Cache::Get<vector<ibapi::ContractDetails>>( cacheId );
+				if( details->size()==1 )
+					update.mutable_contract()->set_underlying_id( details->front().underConId );
+				else
+					WARN( "'{}' returned multiple securities"sv, myContract.Symbol );
+			}
+			// else
+			// 	_client.ReqContractDetails( myContract.Symbol ).wait_for(0s);
 
+			/*  Has issues with n portfolio updates each calling for same stock.
+			auto get = []( TwsClientSync::Future<ibapi::ContractDetails>& f, Proto::Results::PortfolioUpdate& update2 )
+			{
+				var details = f.get();
+				if( details->size()==1 )
+					update2.mutable_contract()->set_underlying_id( details->front().underConId );
+				else
+					WARN( "'{}' returned multiple securities"sv, update2.contract().symbol() );
+				_socket.Push( update2 );
+			};
+			auto future = _client.ReqContractDetails( myContract.Symbol );
+			if( future.wait_for(0s)==std::future_status::ready )
+				get( future, update );
+			else
+			{
+				std::thread( [get2=get, f=move(future), copy=move(update)]()mutable
+				{
+					get2( f, copy );
+				}).detach();
+			}*/
+		}
 		_socket.Push( update );
 	}
 	void WrapperWeb::updateAccountTime( const std::string& timeStamp )noexcept
@@ -260,12 +295,41 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WrapperWeb::contractDetails( int reqId, const ibapi::ContractDetails& contractDetails )noexcept
 	{
-		WrapperLog::contractDetails( reqId, contractDetails );//not sure what to do about this, no reqId or accountName
-		_socket.PushAllocated( reqId, ToProto(contractDetails) );
+		if( _detailsData.Contains(reqId) )
+			WrapperSync::contractDetails( reqId, contractDetails );
+		else
+		{
+			WrapperLog::contractDetails( reqId, contractDetails );
+			_socket.PushAllocated( reqId, ToProto(contractDetails) );
+		}
 	}
 	void WrapperWeb::contractDetailsEnd( int reqId )noexcept
 	{
-		WrapperLog::contractDetailsEnd( reqId );
-		_socket.ContractDetailsEnd( reqId );
+		if( _detailsData.Contains(reqId) )
+			WrapperSync::contractDetailsEnd( reqId );
+		else
+		{
+			WrapperLog::contractDetailsEnd( reqId );
+			_socket.ContractDetailsEnd( reqId );
+		}
 	}
+	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
+	{
+		var handled = WrapperSync::securityDefinitionOptionalParameterSync( reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );
+		if( !handled && exchange=="SMART" )
+			_socket.PushAllocated( reqId, new Proto::Results::OptionParams{ToOptionParam(exchange, underlyingConId, tradingClass, multiplier, expirations, strikes)} );
+	}
+/*	sp<vector<Proto::Results::OptionParams>> WrapperWeb::securityDefinitionOptionalParameterEndSync( int reqId )noexcept
+	{
+		auto pResult = WrapperSync::securityDefinitionOptionalParameterEndSync( reqId );
+		if( pResult )
+		{
+			for( var& result : *pResult )
+			{
+				if( result.exchange()=="SMART" )
+					_socket.PushAllocated( reqId, new Proto::Results::OptionParams{result} );
+			}
+		}
+		return pResult;
+	}*/
 }

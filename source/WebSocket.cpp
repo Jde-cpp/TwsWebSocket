@@ -3,11 +3,11 @@
 #include "WrapperWeb.h"
 #include "EWebReceive.h"
 #include "EWebSend.h"
-#include "../../MarketLibrary/source/TwsClient.h"
+#include "../../MarketLibrary/source/client/TwsClientSync.h"
 
 
 #define var const auto
-#define _client TwsClient::Instance()
+#define _client TwsClientSync::Instance()
 
 using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
@@ -97,7 +97,7 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				sessions.IfEmpty( [&]()
 				{
-					//WrapperWeb::Instance().TwsClient().cancelPositions();
+					//_client.cancelPositions();
 					_requests.erase( Proto::Requests::ERequests::Positions );
 				});
 			}
@@ -110,7 +110,7 @@ namespace Jde::Markets::TwsWebSocket
 			auto& sessionIds =   pAccountSessionIds->second;
 			if( sessionIds.erase(id) && sessionIds.size()==0 )
 			{
-				TwsClient::Instance().reqAccountUpdates( false, accountNumber );
+				_client.reqAccountUpdates( false, accountNumber );
 				pAccountSessionIds = _accountRequests.erase( pAccountSessionIds );
 			}
 			else
