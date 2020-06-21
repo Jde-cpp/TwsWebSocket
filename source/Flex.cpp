@@ -42,11 +42,11 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, sessionId, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
 			auto pMsg = make_shared<Proto::Results::MessageUnion>(); pMsg->set_allocated_flex( pResults );
-			_socket.AddOutgoing( sessionId, pMsg );
+			_socket.Push( sessionId, {pMsg} );
 		}
 		catch( const Exception& e )
 		{
-			_socket.AddError( sessionId, clientId, e );
+			_socket.Push( sessionId, clientId, e );
 		}
 	}
 	time_t ToTimeT( const string& date )noexcept
@@ -109,16 +109,16 @@ namespace Jde::Markets::TwsWebSocket
 					var& data = v.second;
 					auto setValues = [&data]( auto& value )
 					{
-						value.set_accountid( data.get<string>("<xmlattr>.accountId") );
+						value.set_account_id( data.get<string>("<xmlattr>.accountId") );
 						value.set_symbol( data.get<string>("<xmlattr>.symbol") );
-						value.set_conid( data.get<uint32>("<xmlattr>.conid") );
+						value.set_contract_id( data.get<uint32>("<xmlattr>.conid") );
 						var orderType = data.get_optional<string>( "<xmlattr>.orderType" );
 						if( orderType.has_value() )
-							value.set_ordertype( orderType.value() );
+							value.set_order_type( orderType.value() );
 
 						value.set_date( (uint32)ToTimeT(data.get<string>("<xmlattr>.dateTime")) );
-						value.set_ordertime( (uint32)ToTimeT(data.get<string>("<xmlattr>.orderTime")) );
-						value.set_buysell( data.get<string>("<xmlattr>.buySell") );
+						value.set_order_time( (uint32)ToTimeT(data.get<string>("<xmlattr>.orderTime")) );
+						value.set_buy_sell( data.get<string>("<xmlattr>.buySell") );
 						value.set_quantity( data.get<double>("<xmlattr>.quantity") );
 						value.set_price( data.get<double>("<xmlattr>.tradePrice") );
 						value.set_commission( data.get<double>("<xmlattr>.ibCommission") );
@@ -139,9 +139,9 @@ namespace Jde::Markets::TwsWebSocket
 							continue;
 						auto& value = trades.emplace( execId, Proto::Results::Trade{} ).first->second;
 						value.set_id( data.get<uint32>("<xmlattr>.tradeID") );
-						value.set_isapi( data.get<string>("<xmlattr>.isAPIOrder")=="Y" );
-						value.set_orderid( orderId );
-						value.set_execid( execId );
+						value.set_is_api( data.get<string>("<xmlattr>.isAPIOrder")=="Y" );
+						value.set_order_id( orderId );
+						value.set_exec_id( execId );
 						setValues( value );
 					}
 				}

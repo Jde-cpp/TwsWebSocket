@@ -98,12 +98,12 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
 		auto pUpdate = new Proto::Results::AccountUpdateMulti();
-		pUpdate->set_requestid( reqId );
+		pUpdate->set_request_id( reqId );
 		pUpdate->set_account( accountName );
 		pUpdate->set_key( key );
 		pUpdate->set_value( value );
 		pUpdate->set_currency( currency );
-		pUpdate->set_modelcode( modelCode );
+		pUpdate->set_model_code( modelCode );
 
 		_socket.PushAllocated( pUpdate );
 	}
@@ -115,31 +115,23 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::historicalData( TickerId reqId, const ibapi::Bar& bar )noexcept
 	{
-		WrapperLog::historicalData( reqId, bar );
+		if( WrapperSync::historicalDataSync(reqId, bar) )
+			return;
 		unique_lock l{ _historicalDataMutex };
 		auto& pData = _historicalData.emplace( reqId, make_unique<Proto::Results::HistoricalData>() ).first->second;
 		auto pBar = pData->add_bars();
-		l.unlock();
-		var time = bar.time.size()==8 ? DateTime{ (uint16)stoi(bar.time.substr(0,4)), (uint8)stoi(bar.time.substr(4,2)), (uint8)stoi(bar.time.substr(6,2)) } : DateTime( stoi(bar.time) );
-		pBar->set_time( (int)time.TimeT() );
-
-		pBar->set_high( bar.high );
-		pBar->set_low( bar.low );
-		pBar->set_open( bar.open );
-		pBar->set_close( bar.close );
-		pBar->set_wap( bar.wap );
-		pBar->set_volume( bar.volume );
-		pBar->set_count( bar.count );
+		WrapperCache::ToBar( bar, *pBar );
 	}
 	void WrapperWeb::historicalDataEnd( int reqId, const std::string& startDateStr, const std::string& endDateStr )noexcept
 	{
-		WrapperLog::historicalDataEnd( reqId, startDateStr, endDateStr );
+		if( WrapperSync::historicalDataEndSync(reqId, startDateStr, endDateStr) )
+			return;
+
 		unique_lock l{ _historicalDataMutex };
 		auto& pData = _historicalData.emplace( reqId, make_unique<Proto::Results::HistoricalData>() ).first->second;
 		_socket.PushAllocated( reqId, pData.release(), true );
 		_historicalData.erase( reqId );
 	}
-
 
 	void WrapperWeb::error( int id, int errorCode, const std::string& errorString )noexcept
 	{
@@ -149,7 +141,7 @@ namespace Jde::Markets::TwsWebSocket
 			if( errorCode==162 && p->HasHistoricalRequest(id) )// _historicalCrcs.Has(id)
 				p->PushAllocated( id, new Proto::Results::HistoricalData{}, true );
 			else
-				p->AddError( id, errorCode, errorString );
+				p->PushError( id, errorCode, errorString );
 		}
 	}
 
@@ -163,7 +155,8 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::tickPrice( TickerId ibReqId, TickType field, double price, const TickAttrib& attrib )noexcept
 	{
-		WrapperLog::tickPrice( ibReqId, field, price, attrib );
+		if( WrapperSync::TickPrice(ibReqId, field, price, attrib) )
+			return;
 		var [sessionId,clientId] = _socket.GetClientRequest( ibReqId );
 		if( !sessionId )
 		{
@@ -171,14 +164,15 @@ namespace Jde::Markets::TwsWebSocket
 			return;
 		}
 
-		auto pAttributes = new Proto::Results::TickAttrib(); pAttributes->set_canautoexecute( attrib.canAutoExecute ); pAttributes->set_pastlimit( attrib.pastLimit ); pAttributes->set_preopen( attrib.preOpen );
-		auto pPrice = new Proto::Results::TickPrice(); pPrice->set_requestid( clientId ); pPrice->set_ticktype( (Proto::Results::ETickType)field ); pPrice->set_price( price ); pPrice->set_allocated_attributes( pAttributes );
+		auto pAttributes = new Proto::Results::TickAttrib(); pAttributes->set_can_auto_execute( attrib.canAutoExecute ); pAttributes->set_past_limit( attrib.pastLimit ); pAttributes->set_pre_open( attrib.preOpen );
+		auto pPrice = new Proto::Results::TickPrice(); pPrice->set_request_id( clientId ); pPrice->set_tick_type( (Proto::Results::ETickType)field ); pPrice->set_price( price ); pPrice->set_allocated_attributes( pAttributes );
 		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_tick_price( pPrice );
-		_socket.AddOutgoing( sessionId, pMessage );
+		_socket.Push( sessionId, pMessage );
 	}
 	void WrapperWeb::tickSize( TickerId ibReqId, TickType field, int size )noexcept
 	{
-		WrapperLog::tickSize( ibReqId, field, size );
+		if( WrapperSync::TickSize(ibReqId, field, size) )
+			return;
 		var [sessionId,clientId] = _socket.GetClientRequest( ibReqId );
 		if( !sessionId )
 		{
@@ -186,14 +180,15 @@ namespace Jde::Markets::TwsWebSocket
 			return;
 		}
 
-		auto pMessage = new Proto::Results::TickSize(); pMessage->set_requestid( clientId ); pMessage->set_ticktype( (Proto::Results::ETickType)field ); pMessage->set_size( size );
+		auto pMessage = new Proto::Results::TickSize(); pMessage->set_request_id( clientId ); pMessage->set_tick_type( (Proto::Results::ETickType)field ); pMessage->set_size( size );
 		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_tick_size( pMessage );
-		_socket.AddOutgoing( sessionId, pUnion );
+		_socket.Push( sessionId, pUnion );
 	}
 
 	void WrapperWeb::tickGeneric( TickerId ibReqId, TickType field, double value )noexcept
 	{
-		WrapperLog::tickGeneric( ibReqId, field, value );
+		if( WrapperSync::TickGeneric(ibReqId, field, value) )
+			return;
 		var [sessionId,clientId] = _socket.GetClientRequest( ibReqId );
 		if( !sessionId )
 		{
@@ -201,13 +196,15 @@ namespace Jde::Markets::TwsWebSocket
 			return;
 		}
 
-		auto pMessage = new Proto::Results::TickGeneric(); pMessage->set_requestid( clientId ); pMessage->set_ticktype( (Proto::Results::ETickType)field ); pMessage->set_value( value );
+		auto pMessage = new Proto::Results::TickGeneric(); pMessage->set_request_id( clientId ); pMessage->set_tick_type( (Proto::Results::ETickType)field ); pMessage->set_value( value );
 		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_tick_generic( pMessage );
-		_socket.AddOutgoing( sessionId, pUnion );
+		_socket.Push( sessionId, pUnion );
 	}
 	void WrapperWeb::tickString( TickerId ibReqId, TickType field, const std::string& value )noexcept
 	{
-		WrapperLog::tickString( ibReqId, field, value );
+		if( WrapperSync::TickString(ibReqId, field, value) )
+			return;
+
 		var [sessionId,clientId] = _socket.GetClientRequest( ibReqId );
 		if( !sessionId )
 		{
@@ -215,9 +212,9 @@ namespace Jde::Markets::TwsWebSocket
 			return;
 		}
 
-		auto pMessage = new Proto::Results::TickString(); pMessage->set_requestid( clientId ); pMessage->set_ticktype( (Proto::Results::ETickType)field ); pMessage->set_value( value );
+		auto pMessage = new Proto::Results::TickString(); pMessage->set_request_id( clientId ); pMessage->set_tick_type( (Proto::Results::ETickType)field ); pMessage->set_value( value );
 		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_tick_string( pMessage );
-		_socket.AddOutgoing( sessionId, pUnion );
+		_socket.Push( sessionId, pUnion );
 	}
 
 	void WrapperWeb::tickSnapshotEnd( int ibReqId )noexcept
@@ -245,12 +242,12 @@ namespace Jde::Markets::TwsWebSocket
 //		ContractPK underlyingId{0};
 		update.set_allocated_contract( myContract.ToProto(true).get() );
 		update.set_position( position );
-		update.set_marketprice( marketPrice );
-		update.set_marketvalue( marketValue );
-		update.set_averagecost( averageCost );
-		update.set_unrealizedpnl( unrealizedPNL );
-		update.set_realizedpnl( realizedPNL );
-		update.set_accountnumber( accountNumber );
+		update.set_market_price( marketPrice );
+		update.set_market_value( marketValue );
+		update.set_average_cost( averageCost );
+		update.set_unrealized_pnl( unrealizedPNL );
+		update.set_realized_pnl( realizedPNL );
+		update.set_account_number( accountNumber );
 		if( myContract.SecType=="OPT" )
 		{
 			const string cacheId{ fmt::format("reqContractDetails.{}", myContract.Symbol) };

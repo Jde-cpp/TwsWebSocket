@@ -3,6 +3,7 @@
 #include "WebSocket.h"
 #include "WrapperWeb.h"
 #include "../../Framework/source/Cache.h"
+#include "../../MarketLibrary/source/types/IBException.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../MarketLibrary/source/data/OptionData.h"
 #include "../../MarketLibrary/source/types/Bar.h"
@@ -129,9 +130,9 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WebSocket::AddRequestSessions( SessionId id, const vector<Proto::Results::EResults>& webSendMessages )noexcept
 	{
-		function<void(Collections::UnorderedSet<SessionId>&)> afterInsert = [id](Collections::UnorderedSet<SessionId>& values){values.emplace(id);};
+		function<void(UnorderedSet<SessionId>&)> afterInsert = [id](UnorderedSet<SessionId>& values){values.emplace(id);};
 		for( var sendMessage : webSendMessages )
-			_requestSessions.Insert( afterInsert, sendMessage, shared_ptr<Collections::UnorderedSet<SessionId>>{new Collections::UnorderedSet<SessionId>{}} );
+			_requestSessions.Insert( afterInsert, sendMessage, shared_ptr<UnorderedSet<SessionId>>{new UnorderedSet<SessionId>{}} );
 	}
 
 	void WebSocket::ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept
@@ -185,6 +186,10 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		else if( request.type()==ERequests::RequestOptionParams )
 			RequestOptionParams( sessionId, request.ids() );
+		else if( request.type()==ERequests::RequsetPrevOptionValues )
+			RequestPrevDayValues( sessionId, request.request_id(), request.ids() );
+		else if( request.type()==ERequests::RequestFundamentalData )
+			RequestFundamentalData( sessionId, request.request_id(), request.ids() );
 		else
 			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, request.type(), sessionId );
 	}
@@ -209,7 +214,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( const Exception& e )
 			{
-				WebSocket::Instance().AddError( sessionId, 0, -1, e.what() );
+				WebSocket::Instance().PushError( sessionId, 0, -1, e.what() );
 			}
 		}).detach();
 	}
@@ -217,30 +222,26 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		var reqId = _client.RequestId();
 		_requestSession.emplace( reqId, make_tuple(sessionId,req.id()) );
-		Proto::Requests::RequestHistoricalData copy{ req }; copy.set_id( 0 );
-		var crc = IO::Crc::Calc32( copy.SerializeAsString() );
-		var id = fmt::format( "HistoricalData.{}", crc );
-		if( Cache::Has(id) )
-		{
-			PushAllocated( reqId, new Proto::Results::HistoricalData{*Cache::Get<Proto::Results::HistoricalData>(id)}, false );
-			return;
-		}
-		_historicalCrcs.emplace( reqId, crc );
+		Jde::Markets::Contract contract{ req.contract() };
+		_client.ReqHistoricalData( reqId, contract.Id, Chrono::DaysSinceEpoch(Clock::from_time_t(req.date())), 1, req.bar_size(), (TwsDisplay::Enum)req.display(), true, req.use_rth() );
+		//req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
 
-		var pIb = Jde::Markets::Contract{ req.contract() }.ToTws();
+		//
+		// Proto::Requests::RequestHistoricalData copy{ req }; copy.set_id( 0 );
+		// var crc = IO::Crc::Calc32( copy.SerializeAsString() );
+		// var id = fmt::format( "HistoricalData.{}", crc );
+		// if( Cache::Has(id) )
+		// {
+		// 	PushAllocated( reqId, new Proto::Results::HistoricalData{*Cache::Get<Proto::Results::HistoricalData>(id)}, false );
+		// 	return;
+		// }
+		// _historicalCrcs.emplace( reqId, crc );
 
-		const DateTime endTime{ Clock::from_time_t(req.date()) };
-		const string endTimeString{ fmt::format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
-		const string durationString{ fmt::format("{} D", req.days()) };
-		DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, pIb->symbol );
-		try
-		{
-			_client.reqHistoricalData( reqId, *pIb, endTimeString, durationString, BarSize::ToString((BarSize::Enum)req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
-		}
-		catch( const Exception& e )//bar size, etc.
-		{
-			WebSocket::Instance().AddError( sessionId, reqId, e );
-		}
+		// const DateTime endTime{ Clock::from_time_t(req.date()) };
+		// const string endTimeString{ fmt::format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
+		// const string durationString{ fmt::format("{} D", req.days()) };
+		// DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, pIb->symbol );
+		// _client.reqHistoricalData( reqId, *pIb, endTimeString, durationString, BarSize::ToString((BarSize::Enum)req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
 	}
 	void WebSocket::ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept
 	{
@@ -316,30 +317,30 @@ namespace Jde::Markets::TwsWebSocket
 						pContracts = pContracts2;
 					}
 
-					OptionData::LoadDiff( contract, *pContracts, *pResults );
+					return OptionData::LoadDiff( contract, *pContracts, *pResults );
 				};
 				if( options.start_expiration()==options.end_expiration() )
-					fetch( options.start_expiration() );
+					pResults->set_day( fetch(options.start_expiration()) );
 				else
 				{
 					var optionParams = _sync.ReqSecDefOptParamsSmart( underlyingId, contract.Symbol );
 					for( var expiration : optionParams.expirations() )
 					{
 						if( expiration>=options.start_expiration() && expiration<=options.end_expiration() )
-							fetch( expiration );
+							pResults->set_day( fetch(expiration) );
 					}
 				}
 				if( pResults->option_days_size() )
 				{
 					auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_options( pResults );
-					WebSocket::Instance().AddOutgoing( sessionId, pUnion );
+					WebSocket::Instance().Push( sessionId, pUnion );
 				}
 				else
-					WebSocket::Instance().AddError( sessionId, underlyingId, -2, "No previous dates found" );
+					WebSocket::Instance().PushError( sessionId, underlyingId, -2, "No previous dates found" );
 			}
 			catch( const Exception& e )
 			{
-				WebSocket::Instance().AddError( sessionId, underlyingId, -1, e.what() );
+				WebSocket::Instance().PushError( sessionId, underlyingId, -1, e.what() );
 			}
 		} ).detach();
 	}
@@ -424,5 +425,178 @@ namespace Jde::Markets::TwsWebSocket
 		_requestSession.emplace( reqId, make_tuple(sessionId,accountUpdates.id()) );
 		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )"sv, reqId, sessionId, account, accountUpdates.id() );
 		_client.reqAccountUpdatesMulti( reqId, account, accountUpdates.model_code(), accountUpdates.ledger_and_nlv() );
+	}
+	void WebSocket::RequestPrevDayValues( SessionId sessionId, ClientRequestId requestId, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept
+	{
+		std::thread( [this, current=PreviousTradingDay(), sessionId, contractIds, requestId]()
+		{
+			unordered_map<DayIndex,Proto::Results::DaySummary*> bars;
+			try
+			{
+				for( var contractId : contractIds )
+				{
+					sp<vector<ibapi::ContractDetails>> pDetails;
+					try
+					{
+						pDetails = _sync.ReqContractDetails( contractId ).get();
+						THROW_IF( pDetails->size()!=1, IBException("ReqContractDetails( {} ) returned {}."sv, contractId, pDetails->size()) );
+					}
+					catch( const IBException& e )
+					{
+						THROW( IBException( fmt::format("ReqContractDetails( {} ) returned {}."sv, contractId, e.what()), e.ErrorCode, e.RequestId) );
+					}
+
+					Contract contract{ pDetails->front() };
+					var securityType = ToSecurityType( contract.SecType );
+					var isOption = securityType==SecurityType::Option;
+					if( contract.Symbol=="AXE" )
+						DBG( "AXE conId='{}'"sv, contract.Id );
+					var isPreMarket = IsPreMarket( securityType );
+					var count = IsOpen( securityType ) && !isPreMarket ? 1 : 2;
+					for( auto i=0; i<count; ++i )
+					{
+						var day = isPreMarket
+							? i==0 ? current : NextTradingDay( current )
+							: i==0 ? current : PreviousTradingDay( current );
+						auto pBar1 = new Proto::Results::DaySummary{}; pBar1->set_request_id( requestId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
+						bars.emplace( day, pBar1 );
+					}
+					auto load = [isPreMarket,isOption,count,current,sessionId,this,contractId,&bars]( bool useRth, bool fillInBack )
+					{
+						auto groupByDay = []( const vector<ibapi::Bar>& ibBars )->map<DayIndex,vector<ibapi::Bar>>
+						{
+							map<DayIndex,vector<ibapi::Bar>> dayBars;
+							for( var bar : ibBars )
+							{
+								var day = Chrono::DaysSinceEpoch( Clock::from_time_t(ConvertIBDate(bar.time)) );
+								dayBars.try_emplace( day, vector<ibapi::Bar>{} ).first->second.push_back( bar );
+							}
+							return dayBars;
+						};
+						auto set = [&bars, groupByDay]( const vector<ibapi::Bar>& ibBars, function<void(Proto::Results::DaySummary& summary, double close)> fnctn )
+						{
+							var dayBars = groupByDay( ibBars );
+							for( var [day, pBar] : bars )
+							{
+								var pIbBar = dayBars.find( day );
+								if( pIbBar!=dayBars.end() )
+									fnctn( *pBar, pIbBar->second.back().close );
+							}
+						};
+						var barSize = isOption ? Proto::Requests::BarSize::Hour : Proto::Requests::BarSize::Day;
+						var endDate = fillInBack ? current : PreviousTradingDay( current );
+						var dayCount = !useRth ? 1 : useRth && !fillInBack ? std::max( 1, count-1 ) : count;
+						var pAsks = _sync.ReqHistoricalData( contractId, endDate, dayCount, barSize, TwsDisplay::Enum::Ask, true, useRth ).get();
+						set( *pAsks, []( Proto::Results::DaySummary& summary, double close ){ summary.set_ask( close ); } );
+
+						var pBids = _sync.ReqHistoricalData( contractId, endDate, dayCount, barSize, TwsDisplay::Enum::Bid, true, useRth ).get();
+						set( *pBids, []( Proto::Results::DaySummary& summary, double close ){ summary.set_bid( close ); } );
+
+						if( isPreMarket && fillInBack )
+						{
+							var today = NextTradingDay( current );
+							var pToday = _sync.ReqHistoricalData( contractId, today, 1, barSize, TwsDisplay::Enum::Trades, false, false ).get();
+							if( auto pDayBar = bars.find(today); pToday->size()==1 && pDayBar!=bars.end() )
+							{
+								var& bar = pToday->front();
+								pDayBar->second->set_high( bar.high );
+								pDayBar->second->set_low( bar.low );
+								pDayBar->second->set_open( bar.open );
+								auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_day_summary( pDayBar->second );
+								Push( sessionId, pUnion );
+								bars.erase( today );
+							}
+						}
+						var setHighLowRth = !useRth && fillInBack;//after close & before open, want range/volume to be rth.
+						if( setHighLowRth )
+						{
+							var pTrades = _sync.ReqHistoricalData( contractId, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, true ).get();
+							var dayBars = groupByDay( *pTrades );
+							for( var [day, pBar] : bars )
+							{
+								var pIbBar = dayBars.find( day );
+								if( pIbBar==dayBars.end() )
+									continue;
+								var& back = pIbBar->second.back();
+
+								pBar->set_high( back.high );
+								pBar->set_low( back.low );
+								pBar->set_volume( back.volume );
+							}
+						}
+
+						var pTrades = _sync.ReqHistoricalData( contractId, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, useRth ).get();
+						var dayBars = groupByDay( *pTrades );
+						vector<DayIndex> sentDays{}; sentDays.reserve( bars.size() );
+						for( var [day, pBar] : bars )
+						{
+							var pIbBar = dayBars.find( day );
+							if( pIbBar==dayBars.end() )
+								continue;
+							var& trades = pIbBar->second;
+							pBar->set_count( trades.size() );
+							pBar->set_open( trades.front().open );
+							var& back = trades.back();
+							pBar->set_close( back.close );
+							if( !setHighLowRth )
+							{
+								double high=0.0, low = std::numeric_limits<double>::max();
+								for( var bar : trades )
+								{
+									pBar->set_volume( pBar->volume()+bar.volume );
+									high = std::max( bar.high, high );
+									low = std::min( bar.low, low );
+								}
+								pBar->set_high( high );
+								pBar->set_low( low==std::numeric_limits<double>::max() ? 0 : low );
+							}
+							auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_day_summary( pBar );
+							sentDays.push_back( day );
+							Push( sessionId, pUnion );
+						}
+						for( var day : sentDays )
+							bars.erase( day );
+					};
+					var useRth = isOption || count==1;
+					load( useRth, true );
+					if( !useRth )
+						load( !useRth, false );
+				}
+				Push( sessionId, requestId, Proto::Results::EResults::MultiEnd );
+			}
+			catch( const IBException& e )
+			{
+				std::for_each( bars.begin(), bars.end(), [](auto& bar){delete bar.second;} );
+				Push( sessionId, requestId, e );
+			}
+		} ).detach();
+	}
+	void WebSocket::RequestFundamentalData( SessionId sessionId, ClientRequestId requestId, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept
+	{
+		std::thread( [this, current=PreviousTradingDay(), sessionId, contractIds, requestId]()
+		{
+			for( var contractId : contractIds )
+			{
+				sp<map<string,double>> pFundamentals;
+				try
+				{
+					var pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IF( pDetails->size()!=1, IBException("{} has {} contracts", contractId, pDetails->size()) );
+					//Contract contract{ pDetails->front() };
+					pFundamentals = _sync.ReqRatios( pDetails->front().contract ).get();
+				}
+				catch( const IBException& e )
+				{
+					Push( sessionId, requestId, e );
+					return;
+				}
+				auto pRatios = new Proto::Results::Ratios();
+				pRatios->set_request_id( requestId );
+				for( var& [name,value] : *pFundamentals )
+					(*pRatios->mutable_values())[name] = value;
+				auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_ratios( pRatios );
+				Push( sessionId, pUnion );
+			}
+			Push( sessionId, requestId, Proto::Results::EResults::MultiEnd );
+		} ).detach();
 	}
 }
