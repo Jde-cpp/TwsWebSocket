@@ -1,5 +1,5 @@
 #pragma once
-//#include "../framework/Application.h"
+#include "../..//MarketLibrary/source/types/IBException.h"
 //https://www.boost.org/doc/libs/1_71_0/libs/beast/example/websocket/server/sync/websocket_server_sync.cpp
 
 //------------------------------------------------------------------------------
@@ -33,7 +33,13 @@ namespace TwsWebSocket
 		void Push( Proto::Results::PortfolioUpdate& pMessage )noexcept;
 		void Push( Proto::Results::AccountUpdate& accountUpdate )noexcept;
 		void Push( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
-		void PushAllocated( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
+		void Push( SessionId sessionId, ClientRequestId clientId, const Exception& e )noexcept{ PushError( sessionId, clientId, -1, e.what() );}
+		void Push( SessionId sessionId, ClientRequestId clientId, const IBException& e )noexcept{ PushError( sessionId, clientId, e.ErrorCode, e.what() );}
+		//void Push( SessionId id, MessageTypePtr pAllocated )noexcept;
+		void Push( SessionId sessionId, ClientRequestId clientId, Proto::Results::EResults eResults )noexcept;
+		void Push( SessionId id, MessageTypePtr outgoing )noexcept;
+		void Push( SessionId id, const vector<MessageTypePtr>& outgoing )noexcept;
+		//void PushAllocated( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
 		bool PushAllocated( TickerId id, function<void(MessageType&, ClientRequestId)> set )noexcept;
 		void PushAllocated( Proto::Results::AccountUpdateMulti* pMessage )noexcept;
 		void PushAllocated( TickerId reqId, Proto::Results::HistoricalData* pMessage, bool saveCache )noexcept;
@@ -44,11 +50,9 @@ namespace TwsWebSocket
 		void PushAllocated( TickerId tickerId, Proto::Results::ContractDetails* pDetails )noexcept;
 		void PushAllocated( TickerId tickerId, Proto::Results::OptionParams* pDetails )noexcept;
 
-		void AddOutgoing( SessionId id, MessageTypePtr pAllocated )noexcept;
-		void AddOutgoing( SessionId id, const vector<MessageTypePtr>& outgoing )noexcept;
-		void AddError( TickerId id, int errorCode, const std::string& errorString )noexcept;
-		void AddError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept;
-		void AddError( SessionId sessionId, ClientRequestId clientId, const Exception& e )noexcept{ AddError( sessionId, clientId, -1, e.what() );}
+		void PushError( TickerId id, int errorCode, const std::string& errorString )noexcept;
+		void PushError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept;
+
 		void Shutdown()noexcept override;
 		bool HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
 	private:
@@ -66,7 +70,8 @@ namespace TwsWebSocket
 		void ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept;
 		void ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& order )noexcept;
 		void RequestOptionParams( SessionId sessionId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
-
+		void RequestPrevDayValues( SessionId sessionId, ClientRequestId requestId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
+		void RequestFundamentalData( SessionId sessionId, ClientRequestId requestId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
 		TickerId FindRequestId( SessionId sessionId, ClientRequestId clientId )const noexcept;
 		std::atomic<SessionId> _sessionId{0};
 		Collections::UnorderedMap<SessionId,Stream> _sessions;
@@ -78,10 +83,10 @@ namespace TwsWebSocket
 		WebSocket( uint16 port );
 
 		Collections::UnorderedMap<SessionId,Jde::Queue<MessageType>> _outgoing;
-		Collections::UnorderedMap<Proto::Results::EResults,Collections::UnorderedSet<SessionId>> _requestSessions;
+		Collections::UnorderedMap<Proto::Results::EResults,UnorderedSet<SessionId>> _requestSessions;
 		UnorderedMapValue<TickerId,tuple<SessionId,ClientRequestId>> _requestSession;
 		unordered_map<ClientRequestId,unordered_set<TickerId>> _multiRequests; mutable std::mutex _multiRequestMutex;
-		Collections::UnorderedSet<Proto::Requests::ERequests> _requests;
+		UnorderedSet<Proto::Requests::ERequests> _requests;
 		unordered_map<string,unordered_set<SessionId>> _accountRequests; mutable std::shared_mutex _accountRequestMutex;
 		unordered_map<TickerId,unordered_set<SessionId>> _mktDataRequests; mutable std::shared_mutex _mktDataRequestsMutex;
 		UnorderedMapValue<TickerId,uint32> _historicalCrcs; mutable std::mutex _historicalCacheMutex;

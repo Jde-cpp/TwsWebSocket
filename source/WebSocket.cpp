@@ -90,7 +90,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		DBG( "Removing session '{}'"sv, id );
 		_sessions.erase( id );
-		std::function<void(const Proto::Results::EResults&, Collections::UnorderedSet<SessionId>& )> func = [&]( const Proto::Results::EResults& messageId, Collections::UnorderedSet<SessionId>& sessions )
+		std::function<void(const Proto::Results::EResults&, UnorderedSet<SessionId>& )> func = [&]( const Proto::Results::EResults& messageId, UnorderedSet<SessionId>& sessions )
 		{
 			sessions.EraseIf( [&](const SessionId& id){return !_sessions.Find(id);} );//if lost others.
 			if( messageId==Proto::Results::EResults::PositionData )

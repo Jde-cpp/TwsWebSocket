@@ -47,6 +47,6 @@ namespace Jde::Markets::TwsWebSocket
 		shared_ptr<EReaderSignal> _pReaderSignal;
 		map<TickerId,up<Proto::Results::HistoricalData>> _historicalData; mutex _historicalDataMutex;
 		const map<string,string> _accounts;
-		Collections::UnorderedSet<TickerId> _canceledItems;
+		UnorderedSet<TickerId> _canceledItems;
 	};
 }

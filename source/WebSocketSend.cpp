@@ -62,13 +62,13 @@ namespace Jde::Markets::TwsWebSocket
 			EraseSession( id );
 	}
 
-	void WebSocket::AddError( TickerId id, int errorCode, const std::string& errorString )noexcept
+	void WebSocket::PushError( TickerId id, int errorCode, const std::string& errorString )noexcept
 	{
 		if( id>0 )
 		{
 			var [sessionId,clientId] = GetClientRequest( id );
 			if( sessionId )
-				AddError( sessionId, clientId, errorCode, errorString );
+				PushError( sessionId, clientId, errorCode, errorString );
 			else
 				DBG( "Could not find session for error req:  '{}'."sv, id );
 		}
@@ -76,23 +76,24 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			_requestSession.ForEach( [&](auto key, const auto& value)
 			{
-				AddError( get<0>(value), get<1>(value), errorCode, errorString );
+				PushError( get<0>(value), get<1>(value), errorCode, errorString );
 			});
 		}
 	}
-	void WebSocket::AddError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept
+	void WebSocket::PushError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept
 	{
-		auto pError = new Proto::Results::Error(); pError->set_requestid(clientId); pError->set_code(errorCode); pError->set_message(errorString);
+		auto pError = new Proto::Results::Error(); pError->set_request_id(clientId); pError->set_code(errorCode); pError->set_message(errorString);
 		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_error( pError );
-		AddOutgoing( sessionId, pMessage );
+		Push( sessionId, pMessage );
 	}
 
-	void WebSocket::AddOutgoing( SessionId id, MessageTypePtr pUnion )noexcept
+	void WebSocket::Push( SessionId id, MessageTypePtr pUnion )noexcept
 	{
 		function<void(Queue<MessageType>&)> afterInsert = [&pUnion]( Queue<MessageType>& queue ){ queue.Push( pUnion ); };
 		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
 	}
-	void WebSocket::AddOutgoing( SessionId id, const vector<MessageTypePtr>& outgoing )noexcept
+
+	void WebSocket::Push( SessionId id, const vector<MessageTypePtr>& outgoing )noexcept
 	{
 		function<void(Queue<MessageType>&)> afterInsert = [&outgoing]( Queue<MessageType>& queue )
 		{
@@ -112,20 +113,25 @@ namespace Jde::Markets::TwsWebSocket
 
 		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_int_value( clientId ); pMessage->set_type( messageId );
 		auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_message( pMessage );
-		AddOutgoing( sessionId, pUnion );
+		Push( sessionId, pUnion );
 	}
 
 	void WebSocket::Push( const Proto::Results::Position& position )noexcept
 	{
-		function<void(const Collections::UnorderedSet<SessionId>&)> addMessage = [&]( const Collections::UnorderedSet<SessionId>& sessionIds )
+		function<void(const UnorderedSet<SessionId>&)> addMessage = [&]( const UnorderedSet<SessionId>& sessionIds )
 		{
 			sessionIds.ForEach( [&](const SessionId& sessionId )
 				{
 					auto pMessageUnion = make_shared<MessageType>(); pMessageUnion->set_allocated_position( new Proto::Results::Position{position} );
-					AddOutgoing( sessionId, pMessageUnion );
+					Push( sessionId, pMessageUnion );
 				});
 		};
 		_requestSessions.Where( Proto::Results::EResults::PositionData, addMessage );
+	}
+	void WebSocket::Push( SessionId sessionId, ClientRequestId clientId, Proto::Results::EResults eResults )noexcept
+	{
+		auto pValue = new Proto::Results::MessageValue(); pValue->set_int_value( clientId ); pValue->set_type( Proto::Results::EResults::MultiEnd );
+		WebSocket::PushAllocated( sessionId, pValue );
 	}
 	void WebSocket::Push( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept
 	{
@@ -136,7 +142,7 @@ namespace Jde::Markets::TwsWebSocket
 				auto pMessageUnion = make_shared<MessageType>();
 				set( *pMessageUnion );
 				ASSERT( pMessageUnion->Value_case()!=MessageType::ValueCase::VALUE_NOT_SET );
-				AddOutgoing( sessionId, pMessageUnion );
+				Push( sessionId, pMessageUnion );
 			});
 		});
 	}
@@ -147,7 +153,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			auto pUnion = make_shared<MessageType>();
 			set( *pUnion, clientReqId );
-			AddOutgoing( sessionId, pUnion );
+			Push( sessionId, pUnion );
 		}
 		else
 			DBG( "request {} not found"sv, id );
@@ -169,9 +175,9 @@ namespace Jde::Markets::TwsWebSocket
 		var [sessionId, clientReqId] = _requestSession.Find( reqId, make_tuple(0,0) );
 		if( sessionId )
 		{
-			pDetails->set_requestid( clientReqId );
+			pDetails->set_request_id( clientReqId );
 			auto pMessageUnion = make_shared<MessageType>();  pMessageUnion->set_allocated_contract_details( pDetails );
-			AddOutgoing( sessionId, pMessageUnion );
+			Push( sessionId, pMessageUnion );
 		}
 		else
 			DBG( "Could not find session for req:  '{}'."sv, reqId );
@@ -203,7 +209,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}
 		if( pComplete )
-			AddOutgoing( sessionId, pComplete );
+			Push( sessionId, pComplete );
 		else if( !multi )
 			Push( reqId, Proto::Results::EResults::ContractDataEnd );
 	}
@@ -220,9 +226,9 @@ namespace Jde::Markets::TwsWebSocket
 		var [sessionId, clientReqId] = _requestSession.Find( reqId, make_tuple(0,0) );
 		if( sessionId )
 		{
-			pMessage->set_requestid( clientReqId );
+			pMessage->set_request_id( clientReqId );
 			auto pMessageUnion = make_shared<MessageType>();  pMessageUnion->set_allocated_historical_data( pMessage );
-			AddOutgoing( sessionId, pMessageUnion );
+			Push( sessionId, pMessageUnion );
 		}
 		else
 			DBG( "Could not find session for req:  '{}'."sv, reqId );
@@ -230,13 +236,13 @@ namespace Jde::Markets::TwsWebSocket
 	void WebSocket::PushAllocated( SessionId sessionId, Proto::Results::MessageValue* pMessage )noexcept
 	{
 		auto pMessageUnion = make_shared<MessageType>();  pMessageUnion->set_allocated_message( pMessage );
-		AddOutgoing( sessionId, pMessageUnion );
+		Push( sessionId, pMessageUnion );
 	}
 /*	void WebSocket::Push( Proto::Results::EResults webSend, sp<MessageType> pMessageUnion )noexcept
 	{
-		function<void(const Collections::UnorderedSet<SessionId>&)> addMessage = [&]( const Collections::UnorderedSet<SessionId>& sessionIds )
+		function<void(const UnorderedSet<SessionId>&)> addMessage = [&]( const UnorderedSet<SessionId>& sessionIds )
 		{
-			sessionIds.ForEach( [&](const SessionId& sessionId ){ AddOutgoing( sessionId, pMessageUnion ); });
+			sessionIds.ForEach( [&](const SessionId& sessionId ){ Push( sessionId, pMessageUnion ); });
 		};
 		_requestSessions.Where( webSend, addMessage );
 	}
@@ -248,13 +254,13 @@ namespace Jde::Markets::TwsWebSocket
 	}*/
 	void WebSocket::PushAllocated( Proto::Results::AccountUpdateMulti* pMessage )noexcept
 	{
-		var requestId = pMessage->requestid();
+		var requestId = pMessage->request_id();
 		var [sessionId, clientReqId] = _requestSession.Find( requestId, make_tuple(0,0) );
 		if( sessionId )
 		{
-			pMessage->set_requestid( clientReqId );
+			pMessage->set_request_id( clientReqId );
 			auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_account_update_multi( pMessage );
-			AddOutgoing( sessionId, pUnion );
+			Push( sessionId, pUnion );
 		}
 		else
 		{
@@ -269,7 +275,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( sessionId )
 		{
 			auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_option_parameters( pMessage );
-			AddOutgoing( sessionId, pUnion );
+			Push( sessionId, pUnion );
 		}
 		else
 		{
@@ -284,7 +290,7 @@ namespace Jde::Markets::TwsWebSocket
 		var pAccountNumberSessions = _accountRequests.find( accountNumber );
 		if( pAccountNumberSessions==_accountRequests.end() )
 		{
-			WARN( "No listeners for account update '{}'"sv, accountNumber );
+			WARN( "No current listeners for account update '{}', reqAccountUpdates"sv, accountNumber );
 			_client.reqAccountUpdates( false, accountNumber );
 		}
 		else
@@ -292,18 +298,18 @@ namespace Jde::Markets::TwsWebSocket
 			for( var sessionId : pAccountNumberSessions->second )
 			{
 				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_account_update( new Proto::Results::AccountUpdate{accountUpdate} );
-				AddOutgoing( sessionId, pUnion );
+				Push( sessionId, pUnion );
 			}
 		}
 	}
 	void WebSocket::Push( Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept
 	{
-		var accountNumber = porfolioUpdate.accountnumber();
+		var accountNumber = porfolioUpdate.account_number();
 		std::shared_lock<std::shared_mutex> l( _accountRequestMutex );
 		var pAccountNumberSessions = _accountRequests.find( accountNumber );
 		if( pAccountNumberSessions==_accountRequests.end() )
 		{
-			WARN( "No listeners for account update '{}'"sv, accountNumber );
+			WARN( "No listeners for portfolio update '{}'"sv, accountNumber );
 			_client.reqAccountUpdates( false, accountNumber );
 		}
 		else
@@ -311,7 +317,7 @@ namespace Jde::Markets::TwsWebSocket
 			for( var sessionId : pAccountNumberSessions->second )
 			{
 				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_portfolio_update( new Proto::Results::PortfolioUpdate{porfolioUpdate} );
-				AddOutgoing( sessionId, pUnion );
+				Push( sessionId, pUnion );
 			}
 		}
 	}
