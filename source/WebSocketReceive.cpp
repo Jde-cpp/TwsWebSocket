@@ -223,7 +223,8 @@ namespace Jde::Markets::TwsWebSocket
 		var reqId = _client.RequestId();
 		_requestSession.emplace( reqId, make_tuple(sessionId,req.id()) );
 		Jde::Markets::Contract contract{ req.contract() };
-		_client.ReqHistoricalData( reqId, contract.Id, Chrono::DaysSinceEpoch(Clock::from_time_t(req.date())), 1, req.bar_size(), (TwsDisplay::Enum)req.display(), true, req.use_rth() );
+		var time = Clock::from_time_t( req.date() );
+		_client.ReqHistoricalData( reqId, contract.Id, Chrono::DaysSinceEpoch(time), req.days(), req.bar_size(), (TwsDisplay::Enum)req.display(), time<Clock::now(), req.use_rth() );
 		//req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
 
 		//
@@ -297,7 +298,7 @@ namespace Jde::Markets::TwsWebSocket
 				var right = (SecurityRight)options.security_type();
 				const std::array<string_view,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
 				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !options.start_expiration() )
-					THROW( Exception("'{}' - {} has no date.", contract.Symbol, ToString(right)) );
+					THROW( Exception("ReceiveOptions request for '{}' - {} specified no date.", contract.Symbol, ToString(right)) );
 
 				auto pResults = new Proto::Results::OptionValues(); pResults->set_id( options.id() );
 				auto fetch = [&]( DayIndex expiration )
@@ -338,9 +339,13 @@ namespace Jde::Markets::TwsWebSocket
 				else
 					WebSocket::Instance().PushError( sessionId, underlyingId, -2, "No previous dates found" );
 			}
+			catch( const IBException& e )
+			{
+				WebSocket::Instance().Push( sessionId, options.id(), e );
+			}
 			catch( const Exception& e )
 			{
-				WebSocket::Instance().PushError( sessionId, underlyingId, -1, e.what() );
+				WebSocket::Instance().Push( sessionId, options.id(), e );
 			}
 		} ).detach();
 	}
@@ -505,6 +510,7 @@ namespace Jde::Markets::TwsWebSocket
 								auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_day_summary( pDayBar->second );
 								Push( sessionId, pUnion );
 								bars.erase( today );
+								return;
 							}
 						}
 						var setHighLowRth = !useRth && fillInBack;//after close & before open, want range/volume to be rth.
