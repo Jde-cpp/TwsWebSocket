@@ -24,6 +24,8 @@ namespace Jde::Markets::TwsWebSocket
 		void orderStatus( ibapi::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice)noexcept override;
 		void openOrder( ibapi::OrderId orderId, const ibapi::Contract&, const ibapi::Order&, const ibapi::OrderState&)noexcept override;
 		void openOrderEnd()noexcept override;
+		void positionMulti( int reqId, const std::string& account,const std::string& modelCode, const ibapi::Contract& contract, double pos, double avgCost)noexcept override;
+		void positionMultiEnd( int reqId)noexcept override;
 
 		void tickPrice( TickerId tickerId, TickType field, double price, const TickAttrib& attrib)noexcept override;
 		void tickSize( TickerId tickerId, TickType field, int size)noexcept override;

@@ -92,6 +92,8 @@ namespace Jde::Markets::TwsWebSocket
 						ReceiveFlex( sessionId, message.flex_executions() );
 					else if( message.has_place_order() )
 						ReceiveOrder( sessionId, message.place_order() );
+					else if( message.has_request_positions() )
+						ReceivePositions( sessionId, message.request_positions() );
 					else
 						ERR( "Unknown Message '{}'"sv, message.Value_case() );
 				}
@@ -169,6 +171,20 @@ namespace Jde::Markets::TwsWebSocket
 					_requestSession.erase( ibId );
 					std::unique_lock<std::shared_mutex> l{ _mktDataRequestsMutex };
 					_mktDataRequests.erase( ibId );
+				}
+				else
+					WARN( "({})Could not find MktData clientID='{}'"sv, sessionId, request.ids(i) );
+			}
+		}
+		else if( request.type()==ERequests::CancelPositionsMulti )
+		{
+			for( auto i=0; i<request.ids_size(); ++i )
+			{
+				auto ibId = FindRequestId( sessionId, request.ids(i) );
+				if( ibId )
+				{
+					_client.cancelPositionsMulti( ibId );
+					_requestSession.erase( ibId );
 				}
 				else
 					WARN( "({})Could not find MktData clientID='{}'"sv, sessionId, request.ids(i) );
@@ -256,13 +272,13 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WebSocket::ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& proto )noexcept
 	{
-		var reqId = _client.RequestId();
+		var reqId = proto.order().id() ? proto.order().id() : _client.RequestId();
 		_requestSession.emplace( reqId, make_tuple(sessionId,proto.id()) );
 		var pIbContract = Jde::Markets::Contract{ proto.contract() }.ToTws();
 		Jde::Markets::MyOrder order{ reqId, proto.order() };
 		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, sessionId, pIbContract->symbol, order.lmtPrice, order.totalQuantity );
 		_client.placeOrder( *pIbContract, order );
-		if( proto.stop()>0 )
+/*		if( !order.whatIf && proto.stop()>0 )
 		{
 			var parentId = _client.RequestId();
 			_requestSession.emplace( parentId, make_tuple(sessionId, proto.id()) );
@@ -274,7 +290,14 @@ namespace Jde::Markets::TwsWebSocket
 			parent.lmtPrice = proto.stop_limit();
 			parent.parentId = reqId;
 			_client.placeOrder( *pIbContract, parent );
-		}
+		}*/
+	}
+
+	void WebSocket::ReceivePositions( SessionId sessionId, const Proto::Requests::RequestPositions& request )noexcept
+	{
+		var reqId = _client.RequestId();
+		_requestSession.emplace( reqId, make_tuple(sessionId, request.id()) );
+		_client.reqPositionsMulti( reqId, request.account_number(), request.model_code() );
 	}
 
 	void WebSocket::ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& options )noexcept
@@ -595,11 +618,11 @@ namespace Jde::Markets::TwsWebSocket
 					Push( sessionId, requestId, e );
 					return;
 				}
-				auto pRatios = new Proto::Results::Ratios();
+				auto pRatios = new Proto::Results::Fundamentals();
 				pRatios->set_request_id( requestId );
 				for( var& [name,value] : *pFundamentals )
 					(*pRatios->mutable_values())[name] = value;
-				auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_ratios( pRatios );
+				auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_fundamentals( pRatios );
 				Push( sessionId, pUnion );
 			}
 			Push( sessionId, requestId, Proto::Results::EResults::MultiEnd );
