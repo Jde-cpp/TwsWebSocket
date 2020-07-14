@@ -73,13 +73,35 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_allocated_state( MyOrder::ToAllocatedProto(state) );
 		_socket.Push( EResults::OpenOrder_, [p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
 		if( !_socket.PushAllocated(orderId, [p](MessageType& msg, ClientRequestId id){p->set_web_id(id); msg.set_allocated_open_order( p );}) )
+		{
+			TRACE( "({}) openOrder request not found"sv, orderId );
 			delete p;
+		}
 	}
 	void WrapperWeb::openOrderEnd()noexcept
 	{
 		WrapperLog::openOrderEnd();
 		_socket.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
 	}
+	void WrapperWeb::positionMulti( int reqId, const std::string& account, const std::string& modelCode, const ibapi::Contract& contract, double pos, double avgCost )noexcept
+	{
+		WrapperLog::positionMulti( reqId, account, modelCode, contract, pos, avgCost );
+		auto pUpdate = new Proto::Results::PositionMulti();
+		//pUpdate->set_request_id( reqId );
+		pUpdate->set_account( account );
+		pUpdate->set_allocated_contract( Contract{contract}.ToProto(true).get() );
+		pUpdate->set_position( pos );
+		pUpdate->set_avgerage_cost( avgCost );
+		pUpdate->set_model_code( modelCode );
+
+		_socket.PushAllocated( reqId, [p=pUpdate](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_position_multi( p );} );
+	}
+	void WrapperWeb::positionMultiEnd( int reqId )noexcept
+	{
+		WrapperLog::positionMultiEnd( reqId );
+		_socket.Push( reqId, EResults::PositionMultiEnd );
+	}
+
 	void WrapperWeb::managedAccounts( const std::string& accountsList )noexcept
 	{
 		WrapperLog::managedAccounts( accountsList );

@@ -155,8 +155,6 @@ namespace Jde::Markets::TwsWebSocket
 			set( *pUnion, clientReqId );
 			Push( sessionId, pUnion );
 		}
-		else
-			DBG( "request {} not found"sv, id );
 		return sessionId;
 	}
 	void WebSocket::PushAllocatedRequest( TickerId reqId, Proto::Results::MessageValue* pMessage )noexcept
@@ -265,7 +263,7 @@ namespace Jde::Markets::TwsWebSocket
 		else
 		{
 			delete pMessage;
-			DBG( "request {} not found"sv, requestId );
+			DBG( "({})AccountUpdateMulti not found"sv, requestId );
 			_client.cancelPositionsMulti( requestId );
 		}
 	}
@@ -280,7 +278,7 @@ namespace Jde::Markets::TwsWebSocket
 		else
 		{
 			delete pMessage;
-			DBG( "request {} not found"sv, requestId );
+			DBG( "({})OptionParams not found"sv, requestId );
 		}
 	}
 	void WebSocket::Push( Proto::Results::AccountUpdate& accountUpdate )noexcept

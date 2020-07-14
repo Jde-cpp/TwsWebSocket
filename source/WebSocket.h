@@ -69,6 +69,7 @@ namespace TwsWebSocket
 		void ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept;
 		void ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept;
 		void ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& order )noexcept;
+		void ReceivePositions( SessionId sessionId, const Proto::Requests::RequestPositions& request )noexcept;
 		void RequestOptionParams( SessionId sessionId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
 		void RequestPrevDayValues( SessionId sessionId, ClientRequestId requestId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
 		void RequestFundamentalData( SessionId sessionId, ClientRequestId requestId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
