@@ -1,5 +1,6 @@
 #include "Flex.h"
 #include "WebSocket.h"
+#include "../../MarketLibrary/source/types/Contract.h"
 #include "../../Framework/source/Cache.h"
 
 #define var const auto
@@ -37,7 +38,7 @@ namespace Jde::Markets::TwsWebSocket
 				for( int i=0; i< flex.trades_size(); ++i )
 				{
 					*pResults->add_trades() = flex.trades( i );
-					os << flex.trades( i ).quantity() << "," << flex.trades( i ).commission() << std::endl;
+					os << flex.trades( i ).shares() << "," << flex.trades( i ).commission() << std::endl;
 				}
 			}
 			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, sessionId, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
@@ -76,7 +77,8 @@ namespace Jde::Markets::TwsWebSocket
 #ifdef _MSC_VER
 				crcStream << entry.path().string() << ";"; //TODO:  << entry.last_write_time();
 #else
-				crcStream << entry.path().string() << ";" << Clock::to_time_t( entry.last_write_time() );
+			//crcStream << entry.path().string() << ";" << Clock::to_time_t( entry.last_write_time() );
+			crcStream << entry.path().string() << ";" << fs::_FilesystemClock::to_time_t( entry.last_write_time() );
 #endif
 		}
 		var crc = IO::Crc::Calc32( crcStream.str() );
@@ -109,17 +111,17 @@ namespace Jde::Markets::TwsWebSocket
 					var& data = v.second;
 					auto setValues = [&data]( auto& value )
 					{
-						value.set_account_id( data.get<string>("<xmlattr>.accountId") );
-						value.set_symbol( data.get<string>("<xmlattr>.symbol") );
-						value.set_contract_id( data.get<uint32>("<xmlattr>.conid") );
+						value.set_account_number( data.get<string>("<xmlattr>.accountId") );
+						Contract contract{ data.get<ContractPK>("<xmlattr>.conid"), data.get<string>("<xmlattr>.symbol") };
+						value.set_allocated_contract( contract.ToProto(true).get() );
 						var orderType = data.get_optional<string>( "<xmlattr>.orderType" );
 						if( orderType.has_value() )
 							value.set_order_type( orderType.value() );
 
-						value.set_date( (uint32)ToTimeT(data.get<string>("<xmlattr>.dateTime")) );
+						value.set_time( (uint32)ToTimeT(data.get<string>("<xmlattr>.dateTime")) );
 						value.set_order_time( (uint32)ToTimeT(data.get<string>("<xmlattr>.orderTime")) );
-						value.set_buy_sell( data.get<string>("<xmlattr>.buySell") );
-						value.set_quantity( data.get<double>("<xmlattr>.quantity") );
+						value.set_side( data.get<string>("<xmlattr>.buySell") );
+						value.set_shares( data.get<double>("<xmlattr>.quantity") );
 						value.set_price( data.get<double>("<xmlattr>.tradePrice") );
 						value.set_commission( data.get<double>("<xmlattr>.ibCommission") );
 					};
@@ -129,7 +131,7 @@ namespace Jde::Markets::TwsWebSocket
 						if( orders.find(orderId)!=orders.end() )
 							continue;
 						auto& value = orders.emplace( orderId, Proto::Results::FlexOrder{} ).first->second;
-						value.set_id( orderId );
+						value.set_order_id( orderId );
 						setValues( value );
 					}
 					else
@@ -152,17 +154,17 @@ namespace Jde::Markets::TwsWebSocket
 			THROW( Exception("Could not parse flex files - '{}'", boost::diagnostic_information(&e)) );
 		}
 		auto pValues = make_shared<CacheType>();
-		for( var idConfirm : trades )
+		for( var& idConfirm : trades )
 		{
 			var& confirm = idConfirm.second;
-			var day = Chrono::DaysSinceEpoch( Clock::from_time_t(confirm.date()) );
+			var day = Chrono::DaysSinceEpoch( Clock::from_time_t(confirm.time()) );
 			auto& flex = pValues->try_emplace( day, Proto::Results::Flex{} ).first->second;
 			*flex.add_trades() = confirm;
 		}
-		for( var idOrder : orders )
+		for( var& idOrder : orders )
 		{
 			var& order = idOrder.second;
-			var day = Chrono::DaysSinceEpoch( Clock::from_time_t(order.date()) );
+			var day = Chrono::DaysSinceEpoch( Clock::from_time_t(order.time()) );
 			auto& flex = pValues->try_emplace( day, Proto::Results::Flex{} ).first->second;
 			*flex.add_orders() = order;
 		}

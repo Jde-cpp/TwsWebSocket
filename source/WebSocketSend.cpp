@@ -97,7 +97,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		function<void(Queue<MessageType>&)> afterInsert = [&outgoing]( Queue<MessageType>& queue )
 		{
-			for( var p : outgoing )
+			for( var& p : outgoing )
 				queue.Push( p );
 		};
 		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
@@ -298,6 +298,15 @@ namespace Jde::Markets::TwsWebSocket
 				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_account_update( new Proto::Results::AccountUpdate{accountUpdate} );
 				Push( sessionId, pUnion );
 			}
+		}
+	}
+	void WebSocket::Push( Proto::Results::CommissionReport& report )noexcept
+	{
+		std::shared_lock<std::shared_mutex> l( _executionRequestMutex );
+		for( var sessionId : _executionRequests )
+		{
+			auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_commission_report( new Proto::Results::CommissionReport{report} );
+			Push( sessionId, pUnion );
 		}
 	}
 	void WebSocket::Push( Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept

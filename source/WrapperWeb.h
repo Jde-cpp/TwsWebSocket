@@ -16,6 +16,10 @@ namespace Jde::Markets::TwsWebSocket
 		void accountUpdateMultiEnd( int reqId )noexcept override;
 		void contractDetails( int reqId, const ibapi::ContractDetails& contractDetails)noexcept override;
 		void contractDetailsEnd( int reqId)noexcept override;
+		void commissionReport( const CommissionReport& commissionReport)noexcept override;
+		void execDetails( int reqId, const ibapi::Contract& contract, const Execution& execution)noexcept override;
+		void execDetailsEnd( int reqId)noexcept override;
+
 		void historicalData( TickerId reqId, const ibapi::Bar& bar )noexcept override;
 		void historicalDataEnd( int reqId, const std::string& startDateStr, const std::string& endDateStr )noexcept override;
 		void error(int id, int errorCode, const std::string& errorString)noexcept override;
@@ -46,7 +50,6 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperWeb()noexcept(false);
 		static sp<WrapperWeb> _pInstance;
 
-		shared_ptr<EReaderSignal> _pReaderSignal;
 		map<TickerId,up<Proto::Results::HistoricalData>> _historicalData; mutex _historicalDataMutex;
 		const map<string,string> _accounts;
 		UnorderedSet<TickerId> _canceledItems;

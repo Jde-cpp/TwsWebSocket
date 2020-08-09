@@ -11,6 +11,7 @@
 #include "../../MarketLibrary/source/types/Exchanges.h"
 #include "../../MarketLibrary/source/types/MyOrder.h"
 #include "../../MarketLibrary/source/types/proto/requests.pb.h"
+#include <Execution.h>
 #include "Flex.h"
 #define var const auto
 
@@ -94,6 +95,8 @@ namespace Jde::Markets::TwsWebSocket
 						ReceiveOrder( sessionId, message.place_order() );
 					else if( message.has_request_positions() )
 						ReceivePositions( sessionId, message.request_positions() );
+					else if( message.has_request_executions() )
+						ReceiveExecutions( sessionId, message.request_executions() );
 					else
 						ERR( "Unknown Message '{}'"sv, message.Value_case() );
 				}
@@ -240,7 +243,7 @@ namespace Jde::Markets::TwsWebSocket
 		_requestSession.emplace( reqId, make_tuple(sessionId,req.id()) );
 		Jde::Markets::Contract contract{ req.contract() };
 		var time = Clock::from_time_t( req.date() );
-		_client.ReqHistoricalData( reqId, contract.Id, Chrono::DaysSinceEpoch(time), req.days(), req.bar_size(), (TwsDisplay::Enum)req.display(), time<Clock::now(), req.use_rth() );
+		_client.ReqHistoricalData( reqId, contract, Chrono::DaysSinceEpoch(time), req.days(), req.bar_size(), req.display(), req.use_rth() );
 		//req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
 
 		//
@@ -300,6 +303,21 @@ namespace Jde::Markets::TwsWebSocket
 		_client.reqPositionsMulti( reqId, request.account_number(), request.model_code() );
 	}
 
+	void WebSocket::ReceiveExecutions( SessionId sessionId, const Proto::Requests::RequestExecutions& request )noexcept
+	{
+		var reqId = _client.RequestId();
+		{
+			std::shared_lock<std::shared_mutex> l( _executionRequestMutex );
+			_executionRequests.emplace( sessionId );
+		}
+
+		_requestSession.emplace( reqId, make_tuple(sessionId, request.id()) );
+		DateTime time{ request.time() };
+		var timeString = fmt::format( "{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", time.Year(), time.Month(), time.Day(), time.Hour(), time.Minute(), time.Second() );
+		ExecutionFilter filter; filter.m_clientId=request.client_id(); filter.m_acctCode=request.account_number(); filter.m_time=timeString; filter.m_symbol=request.symbol(); filter.m_secType=request.security_type(); filter.m_exchange=request.exchange(); filter.m_side=request.side();
+		_client.reqExecutions( reqId, filter );
+	}
+
 	void WebSocket::ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& options )noexcept
 	{
 		std::thread( [sessionId,options]()
@@ -314,7 +332,7 @@ namespace Jde::Markets::TwsWebSocket
 				if( pDetails->size()!=1 )
 					THROW( Exception("'{}' had '{}' contracts", underlyingId, pDetails->size()) );
 				var contract = Contract{ pDetails->front() };
-				if( contract.SecType=="OPT" )
+				if( contract.SecType==SecurityType::Option )
 					THROW( Exception("passed in option contract ({})'{}'", underlyingId, contract.LocalSymbol) );
 
 				//var isCall = options.security_type()==1 || options.security_type()==2  ? options.security_type()==1 : optional<bool>{};
@@ -389,7 +407,7 @@ namespace Jde::Markets::TwsWebSocket
 			const Jde::Markets::Contract contract{ request.contracts(i++) };//
 			DBG( "reqContractDetails( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, contract.Symbol );
 			_requestSession.emplace( reqId, make_tuple(sessionId,clientRequestId) );
-			if( contract.SecType=="OPT" )
+			if( contract.SecType==SecurityType::Option )
 				_client.ReqContractDetails( reqId, TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right) );
 			else
 				_client.ReqContractDetails( reqId, *contract.ToTws() );
@@ -475,12 +493,11 @@ namespace Jde::Markets::TwsWebSocket
 					}
 
 					Contract contract{ pDetails->front() };
-					var securityType = ToSecurityType( contract.SecType );
-					var isOption = securityType==SecurityType::Option;
+					var isOption = contract.SecType==SecurityType::Option;
 					if( contract.Symbol=="AXE" )
 						DBG( "AXE conId='{}'"sv, contract.Id );
-					var isPreMarket = IsPreMarket( securityType );
-					var count = IsOpen( securityType ) && !isPreMarket ? 1 : 2;
+					var isPreMarket = IsPreMarket( contract.SecType );
+					var count = IsOpen( contract.SecType ) && !isPreMarket ? 1 : 2;
 					for( auto i=0; i<count; ++i )
 					{
 						var day = isPreMarket
@@ -489,12 +506,12 @@ namespace Jde::Markets::TwsWebSocket
 						auto pBar1 = new Proto::Results::DaySummary{}; pBar1->set_request_id( requestId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
 						bars.emplace( day, pBar1 );
 					}
-					auto load = [isPreMarket,isOption,count,current,sessionId,this,contractId,&bars]( bool useRth, bool fillInBack )
+					auto load = [isPreMarket,isOption,count,current,sessionId,this,contract,&bars]( bool useRth, bool fillInBack )
 					{
 						auto groupByDay = []( const vector<ibapi::Bar>& ibBars )->map<DayIndex,vector<ibapi::Bar>>
 						{
 							map<DayIndex,vector<ibapi::Bar>> dayBars;
-							for( var bar : ibBars )
+							for( var& bar : ibBars )
 							{
 								var day = Chrono::DaysSinceEpoch( Clock::from_time_t(ConvertIBDate(bar.time)) );
 								dayBars.try_emplace( day, vector<ibapi::Bar>{} ).first->second.push_back( bar );
@@ -514,16 +531,16 @@ namespace Jde::Markets::TwsWebSocket
 						var barSize = isOption ? Proto::Requests::BarSize::Hour : Proto::Requests::BarSize::Day;
 						var endDate = fillInBack ? current : PreviousTradingDay( current );
 						var dayCount = !useRth ? 1 : useRth && !fillInBack ? std::max( 1, count-1 ) : count;
-						var pAsks = _sync.ReqHistoricalData( contractId, endDate, dayCount, barSize, TwsDisplay::Enum::Ask, true, useRth ).get();
+						var pAsks = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Ask, useRth, true ).get();
 						set( *pAsks, []( Proto::Results::DaySummary& summary, double close ){ summary.set_ask( close ); } );
 
-						var pBids = _sync.ReqHistoricalData( contractId, endDate, dayCount, barSize, TwsDisplay::Enum::Bid, true, useRth ).get();
+						var pBids = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Bid, useRth, true ).get();
 						set( *pBids, []( Proto::Results::DaySummary& summary, double close ){ summary.set_bid( close ); } );
 
 						if( isPreMarket && fillInBack )
 						{
 							var today = NextTradingDay( current );
-							var pToday = _sync.ReqHistoricalData( contractId, today, 1, barSize, TwsDisplay::Enum::Trades, false, false ).get();
+							var pToday = _sync.ReqHistoricalDataSync( contract, today, 1, barSize, TwsDisplay::Enum::Trades, false, true ).get();
 							if( auto pDayBar = bars.find(today); pToday->size()==1 && pDayBar!=bars.end() )
 							{
 								var& bar = pToday->front();
@@ -539,7 +556,7 @@ namespace Jde::Markets::TwsWebSocket
 						var setHighLowRth = !useRth && fillInBack;//after close & before open, want range/volume to be rth.
 						if( setHighLowRth )
 						{
-							var pTrades = _sync.ReqHistoricalData( contractId, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, true ).get();
+							var pTrades = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, true ).get();
 							var dayBars = groupByDay( *pTrades );
 							for( var [day, pBar] : bars )
 							{
@@ -554,7 +571,7 @@ namespace Jde::Markets::TwsWebSocket
 							}
 						}
 
-						var pTrades = _sync.ReqHistoricalData( contractId, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, useRth ).get();
+						var pTrades = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, useRth ).get();
 						var dayBars = groupByDay( *pTrades );
 						vector<DayIndex> sentDays{}; sentDays.reserve( bars.size() );
 						for( var [day, pBar] : bars )
@@ -570,7 +587,7 @@ namespace Jde::Markets::TwsWebSocket
 							if( !setHighLowRth )
 							{
 								double high=0.0, low = std::numeric_limits<double>::max();
-								for( var bar : trades )
+								for( var& bar : trades )
 								{
 									pBar->set_volume( pBar->volume()+bar.volume );
 									high = std::max( bar.high, high );
