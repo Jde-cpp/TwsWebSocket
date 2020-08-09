@@ -16,7 +16,8 @@ target_link_libraries(Jde.TwsWebSocket Jde.XZ)
 target_link_libraries(Jde.TwsWebSocket lzma)
 target_link_libraries(Jde.TwsWebSocket Ib)
 target_link_libraries(Jde.TwsWebSocket protobuf)
-target_link_libraries(Jde.TwsWebSocket stdc++fs)
+target_link_libraries(Jde.TwsWebSocket stdc++)
+#target_link_libraries(Jde.TwsWebSocket stdc++fs)
 target_link_libraries(Jde.TwsWebSocket dl)
 #######################################################
 target_precompile_headers(Jde.TwsWebSocket

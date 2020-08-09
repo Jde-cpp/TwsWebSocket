@@ -1,6 +1,9 @@
 #include "WrapperWeb.h"
 #include <thread>
-#include <EReaderOSSignal.h>
+#include <TickAttrib.h>
+#include <CommissionReport.h>
+#include <Execution.h>
+
 #include "../../Framework/source/Settings.h"
 #include "../../Framework/source/collections/UnorderedSet.h"
 #include "EWebReceive.h"
@@ -10,8 +13,6 @@
 #include "../../MarketLibrary/source/types/Contract.h"
 #include "../../MarketLibrary/source/types/MyOrder.h"
 #include "../../MarketLibrary/source/types/OrderEnums.h"
-#include <TickAttrib.h>
-
 #define var const auto
 
 namespace Jde::Markets::TwsWebSocket
@@ -21,7 +22,6 @@ namespace Jde::Markets::TwsWebSocket
 	using Proto::Results::EResults;
 	sp<WrapperWeb> WrapperWeb::_pInstance{nullptr};
 	WrapperWeb::WrapperWeb()noexcept(false):
-		_pReaderSignal{ make_shared<EReaderOSSignal>() },
 		_accounts{ SettingsPtr->Map<string>("accounts") }
 	{
 
@@ -31,7 +31,8 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		ASSERT( !_pInstance );
 		_pInstance = sp<WrapperWeb>( new WrapperWeb() );
-		TwsClientSync::CreateInstance( settings, _pInstance, _pInstance->_pReaderSignal, SettingsPtr->Get<uint>("twsClientId") );
+		_pInstance->CreateClient( SettingsPtr->Get<uint>("twsClientId") );
+		//TwsClientSync::CreateInstance( settings, _pInstance, _pInstance->_pReaderSignal, SettingsPtr->Get<uint>("twsClientId") );
 	}
 	WrapperWeb& WrapperWeb::Instance()noexcept
 	{
@@ -270,7 +271,7 @@ namespace Jde::Markets::TwsWebSocket
 		update.set_unrealized_pnl( unrealizedPNL );
 		update.set_realized_pnl( realizedPNL );
 		update.set_account_number( accountNumber );
-		if( myContract.SecType=="OPT" )
+		if( myContract.SecType==SecurityType::Option )
 		{
 			const string cacheId{ fmt::format("reqContractDetails.{}", myContract.Symbol) };
 			if( Cache::Has(cacheId) )
@@ -332,6 +333,48 @@ namespace Jde::Markets::TwsWebSocket
 			_socket.ContractDetailsEnd( reqId );
 		}
 	}
+
+	void WrapperWeb::commissionReport( const CommissionReport& ib )noexcept
+	{
+		Proto::Results::CommissionReport a; a.set_exec_id( ib.execId ); a.set_commission( ib.commission ); a.set_currency( ib.currency ); a.set_realized_pnl( ib.realizedPNL ); a.set_yield( ib.yield ); a.set_yield_redemption_date( ib.yieldRedemptionDate );
+		_socket.Push( a );
+		//_socket.PushAllocated( orderId, [a](MessageType& msg, ClientRequestId id){ auto p = new Results::CommissionReport(a); p->set_id( id ); msg.set_allocated_commission_report( p );} );
+	}
+	void WrapperWeb::execDetails( int reqId, const ibapi::Contract& contract, const Execution& ib )noexcept
+	{
+		auto p = new Proto::Results::Execution();
+		p->set_exec_id( ib.execId );
+		var time = ib.time;
+		ASSERT( time.size()==18 );
+		if( time.size()==18 )//"20200717  10:23:05"
+			p->set_time( DateTime( (uint16)stoi(time.substr(0,4)), (uint8)stoi(time.substr(4,2)), (uint8)stoi(time.substr(6,2)), (uint8)stoi(time.substr(10,2)), (uint8)stoi(time.substr(13,2)), (uint8)stoi(time.substr(16,2)) ).TimeT() );
+		p->set_account_number( ib.acctNumber );
+		p->set_exchange( ib.exchange );
+		p->set_side( ib.side );
+		p->set_shares( ib.shares );
+		p->set_price( ib.price );
+		p->set_perm_id( ib.permId );
+		p->set_client_id( ib.clientId );
+		p->set_order_id( ib.orderId );
+		p->set_liquidation( ib.liquidation );
+		p->set_cumulative_quantity( ib.cumQty );
+		p->set_avg_price( ib.avgPrice );
+		p->set_order_ref( ib.orderRef );
+		p->set_ev_rule( ib.evRule );
+		p->set_ev_multiplier( ib.evMultiplier );
+		p->set_model_code( ib.modelCode );
+		p->set_last_liquidity( ib.lastLiquidity );
+		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
+		_socket.PushAllocated( reqId, [p](MessageType& msg, ClientRequestId id){ p->set_id( id ); msg.set_allocated_execution( p );} );
+
+	}
+	void WrapperWeb::execDetailsEnd( int reqId )noexcept
+	{
+		WrapperLog::execDetailsEnd( reqId );
+		_socket.Push( reqId, EResults::ExecutionDataEnd );
+	}
+
+
 	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
 	{
 		var handled = WrapperSync::securityDefinitionOptionalParameterSync( reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );

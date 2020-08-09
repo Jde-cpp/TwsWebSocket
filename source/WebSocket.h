@@ -32,6 +32,7 @@ namespace TwsWebSocket
 		void Push( const Proto::Results::Position& pPosition )noexcept;
 		void Push( Proto::Results::PortfolioUpdate& pMessage )noexcept;
 		void Push( Proto::Results::AccountUpdate& accountUpdate )noexcept;
+		void Push( Proto::Results::CommissionReport& report )noexcept;
 		void Push( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
 		void Push( SessionId sessionId, ClientRequestId clientId, const Exception& e )noexcept{ PushError( sessionId, clientId, -1, e.what() );}
 		void Push( SessionId sessionId, ClientRequestId clientId, const IBException& e )noexcept{ PushError( sessionId, clientId, e.ErrorCode, e.what() );}
@@ -63,11 +64,12 @@ namespace TwsWebSocket
 		void ReceiveAccountUpdates( SessionId sessionId, const Proto::Requests::RequestAccountUpdates& request )noexcept;
 		void ReceiveAccountUpdatesMulti( SessionId sessionId, const Proto::Requests::RequestAccountUpdatesMulti& accountUpdates )noexcept;
 		void ReceiveContractDetails( SessionId sessionId, const Proto::Requests::RequestContractDetails& request )noexcept;
-		void ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& request )noexcept;
+		void ReceiveExecutions( SessionId sessionId, const Proto::Requests::RequestExecutions& request )noexcept;
 		void ReceiveMarketDataSmart( SessionId sessionId, const Proto::Requests::RequestMrkDataSmart& request )noexcept;
 		void ReceiveHistoricalData( SessionId sessionId, const Proto::Requests::RequestHistoricalData& options )noexcept;
 		void ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept;
 		void ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept;
+		void ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& request )noexcept;
 		void ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& order )noexcept;
 		void ReceivePositions( SessionId sessionId, const Proto::Requests::RequestPositions& request )noexcept;
 		void RequestOptionParams( SessionId sessionId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
@@ -89,6 +91,7 @@ namespace TwsWebSocket
 		unordered_map<ClientRequestId,unordered_set<TickerId>> _multiRequests; mutable std::mutex _multiRequestMutex;
 		UnorderedSet<Proto::Requests::ERequests> _requests;
 		unordered_map<string,unordered_set<SessionId>> _accountRequests; mutable std::shared_mutex _accountRequestMutex;
+		unordered_set<SessionId> _executionRequests; mutable std::shared_mutex _executionRequestMutex;
 		unordered_map<TickerId,unordered_set<SessionId>> _mktDataRequests; mutable std::shared_mutex _mktDataRequestsMutex;
 		UnorderedMapValue<TickerId,uint32> _historicalCrcs; mutable std::mutex _historicalCacheMutex;
 		uint16 _port;
