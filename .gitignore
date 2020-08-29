@@ -36,3 +36,8 @@ source/.vscode/c_cpp_properties.json
 /source/.vs
 *.user
 source/TwsWebSocket.json
+tests/*
+source/.vscode/settings.json
+source/.vscode/launch.json
+source/.vscode/settings.json
+

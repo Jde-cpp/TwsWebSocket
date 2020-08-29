@@ -130,7 +130,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WebSocket::Push( SessionId sessionId, ClientRequestId clientId, Proto::Results::EResults eResults )noexcept
 	{
-		auto pValue = new Proto::Results::MessageValue(); pValue->set_int_value( clientId ); pValue->set_type( Proto::Results::EResults::MultiEnd );
+		auto pValue = new Proto::Results::MessageValue(); pValue->set_int_value( clientId ); pValue->set_type( eResults );
 		WebSocket::PushAllocated( sessionId, pValue );
 	}
 	void WebSocket::Push( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept
@@ -219,7 +219,7 @@ namespace Jde::Markets::TwsWebSocket
 			var crc = _historicalCrcs.Find( reqId, 0 );
 			_historicalCrcs.erase( reqId );
 			if( crc>0 )
-				Cache::Set<Proto::Results::HistoricalData>( fmt::format("HistoricalData.{}",crc), make_shared<Proto::Results::HistoricalData>(*pMessage) );
+				Cache::Set<Proto::Results::HistoricalData>( format("HistoricalData.{}",crc), make_shared<Proto::Results::HistoricalData>(*pMessage) );
 		}
 		var [sessionId, clientReqId] = _requestSession.Find( reqId, make_tuple(0,0) );
 		if( sessionId )

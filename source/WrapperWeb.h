@@ -24,6 +24,8 @@ namespace Jde::Markets::TwsWebSocket
 		void historicalDataEnd( int reqId, const std::string& startDateStr, const std::string& endDateStr )noexcept override;
 		void error(int id, int errorCode, const std::string& errorString)noexcept override;
 		void managedAccounts( const std::string& accountsList)noexcept override;
+		void newsProviders( const std::vector<NewsProvider>& providers )noexcept override{ newsProviders( providers, false ); }
+		void newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept;
 		void nextValidId( ibapi::OrderId orderId )noexcept override;
 		void orderStatus( ibapi::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice)noexcept override;
 		void openOrder( ibapi::OrderId orderId, const ibapi::Contract&, const ibapi::Order&, const ibapi::OrderState&)noexcept override;
@@ -43,6 +45,12 @@ namespace Jde::Markets::TwsWebSocket
 		void updateAccountTime( const std::string& timeStamp )noexcept override;
 
 		bool AddCanceled( TickerId id )noexcept{ return _canceledItems.emplace(id); }
+
+		void tickNews( int tickerId, long timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept override;
+		void newsArticle( int requestId, int articleType, const std::string& articleText )noexcept override;
+		void historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept override;
+		void historicalNewsEnd( int requestId, bool hasMore )noexcept override;
+
 	private:
 		//sp<vector<Proto::Results::OptionParams>> securityDefinitionOptionalParameterEndSync( int reqId )noexcept override;
 		void securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept override;
@@ -53,5 +61,6 @@ namespace Jde::Markets::TwsWebSocket
 		map<TickerId,up<Proto::Results::HistoricalData>> _historicalData; mutex _historicalDataMutex;
 		const map<string,string> _accounts;
 		UnorderedSet<TickerId> _canceledItems;
+		flat_map<TickerId,Proto::Results::HistoricalNewsCollection*> _allocatedNews;  mutex _newsMutex;
 	};
 }

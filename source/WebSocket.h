@@ -21,6 +21,8 @@ namespace TwsWebSocket
 		static WebSocket* InstancePtr()noexcept{ return _pInstance.get(); }
 		void DoSession( sp<Stream> pSession )noexcept;
 
+		void AddRequestSession( TickerId ib, SessionId session, ClientRequestId client)noexcept{ _requestSession.emplace(ib, make_tuple(session,client) );}
+
  		void OnTimeout()noexcept override;
 		void OnAwake()noexcept override{ OnTimeout(); }//unexpected
 		//void Push( EResults webSend, sp<google::protobuf::Message> pMessage );//{ _messages.Push( pMessage ); }
@@ -34,8 +36,6 @@ namespace TwsWebSocket
 		void Push( Proto::Results::AccountUpdate& accountUpdate )noexcept;
 		void Push( Proto::Results::CommissionReport& report )noexcept;
 		void Push( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
-		void Push( SessionId sessionId, ClientRequestId clientId, const Exception& e )noexcept{ PushError( sessionId, clientId, -1, e.what() );}
-		void Push( SessionId sessionId, ClientRequestId clientId, const IBException& e )noexcept{ PushError( sessionId, clientId, e.ErrorCode, e.what() );}
 		//void Push( SessionId id, MessageTypePtr pAllocated )noexcept;
 		void Push( SessionId sessionId, ClientRequestId clientId, Proto::Results::EResults eResults )noexcept;
 		void Push( SessionId id, MessageTypePtr outgoing )noexcept;
@@ -51,6 +51,8 @@ namespace TwsWebSocket
 		void PushAllocated( TickerId tickerId, Proto::Results::ContractDetails* pDetails )noexcept;
 		void PushAllocated( TickerId tickerId, Proto::Results::OptionParams* pDetails )noexcept;
 
+		void Push( SessionId sessionId, ClientRequestId clientId, const Exception& e )noexcept{ PushError( sessionId, clientId, -1, e.what() );}
+		void Push( SessionId sessionId, ClientRequestId clientId, const IBException& e )noexcept{ PushError( sessionId, clientId, e.ErrorCode, e.what() );}
 		void PushError( TickerId id, int errorCode, const std::string& errorString )noexcept;
 		void PushError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept;
 
@@ -68,6 +70,7 @@ namespace TwsWebSocket
 		void ReceiveMarketDataSmart( SessionId sessionId, const Proto::Requests::RequestMrkDataSmart& request )noexcept;
 		void ReceiveHistoricalData( SessionId sessionId, const Proto::Requests::RequestHistoricalData& options )noexcept;
 		void ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept;
+		void Receive( SessionId sessionId, ClientRequestId requestId, Proto::Requests::ERequests type, const string& name )noexcept;
 		void ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept;
 		void ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& request )noexcept;
 		void ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& order )noexcept;
