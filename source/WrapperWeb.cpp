@@ -106,15 +106,13 @@ namespace Jde::Markets::TwsWebSocket
 	void WrapperWeb::managedAccounts( const std::string& accountsList )noexcept
 	{
 		WrapperLog::managedAccounts( accountsList );
-		Proto::Results::AccountList accountList;
+		Proto::Results::StringMap accountList;
+		accountList.set_result( EResults::ManagedAccounts );
 		var accounts = StringUtilities::Split( accountsList );
 		for( var& account : accounts )
 			(*accountList.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second : account;
 
-		_socket.Push( EResults::ManagedAccounts, [&accountList]( auto& type )
-		{
-			type.set_allocated_account_list( new Proto::Results::AccountList{accountList} );
-		});
+		_socket.Push( EResults::ManagedAccounts, [&accountList]( auto& type ){ type.set_allocated_string_map(new Proto::Results::StringMap{accountList}); });
 	}
 
 	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
@@ -273,7 +271,7 @@ namespace Jde::Markets::TwsWebSocket
 		update.set_account_number( accountNumber );
 		if( myContract.SecType==SecurityType::Option )
 		{
-			const string cacheId{ fmt::format("reqContractDetails.{}", myContract.Symbol) };
+			const string cacheId{ format("reqContractDetails.{}", myContract.Symbol) };
 			if( Cache::Has(cacheId) )
 			{
 				var details = Cache::Get<vector<ibapi::ContractDetails>>( cacheId );
@@ -374,6 +372,66 @@ namespace Jde::Markets::TwsWebSocket
 		_socket.Push( reqId, EResults::ExecutionDataEnd );
 	}
 
+	void WrapperWeb::tickNews( int tickerId, long timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept
+	{
+		auto pUpdate = new Proto::Results::TickNews();
+		pUpdate->set_time( timeStamp );
+		pUpdate->set_provider_code( providerCode );
+		pUpdate->set_article_id( articleId );
+		pUpdate->set_headline( headline );
+		pUpdate->set_extra_data( extraData );
+
+		_socket.PushAllocated( tickerId, [p=pUpdate](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_tick_news(p);} );
+	}
+
+	void WrapperWeb::newsArticle( int requestId, int articleType, const std::string& articleText )noexcept
+	{
+		auto pUpdate = new Proto::Results::NewsArticle();
+		pUpdate->set_is_text( articleType==0 );
+		pUpdate->set_value( articleText );
+		_socket.PushAllocated( requestId, [p=pUpdate](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_news_article(p);} );
+	}
+	void WrapperWeb::historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept
+	{
+		unique_lock l{_newsMutex};
+		auto pExisting = _allocatedNews.find( requestId );
+		if( pExisting ==_allocatedNews.end() )
+			pExisting = _allocatedNews.emplace( requestId, new Proto::Results::HistoricalNewsCollection() ).first;
+		auto pNew = pExisting->second->add_values();
+		if( time.size()==21 )
+			pNew->set_time( DateTime((uint16)stoi(time.substr(0,4)), (uint8)stoi(time.substr(5,2)), (uint8)stoi(time.substr(8,2)), (uint8)stoi(time.substr(11,2)), (uint8)stoi(time.substr(14,2)), (uint8)stoi(time.substr(17,2)) ).TimeT() );//missing tenth seconds.
+
+		pNew->set_provider_code( providerCode );
+		pNew->set_article_id( articleId );
+		pNew->set_headline( headline );
+	}
+
+	void WrapperWeb::historicalNewsEnd( int requestId, bool hasMore )noexcept
+	{
+		Proto::Results::HistoricalNewsCollection* pCollection;
+		{
+			unique_lock l{_newsMutex};
+			auto pExisting = _allocatedNews.find( requestId );
+			pCollection = pExisting==_allocatedNews.end() ? new Proto::Results::HistoricalNewsCollection() : pExisting->second;
+			_allocatedNews.erase( pExisting );
+		}
+		pCollection->set_has_more( hasMore );
+		_socket.PushAllocated( requestId, [p=pCollection](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_historical_news(p);} );
+	}
+
+	void WrapperWeb::newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept
+	{
+		if( !isCache )
+			WrapperCache::newsProviders( providers );
+		//_newsProviderData.End( make_shared<std::vector<NewsProvider>>(providers) );
+			//DBG0( "no listeners for newsProviders."sv );
+		auto pMap = new Proto::Results::StringMap();
+		pMap->set_result( EResults::NewsProviders );
+		for( var& provider : providers )
+			(*pMap->mutable_values())[provider.providerCode] = provider.providerName;
+
+		_socket.Push( EResults::NewsProviders, [&pMap]( auto& type ){ type.set_allocated_string_map( pMap ); } );
+	}
 
 	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
 	{

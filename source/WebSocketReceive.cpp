@@ -1,7 +1,9 @@
-
+#include "./WebSocket.h"
+#include <Execution.h>
+#include "./News.h"
 #include "EWebReceive.h"
-#include "WebSocket.h"
-#include "WrapperWeb.h"
+#include "./WatchListData.h"
+#include "./WrapperWeb.h"
 #include "../../Framework/source/Cache.h"
 #include "../../MarketLibrary/source/types/IBException.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
@@ -10,8 +12,7 @@
 #include "../../MarketLibrary/source/types/Contract.h"
 #include "../../MarketLibrary/source/types/Exchanges.h"
 #include "../../MarketLibrary/source/types/MyOrder.h"
-#include "../../MarketLibrary/source/types/proto/requests.pb.h"
-#include <Execution.h>
+
 #include "Flex.h"
 #define var const auto
 
@@ -20,14 +21,11 @@ namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.h
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
-	using Proto::Requests::ERequests;
-	using Proto::Results::EResults;
-
 	void WebSocket::DoSession( shared_ptr<Stream> pSession )noexcept
 	{
 		var sessionId = ++_sessionId;
 		{
-			Threading::SetThreadDescription( fmt::format("webReceive - {}", sessionId) );
+			Threading::SetThreadDescription( format("webReceive - {}", sessionId) );
 			//IO::OStreamBuffer buffer( std::make_unique<std::vector<char>>(8192) );
 			//td::ostream os( &buffer );
 			try
@@ -81,6 +79,8 @@ namespace Jde::Markets::TwsWebSocket
 						ReceiveAccountUpdatesMulti( sessionId, message.account_updates_multi() );
 					else if( message.has_generic_requests() )
 						ReceiveRequests( sessionId, message.generic_requests() );
+					else if( message.has_string_request() )
+						Receive( sessionId, message.string_request().id(), message.string_request().type(), message.string_request().name() );
 					else if( message.has_market_data_smart() )
 						ReceiveMarketDataSmart( sessionId, message.market_data_smart() );
 					else if( message.has_contract_details() )
@@ -97,6 +97,20 @@ namespace Jde::Markets::TwsWebSocket
 						ReceivePositions( sessionId, message.request_positions() );
 					else if( message.has_request_executions() )
 						ReceiveExecutions( sessionId, message.request_executions() );
+					else if( message.has_edit_watch_list() )
+						WatchListData::Edit( sessionId, message.edit_watch_list().id(), message.edit_watch_list().file() );
+					else if( message.has_news_article_request() )
+						News::RequestArticle( sessionId, message.news_article_request().id(), message.news_article_request().provider_code(), message.news_article_request().article_id() );
+					else if( message.has_historical_news_request() )
+						News::RequestHistorical( sessionId, message.historical_news_request().id(), message.historical_news_request().contract_id(), message.historical_news_request().provider_codes(), message.historical_news_request().total_results(), message.historical_news_request().start(), message.historical_news_request().end() );
+
+/*	xWatchLists							= -2;
+	xWatchList							= -3;
+	xPortfolios							= -4;
+	xCreateWatchList					= -5;
+	DeleteWatchList					= -6;
+	EditWatchList						= -7;
+*/
 					else
 						ERR( "Unknown Message '{}'"sv, message.Value_case() );
 				}
@@ -139,7 +153,14 @@ namespace Jde::Markets::TwsWebSocket
 		for( var sendMessage : webSendMessages )
 			_requestSessions.Insert( afterInsert, sendMessage, shared_ptr<UnorderedSet<SessionId>>{new UnorderedSet<SessionId>{}} );
 	}
+	void WebSocket::Receive( SessionId sessionId, ClientRequestId requestId, ERequests type, const string& name )noexcept
+	{
+		if( type==ERequests::WatchList )
+			WatchListData::SendList( sessionId, requestId, name );
+		else if( type==ERequests::DeleteWatchList )
+			WatchListData::Delete( sessionId, requestId, name );
 
+	}
 	void WebSocket::ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept
 	{
 		if( request.type()==ERequests::Positions )
@@ -206,9 +227,18 @@ namespace Jde::Markets::TwsWebSocket
 		else if( request.type()==ERequests::RequestOptionParams )
 			RequestOptionParams( sessionId, request.ids() );
 		else if( request.type()==ERequests::RequsetPrevOptionValues )
-			RequestPrevDayValues( sessionId, request.request_id(), request.ids() );
+			RequestPrevDayValues( sessionId, request.id(), request.ids() );
 		else if( request.type()==ERequests::RequestFundamentalData )
-			RequestFundamentalData( sessionId, request.request_id(), request.ids() );
+			RequestFundamentalData( sessionId, request.id(), request.ids() );
+		else if( request.type()==ERequests::Portfolios )
+			WatchListData::SendLists( sessionId, request.id(), true );
+		else if( request.type()==ERequests::WatchLists )
+			WatchListData::SendLists( sessionId, request.id(), false );
+		else if( request.type()==ERequests::ReqNewsProviders )
+		{
+			AddRequestSessions( sessionId, {EResults::NewsProviders} );
+			_client.RequestNewsProviders();
+		}
 		else
 			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, request.type(), sessionId );
 	}
@@ -249,7 +279,7 @@ namespace Jde::Markets::TwsWebSocket
 		//
 		// Proto::Requests::RequestHistoricalData copy{ req }; copy.set_id( 0 );
 		// var crc = IO::Crc::Calc32( copy.SerializeAsString() );
-		// var id = fmt::format( "HistoricalData.{}", crc );
+		// var id = format( "HistoricalData.{}", crc );
 		// if( Cache::Has(id) )
 		// {
 		// 	PushAllocated( reqId, new Proto::Results::HistoricalData{*Cache::Get<Proto::Results::HistoricalData>(id)}, false );
@@ -258,8 +288,8 @@ namespace Jde::Markets::TwsWebSocket
 		// _historicalCrcs.emplace( reqId, crc );
 
 		// const DateTime endTime{ Clock::from_time_t(req.date()) };
-		// const string endTimeString{ fmt::format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
-		// const string durationString{ fmt::format("{} D", req.days()) };
+		// const string endTimeString{ format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
+		// const string durationString{ format("{} D", req.days()) };
 		// DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, pIb->symbol );
 		// _client.reqHistoricalData( reqId, *pIb, endTimeString, durationString, BarSize::ToString((BarSize::Enum)req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
 	}
@@ -313,7 +343,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		_requestSession.emplace( reqId, make_tuple(sessionId, request.id()) );
 		DateTime time{ request.time() };
-		var timeString = fmt::format( "{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", time.Year(), time.Month(), time.Day(), time.Hour(), time.Minute(), time.Second() );
+		var timeString = format( "{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", time.Year(), time.Month(), time.Day(), time.Hour(), time.Minute(), time.Second() );
 		ExecutionFilter filter; filter.m_clientId=request.client_id(); filter.m_acctCode=request.account_number(); filter.m_time=timeString; filter.m_symbol=request.symbol(); filter.m_secType=request.security_type(); filter.m_exchange=request.exchange(); filter.m_side=request.side();
 		_client.reqExecutions( reqId, filter );
 	}
@@ -404,7 +434,7 @@ namespace Jde::Markets::TwsWebSocket
 		int i=0;
 		for( var reqId : requestIds )
 		{
-			const Jde::Markets::Contract contract{ request.contracts(i++) };//
+			const Contract contract{ request.contracts(i++) };//
 			DBG( "reqContractDetails( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, contract.Symbol );
 			_requestSession.emplace( reqId, make_tuple(sessionId,clientRequestId) );
 			if( contract.SecType==SecurityType::Option )
@@ -489,7 +519,7 @@ namespace Jde::Markets::TwsWebSocket
 					}
 					catch( const IBException& e )
 					{
-						THROW( IBException( fmt::format("ReqContractDetails( {} ) returned {}."sv, contractId, e.what()), e.ErrorCode, e.RequestId) );
+						THROW( IBException( format("ReqContractDetails( {} ) returned {}.", contractId, e.what()), e.ErrorCode, e.RequestId) );
 					}
 
 					Contract contract{ pDetails->front() };
@@ -570,8 +600,12 @@ namespace Jde::Markets::TwsWebSocket
 								pBar->set_volume( back.volume );
 							}
 						}
-
+						//if( contract.Symbol=="AAPL" )
+						//	DBG0( "AAPL"sv );
 						var pTrades = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, useRth ).get();
+						if( !pTrades )
+							DBG( "{} - !pTrades"sv, contract.Symbol );
+						//ASSERT( pTrades );
 						var dayBars = groupByDay( *pTrades );
 						vector<DayIndex> sentDays{}; sentDays.reserve( bars.size() );
 						for( var [day, pBar] : bars )

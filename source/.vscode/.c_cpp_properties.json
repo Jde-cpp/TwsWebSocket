@@ -3,19 +3,20 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
-					 "/home/duffyj/code/libraries/boostorg/boost_1_71_0",
-					 "/home/duffyj/code/libraries/spdlog/include",
-					 "/home/duffyj/code/libraries/json/include",
-					 "/home/duffyj/code/libraries/tws-api/source/cppclient/client"
+					 "${workspaceFolder}/**",
+					 "${env:REPO_DIR}/llvm-project/libcxx/include",
+					 "${env:REPO_DIR}/boostorg/beast/include",
+					 "${env:REPO_DIR}/boostorg/asio/include",
+					 "${env:REPO_DIR}/boostorg/boost_1_73_0",
+					 "${env:REPO_DIR}/spdlog/include",
+					 "${env:REPO_DIR}/json/include",
+					 "${env:REPO_DIR}/tws-api/source/cppclient/client"
             ],
 				"defines": [],
-				"forcedInclude": [
-					"${workspaceFolder}/pc.h"
-				],
-            "compilerPath": "/usr/local/clang_9.0.0/bin/clang",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "gcc-x64"
+				"forcedInclude": ["${workspaceFolder}/pc.h"],
+            "compilerPath": "/usr/local/bin/clang++",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "clang-x64"
         }
     ],
     "version": 4
