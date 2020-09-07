@@ -50,5 +50,11 @@
     <ClCompile Include="pc.h">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="News.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WatchListData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

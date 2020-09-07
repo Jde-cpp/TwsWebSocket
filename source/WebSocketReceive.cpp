@@ -274,24 +274,6 @@ namespace Jde::Markets::TwsWebSocket
 		Jde::Markets::Contract contract{ req.contract() };
 		var time = Clock::from_time_t( req.date() );
 		_client.ReqHistoricalData( reqId, contract, Chrono::DaysSinceEpoch(time), req.days(), req.bar_size(), req.display(), req.use_rth() );
-		//req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
-
-		//
-		// Proto::Requests::RequestHistoricalData copy{ req }; copy.set_id( 0 );
-		// var crc = IO::Crc::Calc32( copy.SerializeAsString() );
-		// var id = format( "HistoricalData.{}", crc );
-		// if( Cache::Has(id) )
-		// {
-		// 	PushAllocated( reqId, new Proto::Results::HistoricalData{*Cache::Get<Proto::Results::HistoricalData>(id)}, false );
-		// 	return;
-		// }
-		// _historicalCrcs.emplace( reqId, crc );
-
-		// const DateTime endTime{ Clock::from_time_t(req.date()) };
-		// const string endTimeString{ format("{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endTime.Minute(), endTime.Second()) };
-		// const string durationString{ format("{} D", req.days()) };
-		// DBG( "reqHistoricalData( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, pIb->symbol );
-		// _client.reqHistoricalData( reqId, *pIb, endTimeString, durationString, BarSize::ToString((BarSize::Enum)req.bar_size()), TwsDisplay::ToString((TwsDisplay::Enum)req.display()), req.use_rth() ? 1 : 0, 2/*formatDate*/, req.keep_up_to_date(), TagValueListSPtr{} );
 	}
 	void WebSocket::ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept
 	{
@@ -305,10 +287,10 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WebSocket::ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& proto )noexcept
 	{
-		var reqId = proto.order().id() ? proto.order().id() : _client.RequestId();
+		const ::OrderId reqId = proto.order().id() ? proto.order().id() : _client.RequestId();
 		_requestSession.emplace( reqId, make_tuple(sessionId,proto.id()) );
 		var pIbContract = Jde::Markets::Contract{ proto.contract() }.ToTws();
-		Jde::Markets::MyOrder order{ reqId, proto.order() };
+		const MyOrder order{ reqId, proto.order() };
 		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, sessionId, pIbContract->symbol, order.lmtPrice, order.totalQuantity );
 		_client.placeOrder( *pIbContract, order );
 /*		if( !order.whatIf && proto.stop()>0 )
@@ -365,7 +347,6 @@ namespace Jde::Markets::TwsWebSocket
 				if( contract.SecType==SecurityType::Option )
 					THROW( Exception("passed in option contract ({})'{}'", underlyingId, contract.LocalSymbol) );
 
-				//var isCall = options.security_type()==1 || options.security_type()==2  ? options.security_type()==1 : optional<bool>{};
 				var right = (SecurityRight)options.security_type();
 				const std::array<string_view,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
 				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !options.start_expiration() )
@@ -380,7 +361,7 @@ namespace Jde::Markets::TwsWebSocket
 					var start = options.start_srike(); var end = options.end_strike();
 					if( start!=0 || end!=0 )
 					{
-						auto pContracts2 = make_shared<vector<ibapi::ContractDetails>>();
+						auto pContracts2 = make_shared<vector<ContractDetails>>();
 						for( var& details : *pContracts )
 						{
 							if( (start==0 || start<=details.contract.strike) && (end==0 || end>=details.contract.strike) )
@@ -511,11 +492,11 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				for( var contractId : contractIds )
 				{
-					sp<vector<ibapi::ContractDetails>> pDetails;
+					sp<vector<ContractDetails>> pDetails;
 					try
 					{
 						pDetails = _sync.ReqContractDetails( contractId ).get();
-						THROW_IF( pDetails->size()!=1, IBException("ReqContractDetails( {} ) returned {}."sv, contractId, pDetails->size()) );
+						THROW_IF( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {}."sv, contractId, pDetails->size()), -1) );
 					}
 					catch( const IBException& e )
 					{
@@ -538,17 +519,17 @@ namespace Jde::Markets::TwsWebSocket
 					}
 					auto load = [isPreMarket,isOption,count,current,sessionId,this,contract,&bars]( bool useRth, bool fillInBack )
 					{
-						auto groupByDay = []( const vector<ibapi::Bar>& ibBars )->map<DayIndex,vector<ibapi::Bar>>
+						auto groupByDay = []( const vector<::Bar>& ibBars )->map<DayIndex,vector<::Bar>>
 						{
-							map<DayIndex,vector<ibapi::Bar>> dayBars;
+							map<DayIndex,vector<::Bar>> dayBars;
 							for( var& bar : ibBars )
 							{
 								var day = Chrono::DaysSinceEpoch( Clock::from_time_t(ConvertIBDate(bar.time)) );
-								dayBars.try_emplace( day, vector<ibapi::Bar>{} ).first->second.push_back( bar );
+								dayBars.try_emplace( day, vector<::Bar>{} ).first->second.push_back( bar );
 							}
 							return dayBars;
 						};
-						auto set = [&bars, groupByDay]( const vector<ibapi::Bar>& ibBars, function<void(Proto::Results::DaySummary& summary, double close)> fnctn )
+						auto set = [&bars, groupByDay]( const vector<::Bar>& ibBars, function<void(Proto::Results::DaySummary& summary, double close)> fnctn )
 						{
 							var dayBars = groupByDay( ibBars );
 							for( var [day, pBar] : bars )
@@ -614,7 +595,7 @@ namespace Jde::Markets::TwsWebSocket
 							if( pIbBar==dayBars.end() )
 								continue;
 							var& trades = pIbBar->second;
-							pBar->set_count( trades.size() );
+							pBar->set_count( static_cast<uint32>(trades.size()) );
 							pBar->set_open( trades.front().open );
 							var& back = trades.back();
 							pBar->set_close( back.close );
@@ -660,8 +641,7 @@ namespace Jde::Markets::TwsWebSocket
 				sp<map<string,double>> pFundamentals;
 				try
 				{
-					var pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IF( pDetails->size()!=1, IBException("{} has {} contracts", contractId, pDetails->size()) );
-					//Contract contract{ pDetails->front() };
+					var pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IF( pDetails->size()!=1, IBException(format("{} has {} contracts", contractId, pDetails->size()), -1) );
 					pFundamentals = _sync.ReqRatios( pDetails->front().contract ).get();
 				}
 				catch( const IBException& e )

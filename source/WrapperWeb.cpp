@@ -27,7 +27,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	}
 
-	void WrapperWeb::CreateInstance( const TwsConnectionSettings& settings )noexcept
+	void WrapperWeb::CreateInstance( const TwsConnectionSettings& /*settings*/ )noexcept
 	{
 		ASSERT( !_pInstance );
 		_pInstance = sp<WrapperWeb>( new WrapperWeb() );
@@ -40,13 +40,13 @@ namespace Jde::Markets::TwsWebSocket
 		return *_pInstance;
 	}
 
-	void WrapperWeb::nextValidId( ibapi::OrderId orderId)noexcept
+	void WrapperWeb::nextValidId( ::OrderId orderId)noexcept
 	{
 		WrapperLog::nextValidId( orderId );
 		TwsClientSync::Instance().SetRequestId( orderId );
 	}
 
-	void WrapperWeb::orderStatus( ibapi::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice )noexcept
+	void WrapperWeb::orderStatus( ::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice )noexcept
 	{
 		WrapperLog::orderStatus( orderId, status, filled,	remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice );
 		auto p = new Proto::Results::OrderStatus{};
@@ -65,7 +65,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( !_socket.PushAllocated(orderId, [p](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_order_status( p );}) )
 			delete p;
 	}
-	void WrapperWeb::openOrder( ibapi::OrderId orderId, const ibapi::Contract& contract, const ibapi::Order& order, const ibapi::OrderState& state )noexcept
+	void WrapperWeb::openOrder( ::OrderId orderId, const ibapi::Contract& contract, const ::Order& order, const ::OrderState& state )noexcept
 	{
 		WrapperLog::openOrder( orderId, contract, order, state );
 		auto p = new Proto::Results::OpenOrder{};
@@ -134,7 +134,7 @@ namespace Jde::Markets::TwsWebSocket
 		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::PositionMultiEnd ); pValue->set_int_value( reqId );
 		_socket.PushAllocated( reqId, pValue );
 	}
-	void WrapperWeb::historicalData( TickerId reqId, const ibapi::Bar& bar )noexcept
+	void WrapperWeb::historicalData( TickerId reqId, const ::Bar& bar )noexcept
 	{
 		if( WrapperSync::historicalDataSync(reqId, bar) )
 			return;
@@ -274,7 +274,7 @@ namespace Jde::Markets::TwsWebSocket
 			const string cacheId{ format("reqContractDetails.{}", myContract.Symbol) };
 			if( Cache::Has(cacheId) )
 			{
-				var details = Cache::Get<vector<ibapi::ContractDetails>>( cacheId );
+				var details = Cache::Get<vector<::ContractDetails>>( cacheId );
 				if( details->size()==1 )
 					update.mutable_contract()->set_underlying_id( details->front().underConId );
 				else
@@ -311,7 +311,7 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::updateAccountTime( timeStamp );//not sure what to do about this, no reqId or accountName
 	}
 
-	void WrapperWeb::contractDetails( int reqId, const ibapi::ContractDetails& contractDetails )noexcept
+	void WrapperWeb::contractDetails( int reqId, const ::ContractDetails& contractDetails )noexcept
 	{
 		if( _detailsData.Contains(reqId) )
 			WrapperSync::contractDetails( reqId, contractDetails );
@@ -345,7 +345,7 @@ namespace Jde::Markets::TwsWebSocket
 		var time = ib.time;
 		ASSERT( time.size()==18 );
 		if( time.size()==18 )//"20200717  10:23:05"
-			p->set_time( DateTime( (uint16)stoi(time.substr(0,4)), (uint8)stoi(time.substr(4,2)), (uint8)stoi(time.substr(6,2)), (uint8)stoi(time.substr(10,2)), (uint8)stoi(time.substr(13,2)), (uint8)stoi(time.substr(16,2)) ).TimeT() );
+			p->set_time( (uint32)DateTime( (uint16)stoi(time.substr(0,4)), (uint8)stoi(time.substr(4,2)), (uint8)stoi(time.substr(6,2)), (uint8)stoi(time.substr(10,2)), (uint8)stoi(time.substr(13,2)), (uint8)stoi(time.substr(16,2)) ).TimeT() );
 		p->set_account_number( ib.acctNumber );
 		p->set_exchange( ib.exchange );
 		p->set_side( ib.side );
@@ -372,10 +372,10 @@ namespace Jde::Markets::TwsWebSocket
 		_socket.Push( reqId, EResults::ExecutionDataEnd );
 	}
 
-	void WrapperWeb::tickNews( int tickerId, long timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept
+	void WrapperWeb::tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept
 	{
 		auto pUpdate = new Proto::Results::TickNews();
-		pUpdate->set_time( timeStamp );
+		pUpdate->set_time( static_cast<uint32>(timeStamp) );
 		pUpdate->set_provider_code( providerCode );
 		pUpdate->set_article_id( articleId );
 		pUpdate->set_headline( headline );
@@ -399,7 +399,7 @@ namespace Jde::Markets::TwsWebSocket
 			pExisting = _allocatedNews.emplace( requestId, new Proto::Results::HistoricalNewsCollection() ).first;
 		auto pNew = pExisting->second->add_values();
 		if( time.size()==21 )
-			pNew->set_time( DateTime((uint16)stoi(time.substr(0,4)), (uint8)stoi(time.substr(5,2)), (uint8)stoi(time.substr(8,2)), (uint8)stoi(time.substr(11,2)), (uint8)stoi(time.substr(14,2)), (uint8)stoi(time.substr(17,2)) ).TimeT() );//missing tenth seconds.
+			pNew->set_time( (uint32)DateTime((uint16)stoi(time.substr(0,4)), (uint8)stoi(time.substr(5,2)), (uint8)stoi(time.substr(8,2)), (uint8)stoi(time.substr(11,2)), (uint8)stoi(time.substr(14,2)), (uint8)stoi(time.substr(17,2)) ).TimeT() );//missing tenth seconds.
 
 		pNew->set_provider_code( providerCode );
 		pNew->set_article_id( articleId );
@@ -416,7 +416,7 @@ namespace Jde::Markets::TwsWebSocket
 			_allocatedNews.erase( pExisting );
 		}
 		pCollection->set_has_more( hasMore );
-		_socket.PushAllocated( requestId, [p=pCollection](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_historical_news(p);} );
+		_socket.PushAllocated( requestId, [p=pCollection](MessageType& msg, ClientRequestId id){p->set_request_id( id ); msg.set_allocated_historical_news(p);} );
 	}
 
 	void WrapperWeb::newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept
