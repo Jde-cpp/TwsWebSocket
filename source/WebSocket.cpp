@@ -117,7 +117,7 @@ namespace Jde::Markets::TwsWebSocket
 				++pAccountSessionIds;
 		}
 		{
-			std::unique_lock<std::shared_mutex> l{ _mktDataRequestsMutex };
+			std::unique_lock<std::shared_mutex> l2{ _mktDataRequestsMutex };
 			for( auto pRequestSession = _mktDataRequests.begin(); pRequestSession!=_mktDataRequests.end(); )
 			{
 				if( pRequestSession->second.erase(id) && pRequestSession->second.size()==0 )

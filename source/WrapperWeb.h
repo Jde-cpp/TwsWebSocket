@@ -14,21 +14,21 @@ namespace Jde::Markets::TwsWebSocket
 
 		void accountUpdateMulti( int reqId, const std::string& account, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept override;
 		void accountUpdateMultiEnd( int reqId )noexcept override;
-		void contractDetails( int reqId, const ibapi::ContractDetails& contractDetails)noexcept override;
+		void contractDetails( int reqId, const ContractDetails& contractDetails)noexcept override;
 		void contractDetailsEnd( int reqId)noexcept override;
 		void commissionReport( const CommissionReport& commissionReport)noexcept override;
 		void execDetails( int reqId, const ibapi::Contract& contract, const Execution& execution)noexcept override;
 		void execDetailsEnd( int reqId)noexcept override;
 
-		void historicalData( TickerId reqId, const ibapi::Bar& bar )noexcept override;
+		void historicalData( TickerId reqId, const ::Bar& bar )noexcept override;
 		void historicalDataEnd( int reqId, const std::string& startDateStr, const std::string& endDateStr )noexcept override;
 		void error(int id, int errorCode, const std::string& errorString)noexcept override;
 		void managedAccounts( const std::string& accountsList)noexcept override;
 		void newsProviders( const std::vector<NewsProvider>& providers )noexcept override{ newsProviders( providers, false ); }
 		void newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept;
-		void nextValidId( ibapi::OrderId orderId )noexcept override;
-		void orderStatus( ibapi::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice)noexcept override;
-		void openOrder( ibapi::OrderId orderId, const ibapi::Contract&, const ibapi::Order&, const ibapi::OrderState&)noexcept override;
+		void nextValidId( ::OrderId orderId )noexcept override;
+		void orderStatus( ::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice)noexcept override;
+		void openOrder( ::OrderId orderId, const ibapi::Contract&, const ::Order&, const ::OrderState&)noexcept override;
 		void openOrderEnd()noexcept override;
 		void positionMulti( int reqId, const std::string& account,const std::string& modelCode, const ibapi::Contract& contract, double pos, double avgCost)noexcept override;
 		void positionMultiEnd( int reqId)noexcept override;
@@ -46,7 +46,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		bool AddCanceled( TickerId id )noexcept{ return _canceledItems.emplace(id); }
 
-		void tickNews( int tickerId, long timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept override;
+		void tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept override;
 		void newsArticle( int requestId, int articleType, const std::string& articleText )noexcept override;
 		void historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept override;
 		void historicalNewsEnd( int requestId, bool hasMore )noexcept override;
