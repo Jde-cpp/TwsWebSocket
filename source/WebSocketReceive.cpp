@@ -356,14 +356,15 @@ namespace Jde::Markets::TwsWebSocket
 			var underlyingId = options.contract_id();
 			try
 			{
-				//TODO see if I have, if not download it.
-				//else try getting from tws. (make sure have date.)
+				//TODO see if I have, if not download it, else try getting from tws. (make sure have date.)
+				if( underlyingId==0 )
+					THROW( Exception("did not pass a contract id.") );
 				var pDetails = _sync.ReqContractDetails( underlyingId ).get();
 				if( pDetails->size()!=1 )
 					THROW( Exception("'{}' had '{}' contracts", underlyingId, pDetails->size()) );
 				var contract = Contract{ pDetails->front() };
 				if( contract.SecType==SecurityType::Option )
-					THROW( Exception("passed in option contract ({})'{}'", underlyingId, contract.LocalSymbol) );
+					THROW( Exception("passed in option contract ({})'{}', expected underlying", underlyingId, contract.LocalSymbol) );
 
 				//var isCall = options.security_type()==1 || options.security_type()==2  ? options.security_type()==1 : optional<bool>{};
 				var right = (SecurityRight)options.security_type();
@@ -372,13 +373,14 @@ namespace Jde::Markets::TwsWebSocket
 					THROW( Exception("ReceiveOptions request for '{}' - {} specified no date.", contract.Symbol, ToString(right)) );
 
 				auto pResults = new Proto::Results::OptionValues(); pResults->set_id( options.id() );
-				auto fetch = [&]( DayIndex expiration )
+				auto fetch = [&]( DayIndex expiration )noexcept(false)
 				{
-					auto pContracts = _sync.ReqContractDetails( TwsClientCache::ToContract(contract.Symbol, expiration, right) ).get();
-					if( pContracts->size()<2 )
+					var ibContract = TwsClientCache::ToContract( contract.Symbol, expiration, right, options.start_srike() && options.start_srike()==options.end_strike() ? options.start_srike() : 0 );
+					auto pContracts = _sync.ReqContractDetails( ibContract ).get();
+					if( pContracts->size()<1 )
 						THROW( Exception("'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size()) );
 					var start = options.start_srike(); var end = options.end_strike();
-					if( start!=0 || end!=0 )
+					if( !ibContract.strike && (start!=0 || end!=0) )
 					{
 						auto pContracts2 = make_shared<vector<ibapi::ContractDetails>>();
 						for( var& details : *pContracts )
@@ -396,10 +398,20 @@ namespace Jde::Markets::TwsWebSocket
 				else
 				{
 					var optionParams = _sync.ReqSecDefOptParamsSmart( underlyingId, contract.Symbol );
+					var end = options.end_expiration() ? options.end_expiration() : std::numeric_limits<DayIndex>::max();
 					for( var expiration : optionParams.expirations() )
 					{
-						if( expiration>=options.start_expiration() && expiration<=options.end_expiration() )
+						if( expiration<options.start_expiration() || expiration>end )
+							continue;
+						try
+						{
 							pResults->set_day( fetch(expiration) );
+						}
+						catch( const IBException& e )
+						{
+							if( e.ErrorCode!=200 )//No security definition has been found for the request
+								throw e;
+						}
 					}
 				}
 				if( pResults->option_days_size() )

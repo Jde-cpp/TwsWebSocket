@@ -393,6 +393,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept
 	{
+		WrapperLog::historicalNews( requestId, time, providerCode, articleId, headline );
 		unique_lock l{_newsMutex};
 		auto pExisting = _allocatedNews.find( requestId );
 		if( pExisting ==_allocatedNews.end() )
@@ -408,6 +409,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WrapperWeb::historicalNewsEnd( int requestId, bool hasMore )noexcept
 	{
+		WrapperLog::historicalNewsEnd( requestId, hasMore );
 		Proto::Results::HistoricalNewsCollection* pCollection;
 		{
 			unique_lock l{_newsMutex};
