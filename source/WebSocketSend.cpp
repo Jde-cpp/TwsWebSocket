@@ -74,7 +74,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		else if( errorCode==504 )
 		{
-			_requestSession.ForEach( [&](auto key, const auto& value)
+			_requestSession.ForEach( [&](auto /*key*/, const auto& value)
 			{
 				PushError( get<0>(value), get<1>(value), errorCode, errorString );
 			});
@@ -236,20 +236,6 @@ namespace Jde::Markets::TwsWebSocket
 		auto pMessageUnion = make_shared<MessageType>();  pMessageUnion->set_allocated_message( pMessage );
 		Push( sessionId, pMessageUnion );
 	}
-/*	void WebSocket::Push( Proto::Results::EResults webSend, sp<MessageType> pMessageUnion )noexcept
-	{
-		function<void(const UnorderedSet<SessionId>&)> addMessage = [&]( const UnorderedSet<SessionId>& sessionIds )
-		{
-			sessionIds.ForEach( [&](const SessionId& sessionId ){ Push( sessionId, pMessageUnion ); });
-		};
-		_requestSessions.Where( webSend, addMessage );
-	}
-	void WebSocket::PushAllocated( Proto::Results::AccountList* pAccounts )noexcept
-	{
-		auto pMessageUnion = make_shared<MessageType>();
-		pMessageUnion->set_allocated_accountlist( pAccounts );
-		Push( Proto::Results::EResults::ManagedAccounts, pMessageUnion );
-	}*/
 	void WebSocket::PushAllocated( Proto::Results::AccountUpdateMulti* pMessage )noexcept
 	{
 		var requestId = pMessage->request_id();
