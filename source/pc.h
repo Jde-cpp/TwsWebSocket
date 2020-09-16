@@ -58,6 +58,9 @@
 
 #include "../../MarketLibrary/source/TypeDefs.h"
 #include "../../MarketLibrary/source/TwsProcessor.h"
+#include "../../MarketLibrary/source/types/Exchanges.h"
+#include "../../MarketLibrary/source/client/TwsClientSync.h"
+#include "../../MarketLibrary/source/types/IBException.h"
 //#include "markets/types/messages/IBEnums.h"
 
 //#include <Eigen/Dense>

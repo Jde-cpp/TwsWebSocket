@@ -23,9 +23,7 @@ namespace Jde::Markets::TwsWebSocket
 	sp<WrapperWeb> WrapperWeb::_pInstance{nullptr};
 	WrapperWeb::WrapperWeb()noexcept(false):
 		_accounts{ SettingsPtr->Map<string>("accounts") }
-	{
-
-	}
+	{}
 
 	void WrapperWeb::CreateInstance( const TwsConnectionSettings& /*settings*/ )noexcept
 	{

@@ -7,7 +7,7 @@ link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 #Custom######################################################
 include_directories( "$ENV{REPO_DIR}/tws-api/source/cppclient/client" )
 #######################################################
-add_executable( Jde.TwsWebSocket main.cpp WebSocket.cpp WebSocketReceive.cpp WebSocketSend.cpp WrapperWeb.cpp Flex.cpp WatchListData.cpp News.cpp)
+add_executable( Jde.TwsWebSocket main.cpp WebSocket.cpp WebSocketReceive.cpp WebSocketSend.cpp WrapperWeb.cpp Flex.cpp WatchListData.cpp News.cpp PreviousDayValues.cpp )
 #######################################################
 target_link_libraries(Jde.TwsWebSocket Threads::Threads)
 target_link_libraries(Jde.TwsWebSocket Jde)
@@ -60,5 +60,8 @@ target_precompile_headers(Jde.TwsWebSocket
 		"../../MarketLibrary/source/types/proto/ib.pb.h"
 		"../../MarketLibrary/source/types/proto/requests.pb.h"
 		"../../MarketLibrary/source/types/proto/results.pb.h"
+		"../../MarketLibrary/source/types/Exchanges.h"
+		"../../MarketLibrary/source/client/TwsClientSync.h"
+		"../../MarketLibrary/source/types/IBException.h"
 		"TypeDefs.h"
 )
