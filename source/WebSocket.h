@@ -1,5 +1,4 @@
 #pragma once
-#include "../..//MarketLibrary/source/types/IBException.h"
 //https://www.boost.org/doc/libs/1_71_0/libs/beast/example/websocket/server/sync/websocket_server_sync.cpp
 
 //------------------------------------------------------------------------------
@@ -76,7 +75,6 @@ namespace TwsWebSocket
 		void ReceiveOrder( SessionId sessionId, const Proto::Requests::PlaceOrder& order )noexcept;
 		void ReceivePositions( SessionId sessionId, const Proto::Requests::RequestPositions& request )noexcept;
 		void RequestOptionParams( SessionId sessionId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
-		void RequestPrevDayValues( SessionId sessionId, ClientRequestId requestId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
 		void RequestFundamentalData( SessionId sessionId, ClientRequestId requestId, const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds )noexcept;
 		TickerId FindRequestId( SessionId sessionId, ClientRequestId clientId )const noexcept;
 		std::atomic<SessionId> _sessionId{0};

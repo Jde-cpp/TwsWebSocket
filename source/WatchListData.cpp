@@ -14,31 +14,36 @@ namespace Jde::Markets::TwsWebSocket
 		IOException::TestExists( dir );
 		return dir;
 	}
+	vector<string> WatchListData::Names( optional<bool> portfolio )noexcept
+	{
+		vector<string> names;
+		var dir = GetDir();
+		for( var& dirEntry : fs::directory_iterator(dir) )
+		{
+			if( !dirEntry.is_regular_file() || dirEntry.path().extension()!=".watch" )
+				continue;
+			var& path = dirEntry.path();
+			try
+			{
+				var pFile = IO::ProtoUtilities::Load<Proto::Watch::File>( path );
+				if( !portfolio.has_value() || portfolio==pFile->is_portfolio() )
+					names.push_back( pFile->name() );
+			}
+			catch( const Exception& e )
+			{
+				e.Log();
+			}
+		}
+		return names;
+	}
 	void WatchListData::SendLists( SessionId sessionId, ClientRequestId clientId, bool portfolio )noexcept
 	{
 		std::thread( [sessionId, clientId, portfolio]()
 		{
 			try
 			{
-				var dir = GetDir();
-				vector<string> names;
-				for( var& dirEntry : fs::directory_iterator(dir) )
-				{
-					if( !dirEntry.is_regular_file() || dirEntry.path().extension()!=".watch" )
-						continue;
-					var& path = dirEntry.path();
-					try
-					{
-						var pFile = IO::ProtoUtilities::Load<Proto::Watch::File>( path );
-						if( portfolio==pFile->is_portfolio() )
-							names.push_back( pFile->name() );
-					}
-					catch( const Exception& e )
-					{
-						e.Log();
-					}
-				}
 				auto pNames = new Proto::Results::StringList(); pNames->set_request_id( clientId );
+				vector<string> names = Names( portfolio );
 				for_each( names.begin(), names.end(), [pNames](var& name){ pNames->add_values(name);} );
 				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_string_list( pNames );
 				_socket.Push( sessionId, pUnion );
@@ -49,17 +54,23 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}).detach();
 	}
+
+	sp<Proto::Watch::File> WatchListData::Content( const string& name )noexcept(false)
+	{
+		if( !name.size() )
+			THROW( Exception("did not specify a watch name value.") );
+		var dir = GetDir();
+		var file = dir/StringUtilities::Replace( name+".watch", ' ', '_' );
+		return IO::ProtoUtilities::Load<Proto::Watch::File>( file, true );
+	}
+
 	void WatchListData::SendList( SessionId sessionId, ClientRequestId clientId, const string& watchName )noexcept
 	{
 		std::thread( [sessionId, clientId, name=watchName]()
 		{
 			try
 			{
-				if( !name.size() )
-					THROW( Exception("did not specify a watch name value.") );
-				var dir = GetDir();
-				var file = dir/StringUtilities::Replace( name+".watch", ' ', '_' );
-				var pFile = IO::ProtoUtilities::Load<Proto::Watch::File>( file, true );
+				var pFile = Content( name );
 				var pWatchList = new Proto::Results::WatchList();
 				pWatchList->set_request_id( clientId );
 				pWatchList->set_allocated_file( pFile.get() );

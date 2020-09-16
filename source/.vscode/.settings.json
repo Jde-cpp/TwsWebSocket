@@ -89,7 +89,8 @@
 		"bit": "cpp",
 		"coroutine": "cpp",
 		"ios": "cpp",
-		"locale": "cpp"
+		"locale": "cpp",
+		"__functional_03": "cpp"
 	},
 	"window.title": "WebSocketTws"
 }
