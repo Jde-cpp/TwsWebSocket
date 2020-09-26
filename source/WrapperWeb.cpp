@@ -112,7 +112,11 @@ namespace Jde::Markets::TwsWebSocket
 
 		_socket.Push( EResults::ManagedAccounts, [&accountList]( auto& type ){ type.set_allocated_string_map(new Proto::Results::StringMap{accountList}); });
 	}
-
+	void WrapperWeb::accountDownloadEnd( const std::string& accountName )noexcept
+	{
+		WrapperLog::accountDownloadEnd( accountName );
+		_socket.PushAccountDownloadEnd( accountName );
+	}
 	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
@@ -134,6 +138,8 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::historicalData( TickerId reqId, const ::Bar& bar )noexcept
 	{
+		if( Cache::TryGet<uint>("breakpoint.BGGSQ") && *Cache::TryGet<uint>("breakpoint.BGGSQ")==reqId )
+			TRACE0( "Break here."sv );
 		if( WrapperSync::historicalDataSync(reqId, bar) )
 			return;
 		unique_lock l{ _historicalDataMutex };
@@ -278,29 +284,6 @@ namespace Jde::Markets::TwsWebSocket
 				else
 					WARN( "'{}' returned multiple securities"sv, myContract.Symbol );
 			}
-			// else
-			// 	_client.ReqContractDetails( myContract.Symbol ).wait_for(0s);
-
-			/*  Has issues with n portfolio updates each calling for same stock.
-			auto get = []( TwsClientSync::Future<ibapi::ContractDetails>& f, Proto::Results::PortfolioUpdate& update2 )
-			{
-				var details = f.get();
-				if( details->size()==1 )
-					update2.mutable_contract()->set_underlying_id( details->front().underConId );
-				else
-					WARN( "'{}' returned multiple securities"sv, update2.contract().symbol() );
-				_socket.Push( update2 );
-			};
-			auto future = _client.ReqContractDetails( myContract.Symbol );
-			if( future.wait_for(0s)==std::future_status::ready )
-				get( future, update );
-			else
-			{
-				std::thread( [get2=get, f=move(future), copy=move(update)]()mutable
-				{
-					get2( f, copy );
-				}).detach();
-			}*/
 		}
 		_socket.Push( update );
 	}

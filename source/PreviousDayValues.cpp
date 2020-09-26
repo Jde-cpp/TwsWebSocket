@@ -9,8 +9,8 @@ namespace Jde::Markets
 {
 	void fnctn( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, TwsWebSocket::SessionId sessionId, TwsWebSocket::ClientRequestId requestId )noexcept(false)
 	{
-		var current=PreviousTradingDay();
-		unordered_map<DayIndex,Proto::Results::DaySummary*> bars;
+		var current = CurrentTradingDay();
+		flat_map<DayIndex,Proto::Results::DaySummary*> bars;
 		try
 		{
 			for( var contractId : contractIds )
@@ -28,15 +28,12 @@ namespace Jde::Markets
 
 				Contract contract{ pDetails->front() };
 				var isOption = contract.SecType==SecurityType::Option;
-				if( contract.Symbol=="AXE" )
-					DBG( "AXE conId='{}'"sv, contract.Id );
+				if( contract.Symbol=="AAPL" )
+					DBG( "{} conId='{}'"sv, contract.Symbol, contract.Id );
 				var isPreMarket = IsPreMarket( contract.SecType );
 				var count = IsOpen( contract.SecType ) && !isPreMarket ? 1 : 2;
-				for( auto i=0; i<count; ++i )
+				for( auto day=current; bars.size()<count; day = PreviousTradingDay(day) )
 				{
-					var day = isPreMarket
-						? i==0 ? current : NextTradingDay( current )
-						: i==0 ? current : PreviousTradingDay( current );
 					auto pBar1 = new Proto::Results::DaySummary{}; pBar1->set_request_id( requestId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
 					bars.emplace( day, pBar1 );
 				}
@@ -55,7 +52,7 @@ namespace Jde::Markets
 					auto set = [&bars, groupByDay]( const vector<::Bar>& ibBars, function<void(Proto::Results::DaySummary& summary, double close)> fnctn )
 					{
 						var dayBars = groupByDay( ibBars );
-						for( var [day, pBar] : bars )
+						for( var& [day, pBar] : bars )
 						{
 							var pIbBar = dayBars.find( day );
 							if( pIbBar!=dayBars.end() )
@@ -65,15 +62,18 @@ namespace Jde::Markets
 					var barSize = isOption ? Proto::Requests::BarSize::Hour : Proto::Requests::BarSize::Day;
 					var endDate = fillInBack ? current : PreviousTradingDay( current );
 					var dayCount = !useRth ? 1 : useRth && !fillInBack ? std::max( 1, count-1 ) : count;
-					var pAsks = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Ask, useRth, true ).get();
-					set( *pAsks, []( Proto::Results::DaySummary& summary, double close ){ summary.set_ask( close ); } );
+					if( !IsOpen(contract) )
+					{
+						var pAsks = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Ask, useRth, true ).get();
+						set( *pAsks, []( Proto::Results::DaySummary& summary, double close ){ summary.set_ask( close ); } );
 
-					var pBids = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Bid, useRth, true ).get();
-					set( *pBids, []( Proto::Results::DaySummary& summary, double close ){ summary.set_bid( close ); } );
-
+						var pBids = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Bid, useRth, true ).get();
+						set( *pBids, []( Proto::Results::DaySummary& summary, double close ){ summary.set_bid( close ); } );
+					}
 					if( isPreMarket && fillInBack )
 					{
-						var today = NextTradingDay( current );
+					/* rth in premarket for today makes no sense
+						var today = current;
 						var pToday = _sync.ReqHistoricalDataSync( contract, today, 1, barSize, TwsDisplay::Enum::Trades, false, true ).get();
 						if( auto pDayBar = bars.find(today); pToday->size()==1 && pDayBar!=bars.end() )
 						{
@@ -88,14 +88,15 @@ namespace Jde::Markets
 							}
 							bars.erase( today );
 							return;
-						}
+						}*/
 					}
 					var setHighLowRth = !useRth && fillInBack;//after close & before open, want range/volume to be rth.
+				/* end date is screwed up.
 					if( setHighLowRth )
 					{
 						var pTrades = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, true ).get();
 						var dayBars = groupByDay( *pTrades );
-						for( var [day, pBar] : bars )
+						for( var& [day, pBar] : bars )
 						{
 							var pIbBar = dayBars.find( day );
 							if( pIbBar==dayBars.end() )
@@ -106,16 +107,16 @@ namespace Jde::Markets
 							pBar->set_low( back.low );
 							pBar->set_volume( back.volume );
 						}
-					}
+					}*/
 					//if( contract.Symbol=="AAPL" )
 					//	DBG0( "AAPL"sv );
-					var pTrades = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true, useRth ).get();
+					var pTrades = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, useRth, true ).get();
 					if( !pTrades )
 						DBG( "{} - !pTrades"sv, contract.Symbol );
 					//ASSERT( pTrades );
 					var dayBars = groupByDay( *pTrades );
 					vector<DayIndex> sentDays{}; sentDays.reserve( bars.size() );
-					for( var [day, pBar] : bars )
+					for( var& [day, pBar] : bars )
 					{
 						var pIbBar = dayBars.find( day );
 						if( pIbBar==dayBars.end() )
@@ -137,6 +138,8 @@ namespace Jde::Markets
 							pBar->set_high( high );
 							pBar->set_low( low==std::numeric_limits<double>::max() ? 0 : low );
 						}
+						if( pBar->close()==9.16 || pBar->contract_id()==4964 )
+							TRACE0("here"sv);
 						auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_day_summary( pBar );
 						sentDays.push_back( day );
 						if( sessionId )
@@ -149,6 +152,8 @@ namespace Jde::Markets
 				load( useRth, true );
 				if( !useRth )
 					load( !useRth, false );
+				std::for_each( bars.begin(), bars.end(), [](auto& bar){delete bar.second;} );
+				bars.clear();
 			}
 			if( sessionId )
 				_socket.Push( sessionId, requestId, Proto::Results::EResults::MultiEnd );
@@ -171,6 +176,6 @@ namespace Jde::Markets
 
 	void TwsWebSocket::PreviousDayValues( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, SessionId sessionId, ClientRequestId requestId )noexcept
 	{
-		std::thread( [sessionId, contractIds, requestId](){ Threading::SetThreadDescription("PreviousDayValues"); fnctn( contractIds, sessionId, requestId );} ).detach();
+		std::thread( [sessionId, contractIds, requestId](){ Threading::SetThreadDescription( format("{}-PrevDayValues", contractIds.size()==1 ? contractIds[0] : contractIds.size()) ); fnctn( contractIds, sessionId, requestId );} ).detach();
 	}
 }
