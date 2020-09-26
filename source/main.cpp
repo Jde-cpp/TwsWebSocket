@@ -9,7 +9,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	shared_ptr<Settings::Container> SettingsPtr;
-	void Startup()noexcept;
+	void Startup( bool initialCall=true )noexcept;
 }
 
 int main( int argc, char** argv )
@@ -39,20 +39,43 @@ int main( int argc, char** argv )
 
 namespace Jde::Markets
 {
-	void TwsWebSocket::Startup()noexcept
+	void TwsWebSocket::Startup( bool initialCall )noexcept
 	{
-		while( !Threading::GetThreadInterruptFlag().IsSet() && !TwsClientSync::IsConnected() )
-			std::this_thread::yield();
-		var pPositions = TwsClientSync::Instance().RequestPositions().get();
-		for( var& position : *pPositions )
-			PreviousDayValues( position.contract().id() );
-		for( var& name : WatchListData::Names() )
+		if( initialCall )
 		{
-			var pContent = WatchListData::Content( name );
-			for( auto i=0; i<pContent->securities_size(); ++i )
-				if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+			Threading::SetThreadDescription( "Startup" );
+			while( !Threading::GetThreadInterruptFlag().IsSet() && !TwsClientSync::IsConnected() )
+				std::this_thread::yield();
 		}
-		static std::once_flag single;
-		std::call_once( single, [&](){Startup();} );
+		try
+		{
+			var symbol = ""sv;//"AAPL"sv;
+			var pPositions = TwsClientSync::Instance().RequestPositions().get();
+			for( var& position : *pPositions )
+			{
+				if( !symbol.size() || position.contract().symbol()==symbol )
+					PreviousDayValues( position.contract().id() );
+			}
+			if( !symbol.size() )
+			{
+				for( var& name : WatchListData::Names() )
+				{
+					var pContent = WatchListData::Content( name );
+					for( auto i=0; i<pContent->securities_size(); ++i )
+						if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+				}
+			}
+		}
+		catch( const IBException& e )
+		{
+			e.Log( "Startup Position load ending" );
+		}
+
+		if( initialCall )
+		{
+			DBG0( "Call again to test cache."sv );
+	//		Startup( false );
+			DBG0( "Startup Loading Complete."sv );
+		}
 	}
 }

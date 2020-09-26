@@ -31,7 +31,8 @@ namespace TwsWebSocket
 		//void Push( Proto::Results::EResults webSend, sp<MessageType> pMessageUnion )noexcept;
 		void Push( TickerId ibReqId, Proto::Results::EResults messageId )noexcept;
 		void Push( const Proto::Results::Position& pPosition )noexcept;
-		void Push( Proto::Results::PortfolioUpdate& pMessage )noexcept;
+		void Push( const Proto::Results::PortfolioUpdate& pMessage )noexcept;
+		void PushAccountDownloadEnd( const string& accountNumber )noexcept;
 		void Push( Proto::Results::AccountUpdate& accountUpdate )noexcept;
 		void Push( Proto::Results::CommissionReport& report )noexcept;
 		void Push( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
@@ -43,7 +44,7 @@ namespace TwsWebSocket
 		bool PushAllocated( TickerId id, function<void(MessageType&, ClientRequestId)> set )noexcept;
 		void PushAllocated( Proto::Results::AccountUpdateMulti* pMessage )noexcept;
 		void PushAllocated( TickerId reqId, Proto::Results::HistoricalData* pMessage, bool saveCache )noexcept;
-		void PushAllocated( Proto::Results::StringResult* pMessage )noexcept;
+		//void PushAllocated( Proto::Results::StringResult* pMessage )noexcept;
 		void PushAllocated( SessionId sessionId, Proto::Results::MessageValue* pMessage )noexcept;
 
 		void PushAllocatedRequest( TickerId tickerId, Proto::Results::MessageValue* pMessage )noexcept;
@@ -61,7 +62,7 @@ namespace TwsWebSocket
 		void EraseSession( SessionId id )noexcept;
 		void AddRequestSessions( SessionId id, const vector<Proto::Results::EResults>& webSendMessages )noexcept;
 		void AddRequest( SessionId id, long reqId )noexcept;
-
+		void PushAccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept;
 		void ReceiveAccountUpdates( SessionId sessionId, const Proto::Requests::RequestAccountUpdates& request )noexcept;
 		void ReceiveAccountUpdatesMulti( SessionId sessionId, const Proto::Requests::RequestAccountUpdatesMulti& accountUpdates )noexcept;
 		void ReceiveContractDetails( SessionId sessionId, const Proto::Requests::RequestContractDetails& request )noexcept;

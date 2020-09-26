@@ -11,7 +11,7 @@ namespace Jde::Markets::TwsWebSocket
 		static void CreateInstance( const TwsConnectionSettings& settings )noexcept;
 		static WrapperWeb& Instance()noexcept;
 		bool HaveInstance()const noexcept{ return _pInstance!=nullptr; }
-
+		void accountDownloadEnd( const std::string& accountName )noexcept override;
 		void accountUpdateMulti( int reqId, const std::string& account, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept override;
 		void accountUpdateMultiEnd( int reqId )noexcept override;
 		void contractDetails( int reqId, const ContractDetails& contractDetails)noexcept override;
