@@ -295,9 +295,8 @@ namespace Jde::Markets::TwsWebSocket
 			Push( sessionId, pUnion );
 		}
 	}
-	void WebSocket::Push( Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept
+	void WebSocket::PushAccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept
 	{
-		var accountNumber = porfolioUpdate.account_number();
 		std::shared_lock<std::shared_mutex> l( _accountRequestMutex );
 		var pAccountNumberSessions = _accountRequests.find( accountNumber );
 		if( pAccountNumberSessions==_accountRequests.end() )
@@ -309,9 +308,20 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			for( var sessionId : pAccountNumberSessions->second )
 			{
-				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_portfolio_update( new Proto::Results::PortfolioUpdate{porfolioUpdate} );
+				auto pUnion = make_shared<MessageType>();
+				setMessage( *pUnion );
 				Push( sessionId, pUnion );
 			}
 		}
+	}
+	void WebSocket::Push( const Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept
+	{
+		PushAccountRequest( porfolioUpdate.account_number(), [&porfolioUpdate](MessageType& msg){msg.set_allocated_portfolio_update( new Proto::Results::PortfolioUpdate{porfolioUpdate});} );
+	}
+
+	void WebSocket::PushAccountDownloadEnd( const string& accountNumber )noexcept
+	{
+		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::AccountDownloadEnd ); pValue->set_string_value( accountNumber );
+		PushAccountRequest( accountNumber, [pValue](MessageType& msg){msg.set_allocated_message(pValue);} );
 	}
 }
