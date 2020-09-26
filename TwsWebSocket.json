@@ -1,0 +1,25 @@
+{
+	"barPath": "",
+	"logging":
+	{
+		"level": 1,
+		"server":  false
+	},
+	"twsWebSocket":
+	{ 
+		"webSocketPort":  6811,
+		"twsClientId": 8,
+		"flexPath":  "",
+		"accounts":
+		{
+			"DU1330817": "Sandbox"
+		}
+	},
+	"tws":
+	{
+		"host": "localhost",
+		"options": "",
+		"ports": [7497,7496,4001,4002],
+		"maxHistoricalDataRequest": 40
+	}
+}

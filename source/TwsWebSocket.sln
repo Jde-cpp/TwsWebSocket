@@ -27,6 +27,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XZ", "..\..\XZ\source\XZ.vc
 		{7FC3CC33-B345-423E-99B6-5D499E531FBF} = {7FC3CC33-B345-423E-99B6-5D499E531FBF}
 	EndProjectSection
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "..\Setup\Setup.vdproj", "{22ADB4A9-826E-464E-87D9-54F20CF7637D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -65,6 +67,10 @@ Global
 		{8B49D7A7-4CB3-4610-8028-E9A179AE86F3}.Release|x64.ActiveCfg = Release|x64
 		{8B49D7A7-4CB3-4610-8028-E9A179AE86F3}.Release|x64.Build.0 = Release|x64
 		{8B49D7A7-4CB3-4610-8028-E9A179AE86F3}.Release|x86.ActiveCfg = Release|x64
+		{22ADB4A9-826E-464E-87D9-54F20CF7637D}.Debug|x64.ActiveCfg = Debug
+		{22ADB4A9-826E-464E-87D9-54F20CF7637D}.Debug|x86.ActiveCfg = Debug
+		{22ADB4A9-826E-464E-87D9-54F20CF7637D}.Release|x64.ActiveCfg = Release
+		{22ADB4A9-826E-464E-87D9-54F20CF7637D}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
