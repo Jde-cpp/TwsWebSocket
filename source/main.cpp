@@ -31,6 +31,7 @@ int main( int argc, char** argv )
 	}
 	catch( const Jde::EnvironmentException& e )
 	{
+		std::cerr << e.what() << std::endl;
 		CRITICAL0( string(e.what()) );
 		result = 1;//EXIT_FAILURE
 	}
@@ -46,11 +47,18 @@ namespace Jde::Markets
 		var pPositions = TwsClientSync::Instance().RequestPositions().get();
 		for( var& position : *pPositions )
 			PreviousDayValues( position.contract().id() );
-		for( var& name : WatchListData::Names() )
+		try
 		{
-			var pContent = WatchListData::Content( name );
-			for( auto i=0; i<pContent->securities_size(); ++i )
-				if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+			for( var& name : WatchListData::Names() )
+			{
+				var pContent = WatchListData::Content( name );
+				for( auto i=0; i<pContent->securities_size(); ++i )
+					if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+			}
+		}
+		catch( const IOException& e )
+		{
+			e.Log( "Could not load watch lists" );
 		}
 		static std::once_flag single;
 		std::call_once( single, [&](){Startup();} );

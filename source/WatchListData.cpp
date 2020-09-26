@@ -8,13 +8,13 @@ namespace Jde::Markets::TwsWebSocket
 {
 	fs::path GetDir()noexcept(false)
 	{
-		var dir = SettingsPtr->Get<fs::path>( "watchDir", fs::path{} );
+		var dir = SettingsPtr->Get<fs::path>( "watchDir", IApplication::Instance().ApplicationDataFolder()/"watches" );
 		if( dir.empty() )
-			THROW( EnvironmentException( "WatchDir not set") );
+			THROW( EnvironmentException("WatchDir not set") );
 		IOException::TestExists( dir );
 		return dir;
 	}
-	vector<string> WatchListData::Names( optional<bool> portfolio )noexcept
+	vector<string> WatchListData::Names( optional<bool> portfolio )noexcept(false)//IOException - watch list dir may not exist.
 	{
 		vector<string> names;
 		var dir = GetDir();

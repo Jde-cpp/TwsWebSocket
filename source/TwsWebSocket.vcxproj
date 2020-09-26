@@ -118,6 +118,7 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="PreviousDayValues.cpp" />
     <ClCompile Include="WatchListData.cpp" />
     <ClCompile Include="WebSocketReceive.cpp" />
     <ClCompile Include="WebSocketSend.cpp" />
