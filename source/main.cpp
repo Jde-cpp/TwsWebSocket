@@ -67,6 +67,7 @@ namespace Jde::Markets
 						for( auto i=0; i<pContent->securities_size(); ++i )
 							if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
 					}
+				}
 				catch( const IOException& e )
 				{
 					e.Log( "Could not load watch lists" );

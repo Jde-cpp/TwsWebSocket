@@ -395,8 +395,13 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			unique_lock l{_newsMutex};
 			auto pExisting = _allocatedNews.find( requestId );
-			pCollection = pExisting==_allocatedNews.end() ? new Proto::Results::HistoricalNewsCollection() : pExisting->second;
-			_allocatedNews.erase( pExisting );
+			if( pExisting==_allocatedNews.end() )
+				pCollection = new Proto::Results::HistoricalNewsCollection();
+			else
+			{
+				pCollection = pExisting->second;
+				_allocatedNews.erase( pExisting );
+			}
 		}
 		pCollection->set_has_more( hasMore );
 		_socket.PushAllocated( requestId, [p=pCollection](MessageType& msg, ClientRequestId id){p->set_request_id( id ); msg.set_allocated_historical_news(p);} );
