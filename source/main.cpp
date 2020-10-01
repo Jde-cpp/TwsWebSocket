@@ -61,9 +61,16 @@ namespace Jde::Markets
 			{
 				for( var& name : WatchListData::Names() )
 				{
-					var pContent = WatchListData::Content( name );
-					for( auto i=0; i<pContent->securities_size(); ++i )
-						if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+					for( var& name : WatchListData::Names() )
+					{
+						var pContent = WatchListData::Content( name );
+						for( auto i=0; i<pContent->securities_size(); ++i )
+							if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+					}
+				}
+				catch( const IOException& e )
+				{
+					e.Log( "Could not load watch lists" );
 				}
 			}
 		}
