@@ -46,7 +46,7 @@ namespace Jde::Markets::TwsWebSocket
 	std::once_flag SingleClient;
 	void WebSocket::Accept()noexcept
 	{
-		Threading::SetThreadDescription( "wsAcceptor" );
+		Threading::SetThreadDscrptn( "wsAcceptor" );
 
 		try
 		{

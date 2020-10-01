@@ -44,7 +44,7 @@ namespace Jde::Markets
 	{
 		if( initialCall )
 		{
-			Threading::SetThreadDescription( "Startup" );
+			Threading::SetThreadDscrptn( "Startup" );
 			while( !Threading::GetThreadInterruptFlag().IsSet() && !TwsClientSync::IsConnected() )
 				std::this_thread::yield();
 		}
@@ -55,7 +55,7 @@ namespace Jde::Markets
 			for( var& position : *pPositions )
 			{
 				if( !symbol.size() || position.contract().symbol()==symbol )
-					PreviousDayValues( position.contract().id() );
+					Try( [&](){PreviousDayValues( position.contract().id() );} );
 			}
 			if( !symbol.size() )
 			{
@@ -67,6 +67,7 @@ namespace Jde::Markets
 						for( auto i=0; i<pContent->securities_size(); ++i )
 							if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
 					}
+				}
 				catch( const IOException& e )
 				{
 					e.Log( "Could not load watch lists" );

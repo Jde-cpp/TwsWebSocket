@@ -15,6 +15,12 @@
     {
         "Entry"
         {
+        "MsmKey" = "8:_2E7B68BF5DBA4C52BD8E52F7050ED0AF"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_3364ADBAFB704686A1E7301A964D40EC"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -27,7 +33,49 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_61E3775576E44C788ECA21BE81722EB9"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_6D34857FB24749958F3DD977A470E6CF"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_7B7396CADA5D40B5BA6F04F465EA8680"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_7CAA509FFBAC490FAAB611D4CD7A3D60"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_7EB4E03D99354D00884E93D920C15D45"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_8DD8FC3B6821463398257B0C47739A65"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_9408FA595DA941AAA096E1E77EBD79BD"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_942DFD73D9D245E581737980BF1C4932"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -39,13 +87,19 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_A4AFA142978E49F6AB7215FDAD50907F"
+        "MsmKey" = "8:_A0DBEB9FD85B43F38E8DC1C7AFE1D88A"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_AE3D5B6DAB654EB0ACD46C0CED7285C8"
+        "MsmKey" = "8:_AB8C39CDB01F42C39356469404D89B41"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_AC7263971FFB4E84A76A50FFB0F2ED58"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -57,25 +111,31 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_B0424CA73AAC4D2B827ECFD84ABD1717"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_B85F89DC7EF64C3BB5916A6FF6E64C16"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_DE7077E1739B4097BE265F1F8D74CD32"
+        "MsmKey" = "8:_C5ADE778EC3349B7BC231AADAF37FF53"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_EDC507F6DA1946129CDB1AC03531C6EA"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
         "MsmKey" = "8:_FB7FC305FF3148AD8BBF140F8413AA6D"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_FBAAA57FA7AC4F1BBAD85B400B502AAA"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -97,6 +157,22 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.7.2"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.7.2 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.7.2"
+                    }
+                }
+            }
         }
         "Release"
         {
@@ -113,6 +189,17 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+                "Items"
+                {
+                }
+            }
         }
     }
     "Deployable"
@@ -134,6 +221,26 @@
         }
         "File"
         {
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_2E7B68BF5DBA4C52BD8E52F7050ED0AF"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\assets\\img\\theme-demo-icon.svg"
+            "TargetName" = "8:theme-demo-icon.svg"
+            "Tag" = "8:"
+            "Folder" = "8:_9B8AED0956EF4054BD6D9A5CFF7F426D"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_3364ADBAFB704686A1E7301A964D40EC"
             {
             "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.Markets.dll"
@@ -174,12 +281,152 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_61E3775576E44C788ECA21BE81722EB9"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\assets\\pink-bluegrey.css"
+            "TargetName" = "8:pink-bluegrey.css"
+            "Tag" = "8:"
+            "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_6D34857FB24749958F3DD977A470E6CF"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\assets\\purple-green.css"
+            "TargetName" = "8:purple-green.css"
+            "Tag" = "8:"
+            "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7B7396CADA5D40B5BA6F04F465EA8680"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\assets\\deeppurple-amber.css"
+            "TargetName" = "8:deeppurple-amber.css"
+            "Tag" = "8:"
+            "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7CAA509FFBAC490FAAB611D4CD7A3D60"
             {
             "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.XZ.dll"
             "TargetName" = "8:Jde.XZ.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7EB4E03D99354D00884E93D920C15D45"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\styles.5e87972b24083e9348ab.css"
+            "TargetName" = "8:styles.5e87972b24083e9348ab.css"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_8DD8FC3B6821463398257B0C47739A65"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\polyfills.35a5ca1855eb057f016a.js"
+            "TargetName" = "8:polyfills.35a5ca1855eb057f016a.js"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9408FA595DA941AAA096E1E77EBD79BD"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\3rdpartylicenses.txt"
+            "TargetName" = "8:3rdpartylicenses.txt"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_942DFD73D9D245E581737980BF1C4932"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\index.html"
+            "TargetName" = "8:index.html"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -214,10 +461,10 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_A4AFA142978E49F6AB7215FDAD50907F"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_A0DBEB9FD85B43F38E8DC1C7AFE1D88A"
             {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.XZ.pdb"
-            "TargetName" = "8:Jde.XZ.pdb"
+            "SourcePath" = "8:..\\..\\..\\vcpkg\\packages\\zlib_x64-windows\\bin\\zlib1.dll"
+            "TargetName" = "8:zlib1.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
             "Condition" = "8:"
@@ -234,12 +481,32 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_AE3D5B6DAB654EB0ACD46C0CED7285C8"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_AB8C39CDB01F42C39356469404D89B41"
             {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\TwsWebSocket.pdb"
-            "TargetName" = "8:TwsWebSocket.pdb"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\main.9bbb57afe7c1892883fa.js"
+            "TargetName" = "8:main.9bbb57afe7c1892883fa.js"
             "Tag" = "8:"
-            "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_AC7263971FFB4E84A76A50FFB0F2ED58"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\runtime.acf0dec4155e77772545.js"
+            "TargetName" = "8:runtime.acf0dec4155e77772545.js"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -258,26 +525,6 @@
             {
             "SourcePath" = "8:..\\source\\.bin\\Release\\liblzma.dll"
             "TargetName" = "8:liblzma.dll"
-            "Tag" = "8:"
-            "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_B0424CA73AAC4D2B827ECFD84ABD1717"
-            {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.pdb"
-            "TargetName" = "8:Jde.pdb"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
             "Condition" = "8:"
@@ -314,10 +561,30 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_DE7077E1739B4097BE265F1F8D74CD32"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_C5ADE778EC3349B7BC231AADAF37FF53"
             {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.Markets.pdb"
-            "TargetName" = "8:Jde.Markets.pdb"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\favicon.ico"
+            "TargetName" = "8:favicon.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_EDC507F6DA1946129CDB1AC03531C6EA"
+            {
+            "SourcePath" = "8:..\\..\\..\\vcpkg\\packages\\protobuf_x64-windows\\bin\\libprotobuf.dll"
+            "TargetName" = "8:libprotobuf.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
             "Condition" = "8:"
@@ -340,6 +607,26 @@
             "TargetName" = "8:TwsWebSocket.json"
             "Tag" = "8:"
             "Folder" = "8:_F6F3920D2C154E7CA9CDE7F7B45932B5"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_FBAAA57FA7AC4F1BBAD85B400B502AAA"
+            {
+            "SourcePath" = "8:TwsWeb.bat"
+            "TargetName" = "8:TwsWeb.bat"
+            "Tag" = "8:"
+            "Folder" = "8:_555B1F615E2B4EB4B8BD7A1960F3BB79"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -379,6 +666,39 @@
                     "Property" = "8:_DA2CD6BEBFE44621BD3BF85263C5B5D6"
                         "Folders"
                         {
+                            "{9EF0B969-E518-4E46-987F-47570745A589}:_7CE40941E4A7424DB95BCFD974985737"
+                            {
+                            "Name" = "8:TwsWebsite"
+                            "AlwaysCreate" = "11:FALSE"
+                            "Condition" = "8:"
+                            "Transitive" = "11:FALSE"
+                            "Property" = "8:_54E358762C854AF89F6A1D48D6D73764"
+                                "Folders"
+                                {
+                                    "{9EF0B969-E518-4E46-987F-47570745A589}:_18B6943153E94C12BC88A50CBCBDB522"
+                                    {
+                                    "Name" = "8:assets"
+                                    "AlwaysCreate" = "11:FALSE"
+                                    "Condition" = "8:"
+                                    "Transitive" = "11:FALSE"
+                                    "Property" = "8:_4CA477FB1915450A993EAC10A547EFE8"
+                                        "Folders"
+                                        {
+                                            "{9EF0B969-E518-4E46-987F-47570745A589}:_9B8AED0956EF4054BD6D9A5CFF7F426D"
+                                            {
+                                            "Name" = "8:img"
+                                            "AlwaysCreate" = "11:FALSE"
+                                            "Condition" = "8:"
+                                            "Transitive" = "11:FALSE"
+                                            "Property" = "8:_20A3A28ED2A047DAB5E182D18813FBB0"
+                                                "Folders"
+                                                {
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     "{9EF0B969-E518-4E46-987F-47570745A589}:_F6F3920D2C154E7CA9CDE7F7B45932B5"
@@ -438,6 +758,17 @@
                     }
                 }
             }
+            "{1525181F-901A-416C-8A58-119130FE478E}:_555B1F615E2B4EB4B8BD7A1960F3BB79"
+            {
+            "Name" = "8:#1916"
+            "AlwaysCreate" = "11:FALSE"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Property" = "8:DesktopFolder"
+                "Folders"
+                {
+                }
+            }
             "{3C67513D-01DD-4637-8A68-80971EB9504F}:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
             {
             "DefaultLocation" = "8:[ProgramFiles64Folder][Manufacturer]\\[ProductName]"
@@ -465,16 +796,16 @@
         "Product"
         {
         "Name" = "8:Microsoft Visual Studio"
-        "ProductName" = "8:jde-cpp-TwsWebSocket"
-        "ProductCode" = "8:{8E51F0B6-9590-4B0F-AB0B-1E879DD4E306}"
-        "PackageCode" = "8:{5EAAB9B5-C7E4-48DD-AF18-75BE4866B1BB}"
+        "ProductName" = "8:JdeTwsWebSocket"
+        "ProductCode" = "8:{86F221AD-AF5C-413C-BBC7-D29518F27A55}"
+        "PackageCode" = "8:{2EDF0ECE-E919-437D-8584-935252078B14}"
         "UpgradeCode" = "8:{A054DB4A-7814-4C88-8860-9AE334B5A818}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:FALSE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:TRUE"
-        "ProductVersion" = "8:20.9.1"
+        "ProductVersion" = "8:20.9.7"
         "Manufacturer" = "8:jde-cpp"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:https://github.com/Jde-cpp/TwsWebSocket/issues"
