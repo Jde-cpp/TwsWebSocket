@@ -176,6 +176,6 @@ namespace Jde::Markets
 
 	void TwsWebSocket::PreviousDayValues( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, SessionId sessionId, ClientRequestId requestId )noexcept
 	{
-		std::thread( [sessionId, contractIds, requestId](){ Threading::SetThreadDescription( format("{}-PrevDayValues", contractIds.size()==1 ? contractIds[0] : contractIds.size()) ); fnctn( contractIds, sessionId, requestId );} ).detach();
+		std::thread( [sessionId, contractIds, requestId](){ Threading::SetThreadDscrptn( format("{}-PrevDayValues", contractIds.size()==1 ? contractIds[0] : contractIds.size()) ); fnctn( contractIds, sessionId, requestId );} ).detach();
 	}
 }

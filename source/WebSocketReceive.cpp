@@ -23,7 +23,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		var sessionId = ++_sessionId;
 		{
-			Threading::SetThreadDescription( format("webReceive - {}", sessionId) );
+			Threading::SetThreadDscrptn( format("webReceive - {}", sessionId) );
 			//IO::OStreamBuffer buffer( std::make_unique<std::vector<char>>(8192) );
 			//td::ostream os( &buffer );
 			try
@@ -332,7 +332,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		std::thread( [sessionId,options]()
 		{
-			Threading::SetThreadDescription( "ReceiveOptions" );
+			Threading::SetThreadDscrptn( "ReceiveOptions" );
 			var underlyingId = options.contract_id();
 			try
 			{

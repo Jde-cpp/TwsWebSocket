@@ -41,3 +41,6 @@ source/.vscode/settings.json
 source/.vscode/launch.json
 source/.vscode/settings.json
 
+setup/Release/*
+setup/Debug/*
+
