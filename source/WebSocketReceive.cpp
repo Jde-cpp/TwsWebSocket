@@ -256,7 +256,7 @@ namespace Jde::Markets::TwsWebSocket
 						THROW( Exception("'{}' had '{}' contracts", underlyingId, pDetails->size()) );
 					var requestId = _client.RequestId();
 					_requestSession.emplace( requestId, make_tuple(sessionId,underlyingId) );
-					_client.reqSecDefOptParams( requestId, underlyingId, pDetails->front().contract.localSymbol );
+					_client.ReqSecDefOptParams( requestId, underlyingId, pDetails->front().contract.localSymbol );
 				}
 			}
 			catch( const Exception& e )
