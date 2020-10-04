@@ -63,7 +63,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( !_socket.PushAllocated(orderId, [p](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_order_status( p );}) )
 			delete p;
 	}
-	void WrapperWeb::openOrder( ::OrderId orderId, const ibapi::Contract& contract, const ::Order& order, const ::OrderState& state )noexcept
+	void WrapperWeb::openOrder( ::OrderId orderId, const ::Contract& contract, const ::Order& order, const ::OrderState& state )noexcept
 	{
 		WrapperLog::openOrder( orderId, contract, order, state );
 		auto p = new Proto::Results::OpenOrder{};
@@ -82,7 +82,7 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::openOrderEnd();
 		_socket.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
 	}
-	void WrapperWeb::positionMulti( int reqId, const std::string& account, const std::string& modelCode, const ibapi::Contract& contract, double pos, double avgCost )noexcept
+	void WrapperWeb::positionMulti( int reqId, const std::string& account, const std::string& modelCode, const ::Contract& contract, double pos, double avgCost )noexcept
 	{
 		WrapperLog::positionMulti( reqId, account, modelCode, contract, pos, avgCost );
 		auto pUpdate = new Proto::Results::PositionMulti();
@@ -259,7 +259,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		_socket.Push( update );
 	}
-	void WrapperWeb::updatePortfolio( const ibapi::Contract& contract, double position, double marketPrice, double marketValue, double averageCost, double unrealizedPNL, double realizedPNL, const std::string& accountNumber )noexcept
+	void WrapperWeb::updatePortfolio( const ::Contract& contract, double position, double marketPrice, double marketValue, double averageCost, double unrealizedPNL, double realizedPNL, const std::string& accountNumber )noexcept
 	{
 		WrapperLog::updatePortfolio( contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountNumber );
 		Proto::Results::PortfolioUpdate update;
@@ -319,7 +319,7 @@ namespace Jde::Markets::TwsWebSocket
 		_socket.Push( a );
 		//_socket.PushAllocated( orderId, [a](MessageType& msg, ClientRequestId id){ auto p = new Results::CommissionReport(a); p->set_id( id ); msg.set_allocated_commission_report( p );} );
 	}
-	void WrapperWeb::execDetails( int reqId, const ibapi::Contract& contract, const Execution& ib )noexcept
+	void WrapperWeb::execDetails( int reqId, const ::Contract& contract, const Execution& ib )noexcept
 	{
 		auto p = new Proto::Results::Execution();
 		p->set_exec_id( ib.execId );

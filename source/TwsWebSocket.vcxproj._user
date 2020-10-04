@@ -1,7 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
-    <IncludePath>$(REPO_DIR)/boostorg/boost_1_73_0;$(REPO_DIR)/spdlog/include;$(REPO_DIR)/json/include;$(REPO_DIR)/tws-api/source/cppclient/client;$(IncludePath)</IncludePath>
+    <IncludePath>$(REPO_DIR)/boostorg/boost_1_73_0;$(REPO_DIR)/vcpkg/installed/x64-windows/include;$(REPO_DIR)/spdlog/include;$(REPO_DIR)/json/include;C:\TWS API\source\CppClient\client;$(IncludePath)</IncludePath>
     <LibraryPath>$(REPO_DIR)/boostorg/boost_1_73_0/stage/lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <LibraryPath>$(REPO_DIR)/tws-api/source/cppclient/client/.bin/debug;$(REPO_DIR)/vcpkg/buildtrees/protobuf/x64-windows-dbg;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <LibraryPath>$(REPO_DIR)/tws-api/source/cppclient/client/.bin/release;$(REPO_DIR)/vcpkg/buildtrees/protobuf/x64-windows-rel;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
 </Project>

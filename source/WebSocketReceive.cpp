@@ -438,7 +438,7 @@ namespace Jde::Markets::TwsWebSocket
 	void WebSocket::ReceiveMarketDataSmart( SessionId sessionId, const Proto::Requests::RequestMrkDataSmart& request )noexcept
 	{
 		var reqId = _client.RequestId();
-		ibapi::Contract contract; contract.conId = request.contract_id(); contract.exchange = "SMART";
+		::Contract contract; contract.conId = request.contract_id(); contract.exchange = "SMART";
 		var ticks = StringUtilities::AddCommas( request.tick_list() );
 		DBG( "receiveMarketDataSmart( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, contract.conId );
 

@@ -17,7 +17,7 @@ namespace Jde::Markets::TwsWebSocket
 		void contractDetails( int reqId, const ContractDetails& contractDetails)noexcept override;
 		void contractDetailsEnd( int reqId)noexcept override;
 		void commissionReport( const CommissionReport& commissionReport)noexcept override;
-		void execDetails( int reqId, const ibapi::Contract& contract, const Execution& execution)noexcept override;
+		void execDetails( int reqId, const ::Contract& contract, const Execution& execution)noexcept override;
 		void execDetailsEnd( int reqId)noexcept override;
 
 		void historicalData( TickerId reqId, const ::Bar& bar )noexcept override;
@@ -28,9 +28,9 @@ namespace Jde::Markets::TwsWebSocket
 		void newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept;
 		void nextValidId( ::OrderId orderId )noexcept override;
 		void orderStatus( ::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice)noexcept override;
-		void openOrder( ::OrderId orderId, const ibapi::Contract&, const ::Order&, const ::OrderState&)noexcept override;
+		void openOrder( ::OrderId orderId, const ::Contract&, const ::Order&, const ::OrderState&)noexcept override;
 		void openOrderEnd()noexcept override;
-		void positionMulti( int reqId, const std::string& account,const std::string& modelCode, const ibapi::Contract& contract, double pos, double avgCost)noexcept override;
+		void positionMulti( int reqId, const std::string& account,const std::string& modelCode, const ::Contract& contract, double pos, double avgCost)noexcept override;
 		void positionMultiEnd( int reqId)noexcept override;
 
 		void tickPrice( TickerId tickerId, TickType field, double price, const TickAttrib& attrib)noexcept override;
@@ -41,7 +41,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		//need to cache values between calls.
 		void updateAccountValue( const std::string& key, const std::string& val, const std::string& currency, const std::string& accountName )noexcept override;
-		void updatePortfolio( const ibapi::Contract& contract, double position, double marketPrice, double marketValue, double /*averageCost*/, double /*unrealizedPNL*/, double /*realizedPNL*/, const std::string& /*accountName*/)noexcept  override;
+		void updatePortfolio( const ::Contract& contract, double position, double marketPrice, double marketValue, double /*averageCost*/, double /*unrealizedPNL*/, double /*realizedPNL*/, const std::string& /*accountName*/)noexcept  override;
 		void updateAccountTime( const std::string& timeStamp )noexcept override;
 
 		bool AddCanceled( TickerId id )noexcept{ return _canceledItems.emplace(id); }
