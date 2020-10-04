@@ -18,8 +18,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MarketLibrary", "..\..\Mark
 		{8B49D7A7-4CB3-4610-8028-E9A179AE86F3} = {8B49D7A7-4CB3-4610-8028-E9A179AE86F3}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TwsSocketClient", "..\..\..\tws-api\source\cppclient\client\TwsSocketClient.vcxproj", "{E9C3126E-CEA8-41A8-A714-7644B016DB3C}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Framework", "..\..\Framework\source\Framework.vcxproj", "{7FC3CC33-B345-423E-99B6-5D499E531FBF}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XZ", "..\..\XZ\source\XZ.vcxproj", "{8B49D7A7-4CB3-4610-8028-E9A179AE86F3}"
@@ -28,6 +26,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XZ", "..\..\XZ\source\XZ.vc
 	EndProjectSection
 EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "..\Setup\Setup.vdproj", "{22ADB4A9-826E-464E-87D9-54F20CF7637D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TwsSocketClient64", "..\..\..\..\..\..\..\TWS API\source\CppClient\client\TwsSocketClient64.vcxproj", "{E9C3126E-CEA8-41A8-A714-7644B016DB3C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,12 +49,6 @@ Global
 		{B001A9CB-6EBC-470A-9760-4BFF763D9A16}.Release|x64.ActiveCfg = Release|x64
 		{B001A9CB-6EBC-470A-9760-4BFF763D9A16}.Release|x64.Build.0 = Release|x64
 		{B001A9CB-6EBC-470A-9760-4BFF763D9A16}.Release|x86.ActiveCfg = Release|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x64.ActiveCfg = Debug|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x64.Build.0 = Debug|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x86.ActiveCfg = Debug|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x64.ActiveCfg = Release|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x64.Build.0 = Release|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x86.ActiveCfg = Release|x64
 		{7FC3CC33-B345-423E-99B6-5D499E531FBF}.Debug|x64.ActiveCfg = Debug|x64
 		{7FC3CC33-B345-423E-99B6-5D499E531FBF}.Debug|x64.Build.0 = Debug|x64
 		{7FC3CC33-B345-423E-99B6-5D499E531FBF}.Debug|x86.ActiveCfg = Debug|x64
@@ -71,6 +65,12 @@ Global
 		{22ADB4A9-826E-464E-87D9-54F20CF7637D}.Debug|x86.ActiveCfg = Debug
 		{22ADB4A9-826E-464E-87D9-54F20CF7637D}.Release|x64.ActiveCfg = Release
 		{22ADB4A9-826E-464E-87D9-54F20CF7637D}.Release|x86.ActiveCfg = Release
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x64.ActiveCfg = Debug|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x64.Build.0 = Debug|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x86.ActiveCfg = Debug|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x64.ActiveCfg = Release|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x64.Build.0 = Release|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
