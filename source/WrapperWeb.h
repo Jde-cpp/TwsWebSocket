@@ -54,6 +54,7 @@ namespace Jde::Markets::TwsWebSocket
 	private:
 		//sp<vector<Proto::Results::OptionParams>> securityDefinitionOptionalParameterEndSync( int reqId )noexcept override;
 		void securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept override;
+		void securityDefinitionOptionalParameterEnd( int reqId )noexcept override;
 		void HandleBadTicker( TickerId ibReqId )noexcept;
 		WrapperWeb()noexcept(false);
 		static sp<WrapperWeb> _pInstance;

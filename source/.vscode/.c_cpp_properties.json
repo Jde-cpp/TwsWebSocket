@@ -7,7 +7,7 @@
 					 "${env:REPO_DIR}/llvm-project/libcxx/include",
 					 "${env:REPO_DIR}/boostorg/beast/include",
 					 "${env:REPO_DIR}/boostorg/asio/include",
-					 "${env:REPO_DIR}/boostorg/boost_1_73_0",
+					 "${env:REPO_DIR}/boostorg/boost_1_74_0",
 					 "${env:REPO_DIR}/spdlog/include",
 					 "${env:REPO_DIR}/json/include",
 					 "${env:REPO_DIR}/tws-api/source/cppclient/client"

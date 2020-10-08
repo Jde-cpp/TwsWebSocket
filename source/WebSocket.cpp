@@ -2,7 +2,6 @@
 #include <EClient.h>
 #include "WrapperWeb.h"
 #include "EWebReceive.h"
-#include "EWebSend.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 
 
