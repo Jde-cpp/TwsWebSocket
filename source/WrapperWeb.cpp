@@ -7,7 +7,6 @@
 #include "../../Framework/source/Settings.h"
 #include "../../Framework/source/collections/UnorderedSet.h"
 #include "EWebReceive.h"
-#include "EWebSend.h"
 #include "WebSocket.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../MarketLibrary/source/types/Contract.h"
@@ -427,17 +426,11 @@ namespace Jde::Markets::TwsWebSocket
 		if( !handled && exchange=="SMART" )
 			_socket.PushAllocated( reqId, new Proto::Results::OptionParams{ToOptionParam(exchange, underlyingConId, tradingClass, multiplier, expirations, strikes)} );
 	}
-/*	sp<vector<Proto::Results::OptionParams>> WrapperWeb::securityDefinitionOptionalParameterEndSync( int reqId )noexcept
+
+	void WrapperWeb::securityDefinitionOptionalParameterEnd( int reqId )noexcept
 	{
-		auto pResult = WrapperSync::securityDefinitionOptionalParameterEndSync( reqId );
-		if( pResult )
-		{
-			for( var& result : *pResult )
-			{
-				if( result.exchange()=="SMART" )
-					_socket.PushAllocated( reqId, new Proto::Results::OptionParams{result} );
-			}
-		}
-		return pResult;
-	}*/
+		bool handled = WrapperSync::securityDefinitionOptionalParameterEndSync( reqId );
+		if( !handled )
+			_socket.Push( reqId, Proto::Results::EResults::SecurityDefinitionOptionParameterEnd );
+	}
 }

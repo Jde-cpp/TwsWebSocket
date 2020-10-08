@@ -1,5 +1,4 @@
 #include "WebSocket.h"
-#include "EWebSend.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../Framework/source/Cache.h"
 

@@ -24,11 +24,9 @@ namespace TwsWebSocket
 
  		void OnTimeout()noexcept override;
 		void OnAwake()noexcept override{ OnTimeout(); }//unexpected
-		//void Push( EResults webSend, sp<google::protobuf::Message> pMessage );//{ _messages.Push( pMessage ); }
 
 		tuple<SessionId,TickerId> GetClientRequest( ReqId ibReqId )noexcept{return _requestSession.Find( ibReqId, make_tuple(0,0) ); }
 		void ContractDetailsEnd( ReqId reqId );
-		//void Push( Proto::Results::EResults webSend, sp<MessageType> pMessageUnion )noexcept;
 		void Push( TickerId ibReqId, Proto::Results::EResults messageId )noexcept;
 		void Push( const Proto::Results::Position& pPosition )noexcept;
 		void Push( const Proto::Results::PortfolioUpdate& pMessage )noexcept;
@@ -36,7 +34,6 @@ namespace TwsWebSocket
 		void Push( Proto::Results::AccountUpdate& accountUpdate )noexcept;
 		void Push( Proto::Results::CommissionReport& report )noexcept;
 		void Push( Proto::Results::EResults type, function<void(MessageType&)> set )noexcept;
-		//void Push( SessionId id, MessageTypePtr pAllocated )noexcept;
 		void Push( SessionId sessionId, ClientRequestId clientId, Proto::Results::EResults eResults )noexcept;
 		void Push( SessionId id, MessageTypePtr outgoing )noexcept;
 		void Push( SessionId id, const vector<MessageTypePtr>& outgoing )noexcept;
