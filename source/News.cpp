@@ -36,17 +36,13 @@ namespace Jde::Markets::TwsWebSocket
 		std::thread( fnctn ).detach();
 	}
 */
-	void News::RequestArticle( SessionId sessionId,  ClientRequestId clientId, const string& providerCode, const string& articleId )noexcept
+	void News::RequestArticle( const string& providerCode, const string& articleId, const ProcessArg& arg )noexcept
 	{
-		var requestId = _sync.RequestId();
-		_socket.AddRequestSession( requestId, sessionId, clientId );
-		_sync.reqNewsArticle( requestId, providerCode, articleId );
+		_sync.reqNewsArticle( arg.AddRequestSession(), providerCode, articleId );
 	}
-	void News::RequestHistorical( SessionId sessionId, ClientRequestId clientId, ContractPK contractId, const google::protobuf::RepeatedPtrField<string>& providerCodes, uint limit, time_t start, time_t end )noexcept
+	void News::RequestHistorical( ContractPK contractId, const google::protobuf::RepeatedPtrField<string>& providerCodes, uint limit, time_t start, time_t end, const ProcessArg& arg )noexcept
 	{
-		var requestId = _sync.RequestId();
-		_socket.AddRequestSession( requestId, sessionId, clientId );
-		_sync.reqHistoricalNews( requestId, contractId, IO::ProtoUtilities::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
+		_sync.reqHistoricalNews( arg.AddRequestSession(), contractId, IO::ProtoUtilities::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
 	}
 
 

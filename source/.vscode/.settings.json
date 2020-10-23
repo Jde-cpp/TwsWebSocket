@@ -90,7 +90,10 @@
 		"coroutine": "cpp",
 		"ios": "cpp",
 		"locale": "cpp",
-		"__functional_03": "cpp"
+		"__functional_03": "cpp",
+		"span": "cpp",
+		"rope": "cpp",
+		"slist": "cpp"
 	},
 	"window.title": "WebSocketTws"
 }

@@ -3,7 +3,7 @@
 #include "../../Framework/source/io/ProtoUtilities.h"
 
 #define var const auto
-#define _socket WebSocket::Instance()
+//#define _socket WebSocket::Instance()
 namespace Jde::Markets::TwsWebSocket
 {
 	fs::path GetDir()noexcept(false)
@@ -36,21 +36,21 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		return names;
 	}
-	void WatchListData::SendLists( SessionId sessionId, ClientRequestId clientId, bool portfolio )noexcept
+	void WatchListData::SendLists( bool portfolio, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [sessionId, clientId, portfolio]()
+		std::thread( [arg=inputArg, portfolio]()
 		{
 			try
 			{
-				auto pNames = new Proto::Results::StringList(); pNames->set_request_id( clientId );
+				auto pNames = new Proto::Results::StringList(); pNames->set_request_id( arg.ClientId );
 				vector<string> names = Names( portfolio );
 				for_each( names.begin(), names.end(), [pNames](var& name){ pNames->add_values(name);} );
 				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_string_list( pNames );
-				_socket.Push( sessionId, pUnion );
+				arg.Push( pUnion );
 			}
 			catch( const Exception& e )
 			{
-				_socket.PushError( sessionId, clientId, -1, e.what() );
+				arg.Push( e );
 			}
 		}).detach();
 	}
@@ -64,26 +64,26 @@ namespace Jde::Markets::TwsWebSocket
 		return IO::ProtoUtilities::Load<Proto::Watch::File>( file, true );
 	}
 
-	void WatchListData::SendList( SessionId sessionId, ClientRequestId clientId, const string& watchName )noexcept
+	void WatchListData::SendList( const string& watchName, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [sessionId, clientId, name=watchName]()
+		std::thread( [arg=inputArg, name=watchName]()
 		{
 			try
 			{
 				var pFile = Content( name );
 				var pWatchList = new Proto::Results::WatchList();
-				pWatchList->set_request_id( clientId );
+				pWatchList->set_request_id( arg.ClientId );
 				pWatchList->set_allocated_file( pFile.get() );
 				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_watch_list( pWatchList );
-				_socket.Push( sessionId, pUnion );
+				arg.Push( pUnion );
 			}
 			catch( const Exception& e )
 			{
-				_socket.PushError( sessionId, clientId, -1, e.what() );
+				arg.Push( e );
 			}
 		}).detach();
 	}
-/*	void WatchListData::CreateList( SessionId sessionId, ClientRequestId clientId, const string& watchName )noexcept
+/*	void WatchListData::CreateList( const ClientKey& key, const string& watchName )noexcept
 	{
 		std::thread( [sessionId, clientId, name=watchName]()
 		{
@@ -97,17 +97,17 @@ namespace Jde::Markets::TwsWebSocket
 				Proto::Watch::File file;
 				file.set_name( name );
 				IO::ProtoUtilities::Save( file, path );
-				_socket.Push( sessionId, clientId, Proto::Results::EResults::Accept );
+				arg.WebSendPtr->Push( sessionId, clientId, EResults::Accept );
 			}
 			catch( const Exception& e )
 			{
-				_socket.PushError( sessionId, clientId, -1, e.what() );
+				arg.WebSendPtr->PushError( sessionId, clientId, -1, e.what() );
 			}
 		}).detach();
 	}*/
-	void WatchListData::Delete( SessionId sessionId, ClientRequestId clientId, const string& watchName )noexcept
+	void WatchListData::Delete( const string& watchName, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [sessionId, clientId, name=watchName]()
+		std::thread( [arg=inputArg, name=watchName]()
 		{
 			try
 			{
@@ -117,17 +117,17 @@ namespace Jde::Markets::TwsWebSocket
 					THROW( IOException(path, "watch does not exist") );
 
 				fs::remove( path );
-				_socket.Push( sessionId, clientId, Proto::Results::EResults::Accept );
+				arg.Push( EResults::Accept );
 			}
 			catch( const Exception& e )
 			{
-				_socket.PushError( sessionId, clientId, -1, e.what() );
+				arg.Push( e );
 			}
 		}).detach();
 	}
-	void WatchListData::Edit( SessionId sessionId, ClientRequestId clientId, const Proto::Watch::File& inputFile )noexcept
+	void WatchListData::Edit( const Proto::Watch::File& inputFile, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [sessionId, clientId, file=inputFile]()
+		std::thread( [arg=inputArg, file=inputFile]()
 		{
 			try
 			{
@@ -138,11 +138,11 @@ namespace Jde::Markets::TwsWebSocket
 
 				var path = dir/StringUtilities::Replace( name+".watch", ' ', '_' );
 				IO::ProtoUtilities::Save( file, path );
-				_socket.Push( sessionId, clientId, Proto::Results::EResults::Accept );
+				arg.Push( EResults::Accept );
 			}
 			catch( const Exception& e )
 			{
-				_socket.PushError( sessionId, clientId, -1, e.what() );
+				arg.Push( e );
 			}
 		}).detach();
 	}

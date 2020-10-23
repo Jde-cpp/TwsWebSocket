@@ -4,11 +4,12 @@
 struct EReaderSignal;
 namespace Jde::Markets::TwsWebSocket
 {
+	struct WebSendGateway;
 	enum class EWebReceive : short;
 
 	struct WrapperWeb : public WrapperSync
 	{
-		static void CreateInstance( const TwsConnectionSettings& settings )noexcept;
+		static tuple<sp<TwsClientSync>,sp<WrapperWeb>> CreateInstance()noexcept;
 		static WrapperWeb& Instance()noexcept;
 		bool HaveInstance()const noexcept{ return _pInstance!=nullptr; }
 		void accountDownloadEnd( const std::string& accountName )noexcept override;
@@ -27,17 +28,18 @@ namespace Jde::Markets::TwsWebSocket
 		void newsProviders( const std::vector<NewsProvider>& providers )noexcept override{ newsProviders( providers, false ); }
 		void newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept;
 		void nextValidId( ::OrderId orderId )noexcept override;
-		void orderStatus( ::OrderId orderId, const std::string& status, double filled,	double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice)noexcept override;
+		void orderStatus( ::OrderId orderId, const std::string& status, double filled, double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice )noexcept override;
 		void openOrder( ::OrderId orderId, const ::Contract&, const ::Order&, const ::OrderState&)noexcept override;
 		void openOrderEnd()noexcept override;
 		void positionMulti( int reqId, const std::string& account,const std::string& modelCode, const ::Contract& contract, double pos, double avgCost)noexcept override;
 		void positionMultiEnd( int reqId)noexcept override;
 
+		void tickGeneric(TickerId tickerId, TickType tickType, double value)noexcept override;
+		void tickOptionComputation( TickerId tickerId, TickType tickType, int tickAttrib, double impliedVol, double delta,	double optPrice, double pvDividend, double gamma, double vega, double theta, double undPrice)noexcept override;
 		void tickPrice( TickerId tickerId, TickType field, double price, const TickAttrib& attrib)noexcept override;
 		void tickSize( TickerId tickerId, TickType field, int size)noexcept override;
-		void tickGeneric(TickerId tickerId, TickType tickType, double value)noexcept override;
-		void tickString(TickerId tickerId, TickType tickType, const std::string& value)noexcept override;
 		void tickSnapshotEnd( int reqId)noexcept override;
+		void tickString(TickerId tickerId, TickType tickType, const std::string& value)noexcept override;
 
 		//need to cache values between calls.
 		void updateAccountValue( const std::string& key, const std::string& val, const std::string& currency, const std::string& accountName )noexcept override;
@@ -50,18 +52,23 @@ namespace Jde::Markets::TwsWebSocket
 		void newsArticle( int requestId, int articleType, const std::string& articleText )noexcept override;
 		void historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept override;
 		void historicalNewsEnd( int requestId, bool hasMore )noexcept override;
-
+		void SetWebSend( sp<WebSendGateway> pWebSend )noexcept{ _pWebSend = pWebSend; }
 	private:
+		WrapperWeb()noexcept;
+		sp<TwsClientSync> CreateClient( uint twsClientId )noexcept override;
 		//sp<vector<Proto::Results::OptionParams>> securityDefinitionOptionalParameterEndSync( int reqId )noexcept override;
 		void securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept override;
 		void securityDefinitionOptionalParameterEnd( int reqId )noexcept override;
 		void HandleBadTicker( TickerId ibReqId )noexcept;
-		WrapperWeb()noexcept(false);
 		static sp<WrapperWeb> _pInstance;
 
-		map<TickerId,up<Proto::Results::HistoricalData>> _historicalData; mutex _historicalDataMutex;
+		flat_map<TickerId,up<Proto::Results::HistoricalData>> _historicalData; mutex _historicalDataMutex;
+		flat_map<int,up<Proto::Results::OptionExchanges>> _optionParams;
 		const map<string,string> _accounts;
 		UnorderedSet<TickerId> _canceledItems;
+
+		flat_map<int,unique_ptr<Proto::Results::ContractDetailsResult>> _contractDetails;
 		flat_map<TickerId,Proto::Results::HistoricalNewsCollection*> _allocatedNews;  mutex _newsMutex;
+		sp<WebSendGateway> _pWebSend;
 	};
 }

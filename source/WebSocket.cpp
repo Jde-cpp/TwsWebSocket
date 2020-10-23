@@ -13,18 +13,21 @@ namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.h
 namespace Jde::Markets::TwsWebSocket
 {
 	shared_ptr<WebSocket> WebSocket::_pInstance{nullptr};
-	WebSocket::WebSocket( uint16 port ):
-		Threading::Interrupt( "webSend", 100ms, true ),
+	WebSocket::WebSocket( uint16 port, sp<TwsClientSync> pClient )noexcept:
+		Threading::Interrupt( "webSocket", 100ms, true ),
 		_port{ port },
-		_pAcceptor{ make_shared<Threading::InterruptibleThread>("wsAcceptor",[&](){Accept();}) }
+		_pAcceptor{ make_shared<Threading::InterruptibleThread>("wsAcceptor",[&](){Accept();}) },
+		_pClientSync{ pClient },
+		_pWebSend{ make_shared<WebSendGateway>(*this, _pClientSync) },//*this, _pClientSync
+		_requestWorker{ *this, _pWebSend, _pClientSync }
 	{
 		IApplication::AddThread( _pAcceptor );
 	}
 
-	WebSocket& WebSocket::Create( uint16 port )noexcept
+	WebSocket& WebSocket::Create( uint16 port, sp<TwsClientSync> pClient )noexcept
 	{
 		ASSERT( !_pInstance );
-		_pInstance = shared_ptr<WebSocket>{ new WebSocket(port) };
+		_pInstance = shared_ptr<WebSocket>{ new WebSocket(port, pClient) };
 		IApplication::AddShutdown( _pInstance );
 		return *_pInstance;
 	}
@@ -40,30 +43,36 @@ namespace Jde::Markets::TwsWebSocket
 		if( _pAcceptObject )
 			_pAcceptObject->close();
 		_pAcceptObject = nullptr;
+		_requestWorker.Shutdown();
+		_pWebSend->Shutdown();
+		_pWebSend = nullptr;
 		DBG0( "WebSocket::Shutdown - Leaving"sv );
 	}
+/*
+	TickerId WebSocket::AddRequestSession( ClientKey clientId )noexcept
+	{
+		var id = TwsClientSync::Instance().RequestId();
+		if( auto p = InstancePtr; p )
+			p->_webSend.AddRequestSession( id, clientId.SessionPK, clientId.ClientRequestId );
+		return id;
+	}
+*/
 	std::once_flag SingleClient;
 	void WebSocket::Accept()noexcept
 	{
 		Threading::SetThreadDscrptn( "wsAcceptor" );
 
+		boost::asio::io_context ioc{1};
 		try
 		{
-			std::call_once( SingleClient, [&]()
-			{
-				TwsConnectionSettings settings;
-				from_json( Jde::Settings::Global().SubContainer("tws")->Json(), settings );
-				WrapperWeb::CreateInstance( settings );
-			});
+			auto p = new tcp::acceptor{ ioc, {boost::asio::ip::tcp::v4(), (short unsigned int)_port} };//for some reason inside shared_ptr was throwining
+			_pAcceptObject =  shared_ptr<tcp::acceptor>( p );
 		}
-		catch( const Exception& e )
+		catch( boost::system::system_error& e )
 		{
-			ERR0( string(e.what()) );
+			ERR( "Could not accept web sockets - {}"sv, e.what() );
 			return;
 		}
-
-		boost::asio::io_context ioc{1};
-		_pAcceptObject =  shared_ptr<tcp::acceptor>( new tcp::acceptor(ioc, {boost::asio::ip::tcp::v4(), (short unsigned int)_port}) );
 		INFO( "Accepting web sockets on port {}."sv, _port );
 		while( !Threading::GetThreadInterruptFlag().IsSet() )
 		{
@@ -85,54 +94,149 @@ namespace Jde::Markets::TwsWebSocket
 		DBG0( "Leaving WebSocket::Accept()"sv );
 	}
 
+	void WebSocket::DoSession( shared_ptr<Stream> pSession )noexcept
+	{
+		var sessionId = ++_sessionId;
+		{
+			Threading::SetThreadDscrptn( format("webReceive - {}", sessionId) );
+			//IO::OStreamBuffer buffer( std::make_unique<std::vector<char>>(8192) );
+			//td::ostream os( &buffer );
+			try
+			{
+				pSession->accept();
+				_sessions.emplace( sessionId, pSession );
+			}
+			catch( const boost::system::system_error& se )
+			{
+				if( se.code()==websocket::error::closed )
+					DBG( "Socket Closed on session {} when sending acceptance."sv, sessionId );
+				if( se.code() != websocket::error::closed )
+					ERR( "Error sending app - {}."sv, se.code().message() );
+			}
+			catch( const std::exception& e )
+			{
+				ERR0( string(e.what()) );
+			}
+		}
+		if( !_sessions.Find(sessionId) )
+			return;
+		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_type( Proto::Results::EResults::Accept ); pMessage->set_int_value( sessionId );
+		auto pMessageUnion = make_shared<MessageType>();  pMessageUnion->set_allocated_message( pMessage );
+		_pWebSend->Push( pMessageUnion, sessionId );
+		DBG( "Listening to session #{}"sv, sessionId );
+		UnPause();
+		while( !Threading::GetThreadInterruptFlag().IsSet() )
+		{
+			try
+			{
+				boost::beast::multi_buffer buffers;
+				//vector<char> baseBuffer{'\0','\0','\0','\0'};
+				//auto buffer = boost::asio::dynamic_buffer( baseBuffer );
+				//boost::beast::ostream(buffer) << "\0\0\0\0";//std::array<char,4>{'\0','\0','\0','\0'};
+				//var str2 = boost::beast::buffers_to( buffer.data() );
+				pSession->read( buffers );
+				//vector<google::protobuf::uint8> data;
+				//data.reserve( boost::asio::buffer_size(buffers.data()) );
+				// auto pData = buffers.data();//if in for loop causes crash in release mode.
+				// for( boost::asio::const_buffer buffer : boost::beast::detail::buffers_range(pData) )
+				// 	data.insert( std::end(data), static_cast<const char*>(buffer.data()), static_cast<const char*>(buffer.data())+buffer.size() );  //static_cast<const google::protobuf::uint8*>(buffer.data()), buffer.size() );
+				auto data = boost::beast::buffers_to_string( buffers.data() );
+				_requestWorker.Push( sessionId, std::move(data) );
+			}
+			catch(boost::system::system_error const& se)
+			{
+				auto code = se.code();
+				if(  code == websocket::error::closed )
+					DBG( "se.code()==websocket::error::closed, id={}"sv, sessionId );
+				else
+				{
+					if( code.value()==104 )//reset by peer
+						DBG( "system_error returned: '{}' - closing connection - {}"sv, se.code().message(), sessionId );
+					else
+						DBG( "system_error returned: '{}' - closing connection - {}"sv, se.code().message(), sessionId );
+					EraseSession( sessionId );
+					break;
+				}
+			}
+			catch( std::exception const& e )
+			{
+				ERR( "std::exception returned: '{}'"sv, e.what() );
+			}
+			if( !_sessions.Find(sessionId) )
+			{
+				DBG( "Could not find session id {} exiting thread."sv, sessionId );
+				break;
+			}
+		}
+		DBG0( "Leaving WebSocket::DoSession"sv );
+	}
+
+	void WebSocket::AddOutgoing( MessageTypePtr pUnion, SessionId id )noexcept
+	{
+		function<void(Queue<MessageType>&)> afterInsert = [pUnion]( Queue<MessageType>& queue ){ queue.Push( pUnion ); };
+		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
+	}
+	void WebSocket::AddOutgoing( const vector<MessageTypePtr>& messages, SessionId id )noexcept
+	{
+		function<void(Queue<MessageType>&)> afterInsert = [&messages]( Queue<MessageType>& queue ){ for_each(messages.begin(), messages.end(), [&queue](auto& m){queue.Push( m );} ); };
+		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
+	}
+
+	void WebSocket::OnTimeout()noexcept//TODO fire when queue has items, not on timeout.
+	{
+		if( !_outgoing.size() )
+			return;
+
+		map<SessionId,vector<char>> buffers;
+		std::function<void(const SessionId&, Queue<MessageType>&)> createBuffers = [&buffers]( const SessionId& id, Queue<MessageType>& queue )
+		{
+			if( !queue.size() )
+				return;
+
+			Proto::Results::Transmission transmission;
+			std::function<void(MessageType&)> getFunction = [&transmission]( MessageType& message )
+			{
+				auto pNewMessage = transmission.add_messages();
+				*pNewMessage = message;
+			};
+			queue.ForEach( getFunction );
+			const size_t size = transmission.ByteSizeLong();
+			auto& buffer = buffers.emplace( id, std::vector<char>(size) ).first->second;
+			transmission.SerializeToArray( buffer.data(), (int)buffer.size() );
+		};
+		_outgoing.ForEach( createBuffers );
+		_outgoing.eraseIf( [](const Queue<MessageType>& queue){ return queue.size()==0; } );
+		set<SessionId> brokenIds;
+		for( var& [id, buffer] : buffers )
+		{
+			auto pSession = _sessions.Find( id );
+			if( !pSession )
+			{
+				_outgoing.erase( id );
+				continue;
+			}
+			try
+			{
+				pSession->write( boost::asio::buffer(buffer.data(), buffer.size()) );
+			}
+			catch( boost::exception& e )
+			{
+				brokenIds.emplace( id ); ERRN( "removing because Error writing to Session:  {}", boost::diagnostic_information(&e) );
+				try
+				{
+					pSession->close( websocket::close_code::none );
+				}
+				catch( const boost::exception& e2 )	{ERRN( "Error closing:  ", boost::diagnostic_information(&e2) );}
+			}
+		};
+		for( var id : brokenIds )
+			EraseSession( id );
+	}
+
 	void WebSocket::EraseSession( SessionId id )noexcept
 	{
 		DBG( "Removing session '{}'"sv, id );
 		_sessions.erase( id );
-		std::function<void(const Proto::Results::EResults&, UnorderedSet<SessionId>& )> func = [&]( const Proto::Results::EResults& messageId, UnorderedSet<SessionId>& sessions )
-		{
-			sessions.EraseIf( [&](const SessionId& id){return !_sessions.Find(id);} );//if lost others.
-			if( messageId==Proto::Results::EResults::PositionData )
-			{
-				sessions.IfEmpty( [&]()
-				{
-					//_client.cancelPositions();
-					_requests.erase( Proto::Requests::ERequests::Positions );
-				});
-			}
-		};
-		_requestSessions.ForEach( func );
-		std::unique_lock<std::shared_mutex> l( _accountRequestMutex );
-		for( auto pAccountSessionIds = _accountRequests.begin(); pAccountSessionIds!=_accountRequests.end();  )
-		{
-			var& accountNumber = pAccountSessionIds->first;
-			auto& sessionIds =   pAccountSessionIds->second;
-			if( sessionIds.erase(id) && sessionIds.size()==0 )
-			{
-				_client.reqAccountUpdates( false, accountNumber );
-				pAccountSessionIds = _accountRequests.erase( pAccountSessionIds );
-			}
-			else
-				++pAccountSessionIds;
-		}
-		{
-			std::unique_lock<std::shared_mutex> l2{ _mktDataRequestsMutex };
-			for( auto pRequestSession = _mktDataRequests.begin(); pRequestSession!=_mktDataRequests.end(); )
-			{
-				if( pRequestSession->second.erase(id) && pRequestSession->second.size()==0 )
-				{
-					_client.cancelMktData( pRequestSession->first );
-					pRequestSession = _mktDataRequests.erase( pRequestSession );
-				}
-				else
-					++pRequestSession;
-			}
-		}
-	}
-
-	TickerId WebSocket::FindRequestId( SessionId sessionId, ClientRequestId clientId )const noexcept
-	{
-		auto values = _requestSession.Find( [sessionId, clientId]( const tuple<SessionId,ClientRequestId>& value ){ return get<0>(value)==sessionId && get<1>(value)==clientId; } );
-		return values.size() ? values.begin()->first : 0;
+		_pWebSend->EraseSession( id );
 	}
 }

@@ -15,7 +15,7 @@ namespace Jde::Markets::TwsWebSocket
 	atomic<uint32> DirectoryCrc{0};
 
 	sp<CacheType> Load()noexcept(false);
-	void Flex::SendTrades( SessionId sessionId, ClientRequestId clientId, string accountNumber, TimePoint startTime, TimePoint endTime )noexcept
+	void Flex::SendTrades( const string& accountNumber, TimePoint startTime, TimePoint endTime, const ProcessArg& web )noexcept
 	{
 		try
 		{
@@ -24,7 +24,7 @@ namespace Jde::Markets::TwsWebSocket
 			auto pData = Load();
 
 			shared_lock l{ _cacheMutex };
-			auto pResults = new Proto::Results::Flex(); pResults->set_id( clientId );
+			auto pResults = new Proto::Results::Flex(); pResults->set_id( web.ClientId );
 			ofstream os("/tmp/trades.csv");
 			for( auto day=startDay; day<=endDay; ++day )
 			{
@@ -41,13 +41,14 @@ namespace Jde::Markets::TwsWebSocket
 					os << flex.trades( i ).shares() << "," << flex.trades( i ).commission() << std::endl;
 				}
 			}
-			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, sessionId, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
+			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, web.SessionPK, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
 			auto pMsg = make_shared<Proto::Results::MessageUnion>(); pMsg->set_allocated_flex( pResults );
-			_socket.Push( sessionId, {pMsg} );
+			//Make _webSend global instance.tw
+			web.Push( pMsg );
 		}
 		catch( const Exception& e )
 		{
-			_socket.Push( sessionId, clientId, e );
+			web.Push( e );
 		}
 	}
 	time_t ToTimeT( const string& date )noexcept
