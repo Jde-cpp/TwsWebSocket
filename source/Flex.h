@@ -2,10 +2,10 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	struct Flex : IShutdown
+	struct ProcessArg;
+	struct Flex /*: IShutdown*/
 	{
-		static void SendTrades( SessionId sessionId, ClientRequestId clientId, string accountNumber, TimePoint start, TimePoint end )noexcept;
-	private:
+		static void SendTrades( const string& accountNumber, TimePoint start, TimePoint end, const ProcessArg& web  )noexcept;
 
 	};
 }

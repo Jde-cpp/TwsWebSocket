@@ -3,6 +3,7 @@
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "./WatchListData.h"
 #include "PreviousDayValues.h"
+#include "WrapperWeb.h"
 
 #define var const auto
 
@@ -17,14 +18,23 @@ int main( int argc, char** argv )
 	int result = 0;//EXIT_SUCCESS;
 	try
 	{
+		std::queue<tuple<int,std::string&&>> queue;
+		auto x = make_tuple( 9, std::string{"Hi"} );
+		queue.push( std::move(x) );
+		auto y = std::move( queue.front() );
+		auto one = std::get<1>( y );
+
 		Jde::OSApp::Startup( argc, argv, "TwsWebSocket" );
 
 		Jde::Markets::TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
-		var webSocketPort = Jde::Markets::TwsWebSocket::SettingsPtr->Get<Jde::uint16>( "webSocketPort" );
+		auto [pClient,pWrapper] = Jde::Markets::TwsWebSocket::WrapperWeb::CreateInstance();
 
-		Jde::Markets::TwsWebSocket::WebSocket::Create( webSocketPort );
-		auto pStartup = make_shared<Jde::Threading::InterruptibleThread>( "LoadPositions", [&](){Jde::Markets::TwsWebSocket::Startup();} );
-		Jde::IApplication::AddThread( pStartup );
+		var webSocketPort = Jde::Markets::TwsWebSocket::SettingsPtr->Get<Jde::uint16>( "webSocketPort" );
+		auto& socket = Jde::Markets::TwsWebSocket::WebSocket::Create( webSocketPort, pClient );
+		//auto pSend = ;
+		pWrapper->SetWebSend( socket.WebSend() );
+
+		Jde::IApplication::AddThread( make_shared<Jde::Threading::InterruptibleThread>("LoadPositions", [&](){Jde::Markets::TwsWebSocket::Startup();}) );
 
 		Jde::IApplication::Pause();
 		Jde::IApplication::CleanUp();
@@ -81,7 +91,7 @@ namespace Jde::Markets
 
 		if( initialCall )
 		{
-			DBG0( "Call again to test cache."sv );
+//			DBG0( "Call again to test cache."sv );
 	//		Startup( false );
 			DBG0( "Startup Loading Complete."sv );
 		}
