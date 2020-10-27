@@ -15,7 +15,7 @@ namespace Jde::Markets::TwsWebSocket
 		_webSendPtr{ webSendPtr },
 		_twsPtr{ pTwsClient }
 	{
-		_pThread = make_shared<Threading::InterruptibleThread>( "WebRequestWorker", [&](){Run();} );
+		_pThread = make_shared<Threading::InterruptibleThread>( "TwsSendWorker", [&](){Run();} );
 	}
 	void TwsSendWorker::Push( sp<Proto::Requests::RequestUnion> pData, SessionId sessionId )noexcept
 	{
@@ -107,7 +107,7 @@ namespace Jde::Markets::TwsWebSocket
 		for( var reqId : requestIds )
 		{
 			const Contract contract{ r.contracts(i++) };//
-			DBG( "reqContractDetails( reqId='{}' sessionId='{}', contract='{}' )"sv, reqId, sessionId, contract.Symbol );
+			TRACE( "({}.{})ContractDetails( contract='{}' )"sv, sessionId, reqId, contract.Symbol );
 
 			if( contract.SecType==SecurityType::Option )
 				((TwsClientCache&)_tws).ReqContractDetails( reqId, TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right) );

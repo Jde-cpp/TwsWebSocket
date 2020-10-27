@@ -30,7 +30,7 @@ namespace TwsWebSocket
 				var current = CurrentTradingDay( *contract.TradingHoursPtr );
 				var isOption = contract.SecType==SecurityType::Option;
 				var isPreMarket = IsPreMarket( contract.SecType );
-				var count = IsOpen( contract.SecType ) && !isPreMarket ? 1u : 2u;
+				var count = isOption || (IsOpen( contract.SecType ) && !isPreMarket) ? 1u : 2u;
 				for( auto day=current; bars.size()<count; day = PreviousTradingDay(day) )
 				{
 					auto pBar1 = new Proto::Results::DaySummary{}; pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
@@ -44,6 +44,7 @@ namespace TwsWebSocket
 						for( var& bar : ibBars )
 						{
 							var day = Chrono::DaysSinceEpoch( Clock::from_time_t(ConvertIBDate(bar.time)) );
+							//DBG( "vol='{}' time='{}", bar.volume, ToIsoString(Clock::from_time_t(ConvertIBDate(bar.time))) );
 							dayBars.try_emplace( day ).first->second.push_back( bar );
 						}
 						return dayBars;
@@ -141,7 +142,7 @@ namespace TwsWebSocket
 					for( var day : sentDays )
 						bars.erase( day );
 				};
-				var useRth = isOption || count==1;
+				var useRth = count==1;
 				load( useRth, current );
 				if( !useRth )
 					load( !useRth, PreviousTradingDay(current) );

@@ -51,7 +51,7 @@ namespace Jde::Markets::TwsWebSocket
 			if( auto pDoomedTicks = pContractSessions->second.find( id ); pDoomedTicks!=pContractSessions->second.end() )
 			{
 				var contractId = pContractSessions->first;
-				if( var [reqId,ticks] = RemoveMarketDataSubscription(contractId, id, true); reqId )
+				if( var [reqId,ticks] = RemoveMarketDataSubscription(contractId, id, true); reqId )//~~~
 				{
 					if( ticks.size() )
 						Try( [&,reqId2=reqId, &ticks=ticks]()
@@ -127,10 +127,23 @@ namespace Jde::Markets::TwsWebSocket
 			auto pExisting = _marketSubscriptions.find( contractId );
 			if( pExisting==_marketSubscriptions.end()  )
 				_marketSubscriptions.emplace( contractId, make_tuple(reqId = _client.RequestId(), ticks) );
-			else if( get<1>(pExisting->second)!=ticks )
+			else
 			{
-				_client.cancelMktData( get<0>(pExisting->second) );//todo move this & probably _marketSubscriptions to TwsSendWorker.
-				pExisting->second = make_tuple( reqId = _client.RequestId(), ticks );
+				if( get<1>(pExisting->second)!=ticks )
+				{
+					_client.cancelMktData( get<0>(pExisting->second) );//todo move this & probably _marketSubscriptions to TwsSendWorker.
+					pExisting->second = make_tuple( reqId = _client.RequestId(), ticks );
+				}
+				else
+				{
+					ostringstream os{"["};
+					for_each( ticks.begin(), ticks.end(), [&os](var tick){ os << tick << ",";} );
+					os << "]==[";
+					var y = get<1>(pExisting->second);
+					for_each( y.begin(), y.end(), [&os](var tick){ os << tick << ",";} );
+					os << "]";
+					DBG( "ticks equal = {}"sv, os.str() );
+				}
 			}
 		}
 		else if( var p = _marketSubscriptions.find(contractId); p!=_marketSubscriptions.end() )//if need to cancel...
@@ -154,15 +167,17 @@ namespace Jde::Markets::TwsWebSocket
 	tuple<TickerId,flat_set<Proto::Requests::ETickList>> WebSendGateway::RemoveMarketDataSubscription( ContractPK contractId, SessionId sessionId, bool haveLock )noexcept
 	{
 		auto pLock = haveLock ? up<std::unique_lock<std::mutex>>{} : make_unique<std::unique_lock<std::mutex>>( _marketSubscriptionsMutex );
-	 	if( auto pRequestSessions = _marketSessionSubscriptions.find( contractId ); pRequestSessions!=_marketSessionSubscriptions.end() )
+	 	if( auto pRequestSessions = _marketSessionSubscriptions.find( contractId ); pRequestSessions!=_marketSessionSubscriptions.end() )//does session have any for contract?
 	 	{
 	 		pRequestSessions->second.erase( sessionId );
 	 		if( !pRequestSessions->second.size() )
+			{
 				_marketSessionSubscriptions.erase( pRequestSessions );
+				_marketSubscriptions.erase( contractId );
+			}
 	 	}
 		else
 			DBG( "Could not find market data subscription('{}') sessionId='{}'"sv, contractId, sessionId );
-
 		return MarketDataTicks( contractId );
 	}
 
@@ -296,7 +311,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			else
 			{
-				ERR( "({})Canceling for {}, no contracts found."sv, id, contractId );
+				ERR( "({})Canceling for {}, no contracts found."sv, id, contractId );//TODO:  keep track of recently canceled tickers.
 				cancel = true;
 			}
 		}

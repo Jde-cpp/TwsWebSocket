@@ -128,87 +128,107 @@ namespace Jde::Markets::TwsWebSocket
 		} ).detach();
 	}
 
-	void WebRequestWorker::ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& options )noexcept
+	void WebRequestWorker::ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& params )noexcept
 	{
-		std::thread( [options, web=ProcessArg ARG(options.id())]()
+		std::thread( [params, web=ProcessArg ARG(params.id())]()
 		{
 			Threading::SetThreadDscrptn( "ReceiveOptions" );
-			var underlyingId = options.contract_id();
+			var underlyingId = params.contract_id();
 			try
 			{
 				//TODO see if I have, if not download it, else try getting from tws. (make sure have date.)
 				if( underlyingId==0 )
-					THROW( Exception("did not pass a contract id.") );
+					THROW( Exception("({}.{}) did not pass a contract id.", web.SessionPK, web.ClientId) );
 				var pDetails = _sync.ReqContractDetails( underlyingId ).get();
 				if( pDetails->size()!=1 )
-					THROW( Exception("'{}' had '{}' contracts", underlyingId, pDetails->size()) );
+					THROW( Exception("({}.{}) '{}' had '{}' contracts", web.SessionPK, web.ClientId, underlyingId, pDetails->size()) );
 				var contract = Contract{ pDetails->front() };
 				if( contract.SecType==SecurityType::Option )
-					THROW( Exception("passed in option contract ({})'{}', expected underlying", underlyingId, contract.LocalSymbol) );
+					THROW( Exception("({}.{})Passed in option contract ({})'{}', expected underlying", web.SessionPK, web.ClientId, underlyingId, contract.LocalSymbol) );
 
-				var right = (SecurityRight)options.security_type();
 				const std::array<string_view,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
-				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !options.start_expiration() )
-					THROW( Exception("ReceiveOptions request for '{}' - {} specified no date.", contract.Symbol, ToString(right)) );
+				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !params.start_expiration() )
+					THROW( Exception("({}.{})ReceiveOptions request for '{}' specified no date.", web.SessionPK, web.ClientId, contract.Symbol) );
 
-				auto pResults = new Proto::Results::OptionValues(); pResults->set_id( options.id() );
-				auto fetch = [&]( DayIndex expiration )noexcept(false)
+				auto pResults = make_unique<Proto::Results::OptionValues>(); pResults->set_id( params.id() );
+				sp<Proto::Results::ExchangeContracts> pOptionParams;
+				auto loadRight = [&]( SecurityRight right )
 				{
-					var ibContract = TwsClientCache::ToContract( contract.Symbol, expiration, right, options.start_srike() && options.start_srike()==options.end_strike() ? options.start_srike() : 0 );
-					auto pContracts = _sync.ReqContractDetails( ibContract ).get();
-					if( pContracts->size()<1 )
-						THROW( Exception("'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size()) );
-					var start = options.start_srike(); var end = options.end_strike();
-					if( !ibContract.strike && (start!=0 || end!=0) )
+					auto fetch = [&]( DayIndex expiration )noexcept(false)
 					{
-						auto pContracts2 = make_shared<vector<ContractDetails>>();
-						for( var& details : *pContracts )
+						var ibContract = TwsClientCache::ToContract( contract.Symbol, expiration, right, params.start_srike() && params.start_srike()==params.end_strike() ? params.start_srike() : 0 );
+						auto pContracts = _sync.ReqContractDetails( ibContract ).get();
+						if( pContracts->size()<1 )
+							THROW( Exception("'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size()) );
+						var start = params.start_srike(); var end = params.end_strike();
+						if( !ibContract.strike && (start!=0 || end!=0) )//remove contracts outside bounds?
 						{
-							if( (start==0 || start<=details.contract.strike) && (end==0 || end>=details.contract.strike) )
-								pContracts2->push_back( details );
+							auto pContracts2 = make_shared<vector<ContractDetails>>();
+							for( var& details : *pContracts )
+							{
+								if( (start==0 || start<=details.contract.strike) && (end==0 || end>=details.contract.strike) )
+									pContracts2->push_back( details );
+							}
+							pContracts = pContracts2;
 						}
-						pContracts = pContracts2;
-					}
+						var valueDay = OptionData::LoadDiff( contract, *pContracts, *pResults );
+						if( !valueDay )
+						{
+							flat_map<double,ContractPK> sorted;
+							for( var& details : *pContracts )
+								sorted.emplace( details.contract.strike, details.contract.conId );
 
-					return OptionData::LoadDiff( contract, *pContracts, *pResults );
+							auto pExpiration = pResults->add_option_days();
+							pExpiration->set_is_call( right==SecurityRight::Call );
+							pExpiration->set_expiration_days( expiration );
+							for( var& [strike,contractId] : sorted )
+							{
+								auto pValue = pExpiration->add_values();
+								pValue->set_id( contractId );
+								//DBG( "strike = '{}'"sv, details.contract.strike );
+								pValue->set_strike( strike );
+							}
+						}
+						return valueDay;
+					};
+					if( params.start_expiration()==params.end_expiration() )
+						pResults->set_day( fetch(params.start_expiration()) );
+					else
+					{
+						if( !pOptionParams )
+							pOptionParams = _sync.ReqSecDefOptParamsSmart( underlyingId, contract.Symbol );
+						var end = params.end_expiration() ? params.end_expiration() : std::numeric_limits<DayIndex>::max();
+						for( var expiration : pOptionParams->expirations() )
+						{
+							if( expiration<params.start_expiration() || expiration>end )
+								continue;
+							try
+							{
+								pResults->set_day( fetch(expiration) );//sets day multiple times...
+							}
+							catch( const IBException& e )
+							{
+								if( e.ErrorCode!=200 )//No security definition has been found for the request
+									throw e;
+							}
+						}
+					}
 				};
-				if( options.start_expiration()==options.end_expiration() )
-					pResults->set_day( fetch(options.start_expiration()) );
-				else
-				{
-					var optionParams = _sync.ReqSecDefOptParamsSmart( underlyingId, contract.Symbol );
-					var end = options.end_expiration() ? options.end_expiration() : std::numeric_limits<DayIndex>::max();
-					for( var expiration : optionParams.expirations() )
-					{
-						if( expiration<options.start_expiration() || expiration>end )
-							continue;
-						try
-						{
-							pResults->set_day( fetch(expiration) );
-						}
-						catch( const IBException& e )
-						{
-							if( e.ErrorCode!=200 )//No security definition has been found for the request
-								throw e;
-						}
-					}
-				}
+				if( (params.security_type() & SecurityRight::Call) )
+					loadRight( SecurityRight::Call );
+				if( (params.security_type() & SecurityRight::Put) )
+					loadRight( SecurityRight::Put );
+
 				if( pResults->option_days_size() )
 				{
-					auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_options( pResults );
+					auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_options( pResults.release() );
 					web.Push( pUnion );
 				}
 				else
 					web.WebSendPtr->Push( IBException{"No previous dates found", -2}, {web.SessionPK, underlyingId} );
 			}
-			catch( const IBException& e )
-			{
-				web.Push( e );
-			}
-			catch( const Exception& e )
-			{
-				web.Push( e );
-			}
+			catch( const IBException& e ){ web.Push( e ); }
+			catch( const Exception& e ){ web.Push( e ); }
 		} ).detach();
 	}
 
