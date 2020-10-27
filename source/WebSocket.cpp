@@ -16,11 +16,11 @@ namespace Jde::Markets::TwsWebSocket
 	WebSocket::WebSocket( uint16 port, sp<TwsClientSync> pClient )noexcept:
 		Threading::Interrupt( "webSocket", 100ms, true ),
 		_port{ port },
-		_pAcceptor{ make_shared<Threading::InterruptibleThread>("wsAcceptor",[&](){Accept();}) },
 		_pClientSync{ pClient },
-		_pWebSend{ make_shared<WebSendGateway>(*this, _pClientSync) },//*this, _pClientSync
+		_pWebSend{ make_shared<WebSendGateway>(*this, _pClientSync) },
 		_requestWorker{ *this, _pWebSend, _pClientSync }
 	{
+		_pAcceptor = make_shared<Threading::InterruptibleThread>( "wsAcceptor", [&](){Accept();} );//accesses members, so not initialized above.
 		IApplication::AddThread( _pAcceptor );
 	}
 
@@ -48,25 +48,16 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend = nullptr;
 		DBG0( "WebSocket::Shutdown - Leaving"sv );
 	}
-/*
-	TickerId WebSocket::AddRequestSession( ClientKey clientId )noexcept
-	{
-		var id = TwsClientSync::Instance().RequestId();
-		if( auto p = InstancePtr; p )
-			p->_webSend.AddRequestSession( id, clientId.SessionPK, clientId.ClientRequestId );
-		return id;
-	}
-*/
+
 	std::once_flag SingleClient;
 	void WebSocket::Accept()noexcept
 	{
-		Threading::SetThreadDscrptn( "wsAcceptor" );
+		Threading::SetThreadDscrptn( "webAcceptor" );
 
 		boost::asio::io_context ioc{1};
 		try
 		{
-			auto p = new tcp::acceptor{ ioc, {boost::asio::ip::tcp::v4(), (short unsigned int)_port} };//for some reason inside shared_ptr was throwining
-			_pAcceptObject =  shared_ptr<tcp::acceptor>( p );
+			_pAcceptObject =  shared_ptr<tcp::acceptor>( new tcp::acceptor{ioc, {boost::asio::ip::tcp::v4(), (short unsigned int)_port}} );
 		}
 		catch( boost::system::system_error& e )
 		{
@@ -99,8 +90,6 @@ namespace Jde::Markets::TwsWebSocket
 		var sessionId = ++_sessionId;
 		{
 			Threading::SetThreadDscrptn( format("webReceive - {}", sessionId) );
-			//IO::OStreamBuffer buffer( std::make_unique<std::vector<char>>(8192) );
-			//td::ostream os( &buffer );
 			try
 			{
 				pSession->accept();
@@ -130,16 +119,7 @@ namespace Jde::Markets::TwsWebSocket
 			try
 			{
 				boost::beast::multi_buffer buffers;
-				//vector<char> baseBuffer{'\0','\0','\0','\0'};
-				//auto buffer = boost::asio::dynamic_buffer( baseBuffer );
-				//boost::beast::ostream(buffer) << "\0\0\0\0";//std::array<char,4>{'\0','\0','\0','\0'};
-				//var str2 = boost::beast::buffers_to( buffer.data() );
 				pSession->read( buffers );
-				//vector<google::protobuf::uint8> data;
-				//data.reserve( boost::asio::buffer_size(buffers.data()) );
-				// auto pData = buffers.data();//if in for loop causes crash in release mode.
-				// for( boost::asio::const_buffer buffer : boost::beast::detail::buffers_range(pData) )
-				// 	data.insert( std::end(data), static_cast<const char*>(buffer.data()), static_cast<const char*>(buffer.data())+buffer.size() );  //static_cast<const google::protobuf::uint8*>(buffer.data()), buffer.size() );
 				auto data = boost::beast::buffers_to_string( buffers.data() );
 				_requestWorker.Push( sessionId, std::move(data) );
 			}
@@ -188,7 +168,7 @@ namespace Jde::Markets::TwsWebSocket
 			return;
 
 		map<SessionId,vector<char>> buffers;
-		std::function<void(const SessionId&, Queue<MessageType>&)> createBuffers = [&buffers]( const SessionId& id, Queue<MessageType>& queue )
+		std::function<void(const SessionId&, Queue<MessageType>&)> createBuffers = [&buffers]( const SessionId& id, Queue<MessageType>& queue )->void
 		{
 			if( !queue.size() )
 				return;
