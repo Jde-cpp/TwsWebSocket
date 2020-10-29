@@ -33,7 +33,6 @@ namespace Jde::Markets::TwsWebSocket
 		ASSERT( !_pInstance );
 		_pInstance = sp<WrapperWeb>( new WrapperWeb() );
 		sp<TwsClientSync> pClient = _pInstance->CreateClient( SettingsPtr->Get<uint>("twsClientId") );
-		//TwsClientSync::CreateInstance( settings, _pInstance, _pInstance->_pReaderSignal, SettingsPtr->Get<uint>("twsClientId") );
 		return make_tuple( pClient, _pInstance );
 	}
 	WrapperWeb& WrapperWeb::Instance()noexcept
@@ -44,8 +43,6 @@ namespace Jde::Markets::TwsWebSocket
 	sp<TwsClientSync> WrapperWeb::CreateClient( uint twsClientId )noexcept
 	{
 		return WrapperSync::CreateClient( twsClientId );
-
-		//_pWebSend->SetClientSync( pClient );
 	}
 
 	void WrapperWeb::nextValidId( ::OrderId orderId)noexcept
@@ -96,15 +93,14 @@ namespace Jde::Markets::TwsWebSocket
 	void WrapperWeb::positionMulti( int reqId, const std::string& account, const std::string& modelCode, const ::Contract& contract, double pos, double avgCost )noexcept
 	{
 		WrapperLog::positionMulti( reqId, account, modelCode, contract, pos, avgCost );
-		auto pUpdate = new Proto::Results::PositionMulti();
-		//pUpdate->set_request_id( reqId );
+		auto pUpdate = make_unique<Proto::Results::PositionMulti>();
 		pUpdate->set_account( account );
 		pUpdate->set_allocated_contract( Contract{contract}.ToProto(true).get() );
 		pUpdate->set_position( pos );
 		pUpdate->set_avgerage_cost( avgCost );
 		pUpdate->set_model_code( modelCode );
 
-		_pWebSend->Push( reqId, [p=pUpdate](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_position_multi( p );} );
+		_pWebSend->Push( reqId, [&p=pUpdate](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_position_multi(p.release());} );
 	}
 	void WrapperWeb::positionMultiEnd( int reqId )noexcept
 	{
@@ -176,7 +172,6 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WrapperWeb::error( int reqId, int errorCode, const std::string& errorString )noexcept
 	{
-		//auto p = WebSocket::InstancePtr();
 		if( !WrapperSync::error2(reqId, errorCode, errorString) )
 		{
 			if( errorCode==162 && _pWebSend->HasHistoricalRequest(reqId) )// _historicalCrcs.Has(id)
@@ -258,7 +253,6 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::updatePortfolio( contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountNumber );
 		Proto::Results::PortfolioUpdate update;
 		Contract myContract{ contract };
-//		ContractPK underlyingId{0};
 		update.set_allocated_contract( myContract.ToProto(true).get() );
 		update.set_position( position );
 		update.set_market_price( marketPrice );
@@ -316,11 +310,10 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		Proto::Results::CommissionReport a; a.set_exec_id( ib.execId ); a.set_commission( ib.commission ); a.set_currency( ib.currency ); a.set_realized_pnl( ib.realizedPNL ); a.set_yield( ib.yield ); a.set_yield_redemption_date( ib.yieldRedemptionDate );
 		_pWebSend->Push( a );
-		//_pWebSend->PushAllocated( orderId, [a](MessageType& msg, ClientRequestId id){ auto p = new Results::CommissionReport(a); p->set_id( id ); msg.set_allocated_commission_report( p );} );
 	}
 	void WrapperWeb::execDetails( int reqId, const ::Contract& contract, const Execution& ib )noexcept
 	{
-		auto p = new Proto::Results::Execution();
+		auto p = make_unique<Proto::Results::Execution>();
 		p->set_exec_id( ib.execId );
 		var time = ib.time;
 		ASSERT( time.size()==18 );
@@ -343,7 +336,7 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_model_code( ib.modelCode );
 		p->set_last_liquidity( ib.lastLiquidity );
 		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
-		_pWebSend->Push( reqId, [p](MessageType& msg, ClientRequestId id){ p->set_id( id ); msg.set_allocated_execution( p );} );
+		_pWebSend->Push( reqId, [&p](MessageType& msg, ClientRequestId id){ p->set_id( id ); msg.set_allocated_execution( p.release() );} );
 
 	}
 	void WrapperWeb::execDetailsEnd( int reqId )noexcept
@@ -354,7 +347,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WrapperWeb::tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept
 	{
-		auto pUpdate = new Proto::Results::TickNews();
+		auto pUpdate = new Proto::Results::TickNews();//TODO remove all new 
 		pUpdate->set_time( static_cast<uint32>(timeStamp) );
 		pUpdate->set_provider_code( providerCode );
 		pUpdate->set_article_id( articleId );
@@ -410,8 +403,6 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		if( !isCache )
 			WrapperCache::newsProviders( providers );
-		//_newsProviderData.End( make_shared<std::vector<NewsProvider>>(providers) );
-			//DBG0( "no listeners for newsProviders."sv );
 		auto pMap = new Proto::Results::StringMap();
 		pMap->set_result( EResults::NewsProviders );
 		for( var& provider : providers )
@@ -424,12 +415,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		var handled = WrapperSync::securityDefinitionOptionalParameterSync( reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );
 		if( !handled && CIString{exchange}=="SMART"sv )
-		{
 			*Collections::InsertUnique( _optionParams, reqId )->add_exchanges() = ToOptionParam( exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );
-//			if( !_pWebSend->PushAllocated(reqId, [p](MessageType& msg, ClientRequestId id){ msg.set_allocated_option_parameters(p); }) )
-	//			delete p;
-		}
-
 	}
 
 	void WrapperWeb::securityDefinitionOptionalParameterEnd( int reqId )noexcept

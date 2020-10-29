@@ -109,7 +109,7 @@ namespace Jde::Markets::TwsWebSocket
 			const Contract contract{ r.contracts(i++) };//
 			TRACE( "({}.{})ContractDetails( contract='{}' )"sv, sessionId, reqId, contract.Symbol );
 
-			if( contract.SecType==SecurityType::Option )
+			if( !contract.Id && contract.SecType==SecurityType::Option )
 				((TwsClientCache&)_tws).ReqContractDetails( reqId, TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right) );
 			else
 				((TwsClientCache&)_tws).ReqContractDetails( reqId, *contract.ToTws() );
