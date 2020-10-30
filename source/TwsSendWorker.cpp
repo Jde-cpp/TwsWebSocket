@@ -181,8 +181,8 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		else if( r.type()==ERequests::RequestAllOpenOrders )
 		{
-			_web.AddRequestSessions( sessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
-			_tws.reqAllOpenOrders();
+			_web.AddRequestSessions( sessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );
+			_tws.reqAllOpenOrders();//not a subscription.
 		}
 		else if( r.type()==ERequests::CancelMarketData )
 		{

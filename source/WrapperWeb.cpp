@@ -54,7 +54,8 @@ namespace Jde::Markets::TwsWebSocket
 	void WrapperWeb::orderStatus( ::OrderId orderId, const std::string& status, double filled, double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice )noexcept
 	{
 		WrapperLog::orderStatus( orderId, status, filled,	remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice );
-		auto p = new Proto::Results::OrderStatus{};
+		if( !_pWebSend ) return;
+		auto p = make_unique<Proto::Results::OrderStatus>();
 		p->set_order_id( orderId );
 		p->set_status( ToOrderStatus(status) );
 		p->set_filled( filled );
@@ -67,28 +68,24 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_why_held( whyHeld );
 		p->set_market_cap_price( mktCapPrice );
 		//could subscribe to all orders or just the one.
-		_pWebSend->Push( EResults::OrderStatus_, [p](MessageType& msg){msg.set_allocated_order_status(new Proto::Results::OrderStatus{*p});} );
-		if( !_pWebSend->Push(orderId, [p](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_order_status( p );}) )
-			delete p;
+		_pWebSend->Push( EResults::OrderStatus_, [&p](MessageType& msg){msg.set_allocated_order_status(new Proto::Results::OrderStatus{*p});} );
+		_pWebSend->Push( orderId, [&p](MessageType& msg, ClientRequestId id){p->set_id( id ); msg.set_allocated_order_status( p.release() );} );
 	}
 	void WrapperWeb::openOrder( ::OrderId orderId, const ::Contract& contract, const ::Order& order, const ::OrderState& state )noexcept
 	{
 		WrapperLog::openOrder( orderId, contract, order, state );
-		auto p = new Proto::Results::OpenOrder{};
+		if( !_pWebSend ) return;
+		auto p = make_unique<Proto::Results::OpenOrder>();
 		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
 		p->set_allocated_order( MyOrder{order}.ToProto(true).get() );
 		p->set_allocated_state( MyOrder::ToAllocatedProto(state) );
-		_pWebSend->Push( EResults::OpenOrder_, [p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
-		if( !_pWebSend->Push(orderId, [p](MessageType& msg, ClientRequestId id){p->set_web_id(id); msg.set_allocated_open_order( p );}) )
-		{
-			TRACE( "({}) openOrder request not found"sv, orderId );
-			delete p;
-		}
+		_pWebSend->Push( EResults::OpenOrder_, [&p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
+		_pWebSend->Push( orderId, [&p](MessageType& msg, ClientRequestId id){p->set_web_id(id); msg.set_allocated_open_order( p.release() );} );
 	}
 	void WrapperWeb::openOrderEnd()noexcept
 	{
 		WrapperLog::openOrderEnd();
-		_pWebSend->Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
+		_webSend.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
 	}
 	void WrapperWeb::positionMulti( int reqId, const std::string& account, const std::string& modelCode, const ::Contract& contract, double pos, double avgCost )noexcept
 	{
@@ -347,7 +344,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WrapperWeb::tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept
 	{
-		auto pUpdate = new Proto::Results::TickNews();//TODO remove all new 
+		auto pUpdate = new Proto::Results::TickNews();//TODO remove all new
 		pUpdate->set_time( static_cast<uint32>(timeStamp) );
 		pUpdate->set_provider_code( providerCode );
 		pUpdate->set_article_id( articleId );
