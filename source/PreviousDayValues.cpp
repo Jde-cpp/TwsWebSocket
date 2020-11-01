@@ -27,7 +27,7 @@ namespace TwsWebSocket
 					THROW( IBException( format("ReqContractDetails( {} ) returned {}.", contractId, e.what()), e.ErrorCode, e.RequestId) );
 				}
 				Contract contract{ pDetails->front() };
-				var current = CurrentTradingDay( *contract.TradingHoursPtr );
+				var current = CurrentTradingDay( contract );
 				var isOption = contract.SecType==SecurityType::Option;
 				var isPreMarket = IsPreMarket( contract.SecType );
 				var count = isOption || (IsOpen( contract.SecType ) && !isPreMarket) ? 1u : 2u;

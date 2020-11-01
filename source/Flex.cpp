@@ -15,7 +15,7 @@ namespace Jde::Markets::TwsWebSocket
 	atomic<uint32> DirectoryCrc{0};
 
 	sp<CacheType> Load()noexcept(false);
-	void Flex::SendTrades( const string& accountNumber, TimePoint startTime, TimePoint endTime, const ProcessArg& web )noexcept
+	void Flex::SendTrades( const string& /*accountNumber*/, TimePoint startTime, TimePoint endTime, const ProcessArg& web )noexcept
 	{
 		try
 		{

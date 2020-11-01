@@ -75,7 +75,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libprotobuf.lib;TwsSocketClient.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TwsSocketClient.lib;fmt.lib;libprotobufd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -100,7 +100,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libprotobuf.lib;TwsSocketClient.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TwsSocketClient.lib;fmt.lib;libprotobuf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -119,12 +119,21 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="PreviousDayValues.cpp" />
+    <ClCompile Include="TwsSendWorker.cpp" />
     <ClCompile Include="WatchListData.cpp" />
-    <ClCompile Include="WebSocketReceive.cpp" />
-    <ClCompile Include="WebSocketSend.cpp" />
+    <ClCompile Include="WebRequestWorker.cpp" />
+    <ClCompile Include="WebSendGateway.cpp" />
     <ClCompile Include="WrapperWeb.cpp" />
     <ClInclude Include="EWebSend.h" />
     <ClInclude Include="EWebReceive.h" />
+    <ClInclude Include="Flex.h" />
+    <ClInclude Include="News.h" />
+    <ClInclude Include="PreviousDayValues.h" />
+    <ClInclude Include="TwsSendWorker.h" />
+    <ClInclude Include="TypeDefs.h" />
+    <ClInclude Include="WatchListData.h" />
+    <ClInclude Include="WebRequestWorker.h" />
+    <ClInclude Include="WebSendGateway.h" />
     <ClInclude Include="WrapperWeb.h" />
     <ClInclude Include="WebSocket.h" />
   </ItemGroup>

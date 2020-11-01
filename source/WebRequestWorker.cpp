@@ -11,7 +11,7 @@
 #define var const auto
 namespace Jde::Markets::TwsWebSocket
 {
-	WebRequestWorker::WebRequestWorker( WebSocket& webSocketParent, sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept:
+	WebRequestWorker::WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept:
 		_pTwsSend{ make_shared<TwsSendWorker>(webSend, pTwsClient) },
 		_pWebSend{webSend}
 	{
@@ -117,7 +117,7 @@ namespace Jde::Markets::TwsWebSocket
 				if( pDetails->size()!=1 )
 					THROW( Exception("Contract '{}' return '{}' records"sv, contractId, pDetails->size()) );
 				var pStats = HistoricalDataCache::ReqStats( {pDetails->front()}, days, start );
-				auto p = new Proto::Results::Statistics(); p->set_request_id(inputArg.ClientId); p->set_count(pStats->Count); p->set_average(pStats->Average);p->set_variance(pStats->Variance);p->set_min(pStats->Min); p->set_max(pStats->Max);
+				auto p = new Proto::Results::Statistics(); p->set_request_id(inputArg.ClientId); p->set_count(static_cast<uint32>(pStats->Count)); p->set_average(pStats->Average);p->set_variance(pStats->Variance);p->set_min(pStats->Min); p->set_max(pStats->Max);
 				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_statistics( p );
 				inputArg.Push( pUnion );
 			}
@@ -186,7 +186,7 @@ namespace Jde::Markets::TwsWebSocket
 								auto pValue = pExpiration->add_values();
 								pValue->set_id( contractId );
 								//DBG( "strike = '{}'"sv, details.contract.strike );
-								pValue->set_strike( strike );
+								pValue->set_strike( static_cast<float>(strike) );
 							}
 						}
 						return valueDay;

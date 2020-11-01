@@ -217,7 +217,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
-				OrderId orderId = r.ids(i);
+				var orderId = r.ids(i);
 				_web.AddOrderSubscription( orderId, sessionId );
 				_tws.cancelOrder( orderId );
 			}

@@ -19,7 +19,7 @@ namespace Jde::Markets::TwsWebSocket
 	struct WebRequestWorker
 	{
 		typedef tuple<SessionId,string> QueueType;
-		WebRequestWorker( WebSocket& webSocketParent, sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept;
+		WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept;
 		void Push( SessionId sessionId, string&& data )noexcept;
 		void Shutdown()noexcept{ _pTwsSend->Shutdown(); _pThread->Interrupt(); _pThread->Join(); }
 	private:
