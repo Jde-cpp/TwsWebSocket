@@ -21,21 +21,23 @@
 #pragma warning( default : 4245)
 #pragma warning( default : 4701)
 #include <boost/asio.hpp>
-#include <boost/exception/diagnostic_information.hpp>
-#include <boost/core/noncopyable.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <boost/container/flat_set.hpp>
+#include <boost/core/noncopyable.hpp>
+#include <boost/exception/diagnostic_information.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/fmt/ostr.h>
 
 #include <nlohmann/json.hpp>
-#include <EWrapper.h>
 #include <EClientSocket.h>
+#include <EWrapper.h>
+#include <Execution.h>
 #include <Order.h>
 
 #include "../../Framework/source/log/Logging.h"

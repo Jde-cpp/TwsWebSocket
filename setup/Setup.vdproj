@@ -69,12 +69,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_92B8ECD7F78C48158756BC80DABB8C04"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_9408FA595DA941AAA096E1E77EBD79BD"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -112,6 +106,18 @@
         "Entry"
         {
         "MsmKey" = "8:_C5ADE778EC3349B7BC231AADAF37FF53"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_E2DE0A024DCA4828A09879EA2E7B1816"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_E9F1AA8C1FCA49DB823161F11B8D0CD6"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -401,26 +407,6 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_92B8ECD7F78C48158756BC80DABB8C04"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\main.cba10f963e212e3ef035.js"
-            "TargetName" = "8:main.cba10f963e212e3ef035.js"
-            "Tag" = "8:"
-            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9408FA595DA941AAA096E1E77EBD79BD"
             {
             "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\3rdpartylicenses.txt"
@@ -545,6 +531,46 @@
             {
             "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\favicon.ico"
             "TargetName" = "8:favicon.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_E2DE0A024DCA4828A09879EA2E7B1816"
+            {
+            "SourcePath" = "8:build-tws.bat"
+            "TargetName" = "8:build-tws.bat"
+            "Tag" = "8:"
+            "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_E9F1AA8C1FCA49DB823161F11B8D0CD6"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\main.2c3006e2d074459c4e38.js"
+            "TargetName" = "8:main.2c3006e2d074459c4e38.js"
             "Tag" = "8:"
             "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
@@ -797,15 +823,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:JdeTwsWebSocket"
-        "ProductCode" = "8:{62060E1C-DCA7-4B5B-8E86-42C8F52865FA}"
-        "PackageCode" = "8:{55AA4C40-141E-4835-AC5F-6C21464112EA}"
+        "ProductCode" = "8:{A76B3921-866B-4297-8082-3792E28223C1}"
+        "PackageCode" = "8:{12360D28-F60E-4648-90C8-9BB70F24F355}"
         "UpgradeCode" = "8:{A054DB4A-7814-4C88-8860-9AE334B5A818}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:FALSE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:TRUE"
-        "ProductVersion" = "8:20.10.1"
+        "ProductVersion" = "8:20.11.1"
         "Manufacturer" = "8:jde-cpp"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:https://github.com/Jde-cpp/TwsWebSocket/issues"

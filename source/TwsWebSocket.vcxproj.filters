@@ -27,6 +27,30 @@
     <ClInclude Include="WrapperWeb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WebSendGateway.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WebRequestWorker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WatchListData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TypeDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TwsSendWorker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PreviousDayValues.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="News.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Flex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -35,13 +59,7 @@
     <ClCompile Include="WebSocket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WebSocketReceive.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="WrapperWeb.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WebSocketSend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Flex.cpp">
@@ -57,6 +75,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PreviousDayValues.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WebSendGateway.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WebRequestWorker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TwsSendWorker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
