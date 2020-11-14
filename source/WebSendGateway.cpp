@@ -13,13 +13,13 @@ namespace Jde::Markets::TwsWebSocket
 		DBG0( "WebSendGateway::WebSendGateway"sv );
 	}
 
-	void WebSendGateway::EraseSession( SessionId id )noexcept
+	void WebSendGateway::EraseSession( SessionPK id )noexcept
 	{
 		DBG( "Removing session '{}'"sv, id );
 //		_sessions.erase( id );
-		std::function<void(const EResults&, UnorderedSet<SessionId>& )> func = [id]( const EResults& messageId, UnorderedSet<SessionId>& sessions )
+		std::function<void(const EResults&, UnorderedSet<SessionPK>& )> func = [id]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
 		{
-			//sessions.EraseIf( [&](const SessionId& id){return !_sessions.Find(id);} );//if lost others.
+			//sessions.EraseIf( [&](const SessionPK& id){return !_sessions.Find(id);} );//if lost others.
 			sessions.erase( id );
 			if( messageId==EResults::PositionData )
 			{
@@ -80,13 +80,13 @@ namespace Jde::Markets::TwsWebSocket
 		for_each( ids.begin(), ids.end(), [this, &key](auto id){ _requestSession.emplace(id, key); } );
 	}
 
-	void WebSendGateway::AddRequestSessions( SessionId id, const vector<EResults>& webSendMessages )noexcept//todo arg forwarding.
+	void WebSendGateway::AddRequestSessions( SessionPK id, const vector<EResults>& webSendMessages )noexcept//todo arg forwarding.
 	{
-		auto afterInsert = [id](UnorderedSet<SessionId>& values){values.emplace(id);};
+		auto afterInsert = [id](UnorderedSet<SessionPK>& values){values.emplace(id);};
 		for( var sendMessage : webSendMessages )
-			_requestSessions.Insert( afterInsert, sendMessage, sp<UnorderedSet<SessionId>>{new UnorderedSet<SessionId>{}} );
+			_requestSessions.Insert( afterInsert, sendMessage, sp<UnorderedSet<SessionPK>>{new UnorderedSet<SessionPK>{}} );
 	}
-	bool WebSendGateway::AddAccountSubscription( const string& account, SessionId sessionId )noexcept
+	bool WebSendGateway::AddAccountSubscription( const string& account, SessionPK sessionId )noexcept
 	{
 		DBG( "Account('{}') subscription for sessionId='{}'"sv, account, sessionId );
 		unique_lock l{ _accountSubscriptionMutex };
@@ -94,7 +94,7 @@ namespace Jde::Markets::TwsWebSocket
 		pValue->second.emplace( sessionId );
 		return inserted;
 	}
-	bool WebSendGateway::CancelAccountSubscription( const string& account, SessionId sessionId )noexcept
+	bool WebSendGateway::CancelAccountSubscription( const string& account, SessionPK sessionId )noexcept
 	{
 		DBG( "Account('{}') unsubscribe for sessionId='{}'"sv, account, sessionId );
 		unique_lock l{ _accountSubscriptionMutex };
@@ -151,7 +151,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		return make_tuple( reqId, ticks );
 	}
-	tuple<TickerId,flat_set<Proto::Requests::ETickList>> WebSendGateway::AddMarketDataSubscription( ContractPK contractId, flat_set<Proto::Requests::ETickList>&& ticks, SessionId sessionId )noexcept
+	tuple<TickerId,flat_set<Proto::Requests::ETickList>> WebSendGateway::AddMarketDataSubscription( ContractPK contractId, flat_set<Proto::Requests::ETickList>&& ticks, SessionPK sessionId )noexcept
 	{
 		std::unique_lock l{ _marketSubscriptionsMutex };
 		auto [pRequestSessions,inserted] = _marketSessionSubscriptions.try_emplace( contractId );
@@ -164,7 +164,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		return result;
 	}
-	tuple<TickerId,flat_set<Proto::Requests::ETickList>> WebSendGateway::RemoveMarketDataSubscription( ContractPK contractId, SessionId sessionId, bool haveLock )noexcept
+	tuple<TickerId,flat_set<Proto::Requests::ETickList>> WebSendGateway::RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock )noexcept
 	{
 		auto pLock = haveLock ? up<std::unique_lock<std::mutex>>{} : make_unique<std::unique_lock<std::mutex>>( _marketSubscriptionsMutex );
 	 	if( auto pRequestSessions = _marketSessionSubscriptions.find( contractId ); pRequestSessions!=_marketSessionSubscriptions.end() )//does session have any for contract?
@@ -190,7 +190,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_requestSessions.Where( type, [&]( const auto& sessionIds )
 		{
-			sessionIds.ForEach( [&](const SessionId& sessionId )
+			sessionIds.ForEach( [&](const SessionPK& sessionId )
 			{
 				auto pMessageUnion = make_shared<MessageType>();
 				set( *pMessageUnion ); ASSERT( pMessageUnion->Value_case()!=MessageType::ValueCase::VALUE_NOT_SET );
@@ -211,11 +211,11 @@ namespace Jde::Markets::TwsWebSocket
 			DBG( "Could not find session for messageId:  '{}' req:  '{}'."sv, messageId, ibReqId );
 	}
 
-	void WebSendGateway::Push( MessageTypePtr pUnion, SessionId id )noexcept
+	void WebSendGateway::Push( MessageTypePtr pUnion, SessionPK id )noexcept
 	{
 		_webSocket.AddOutgoing( pUnion, id );
 	}
-	void WebSendGateway::Push( const vector<MessageTypePtr>& messages, SessionId id )noexcept
+	void WebSendGateway::Push( const vector<MessageTypePtr>& messages, SessionPK id )noexcept
 	{
 		_webSocket.AddOutgoing( messages, id );
 	}
@@ -225,7 +225,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( id>0 )
 		{
 			var key = GetClientRequest( id );
-			if( key.SessionPK )
+			if( key.SessionId )
 				Push( IBException{errorString, errorCode}, key );
 			else
 				DBG( "Could not find session for error req:  '{}'."sv, id );
@@ -242,10 +242,10 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		auto pError = new Proto::Results::Error(); pError->set_request_id(key.ClientId); pError->set_code(errorCode); pError->set_message(errorString);
 		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_error( pError );
-		Push( pMessage, key.SessionPK );
+		Push( pMessage, key.SessionId );
 	}
 
-	void WebSendGateway::AddOrderSubscription( OrderId orderId, SessionId sessionId )noexcept
+	void WebSendGateway::AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept
 	{
 		unique_lock l{ _orderSubscriptionMutex };
 
@@ -254,7 +254,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 
 
-/*	void WebSendGateway::PushError( SessionId sessionId, ClientRequestId clientId, int errorCode, const std::string& errorString )noexcept
+/*	void WebSendGateway::PushError( SessionPK sessionId, ClientPK clientId, int errorCode, const std::string& errorString )noexcept
 	{
 		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_error( pError );
 		Push( sessionId, pMessage );
@@ -273,7 +273,7 @@ namespace Jde::Markets::TwsWebSocket
 			DBG( "Could not find session for req:  '{}'."sv, reqId );
 	}
 */
-	bool WebSendGateway::Push( TickerId id, function<void(MessageType&, ClientRequestId)> set )noexcept
+	bool WebSendGateway::Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept
 	{
 		var [sessionId, clientReqId] = _requestSession.Find( id, ClientKey{} );
 		if( sessionId )
@@ -285,7 +285,7 @@ namespace Jde::Markets::TwsWebSocket
 		return sessionId;
 	}
 
-	void WebSendGateway::PushMarketData( TickerId id, function<void(MessageType&, ClientRequestId)> set )noexcept
+	void WebSendGateway::PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept
 	{
 		bool cancel = false; ContractPK contractId = 0;
 		{
@@ -435,6 +435,6 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_int_value( key.ClientId ); pMessage->set_type( messageId );
 		auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_message( pMessage );
-		Push( pUnion, key.SessionPK );
+		Push( pUnion, key.SessionId );
 	}
 }

@@ -55,13 +55,13 @@ namespace Jde::Markets::TwsWebSocket
 		}).detach();
 	}
 
-	sp<Proto::Watch::File> WatchListData::Content( const string& name )noexcept(false)
+	up<Proto::Watch::File> WatchListData::Content( const string& name )noexcept(false)
 	{
 		if( !name.size() )
 			THROW( Exception("did not specify a watch name value.") );
 		var dir = GetDir();
 		var file = dir/StringUtilities::Replace( name+".watch", ' ', '_' );
-		return IO::ProtoUtilities::Load<Proto::Watch::File>( file, true );
+		return IO::ProtoUtilities::Load<Proto::Watch::File>( file );
 	}
 
 	void WatchListData::SendList( const string& watchName, const ProcessArg& inputArg )noexcept
@@ -70,10 +70,10 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			try
 			{
-				var pFile = Content( name );
+				auto pFile = Content( name );
 				var pWatchList = new Proto::Results::WatchList();
 				pWatchList->set_request_id( arg.ClientId );
-				pWatchList->set_allocated_file( pFile.get() );
+				pWatchList->set_allocated_file( pFile.release() );
 				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_watch_list( pWatchList );
 				arg.Push( pUnion );
 			}

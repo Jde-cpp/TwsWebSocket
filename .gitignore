@@ -44,3 +44,4 @@ source/.vscode/settings.json
 setup/Release/*
 setup/Debug/*
 
+*.diff

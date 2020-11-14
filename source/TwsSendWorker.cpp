@@ -17,7 +17,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_pThread = make_shared<Threading::InterruptibleThread>( "TwsSendWorker", [&](){Run();} );
 	}
-	void TwsSendWorker::Push( sp<Proto::Requests::RequestUnion> pData, SessionId sessionId )noexcept
+	void TwsSendWorker::Push( sp<Proto::Requests::RequestUnion> pData, SessionPK sessionId )noexcept
 	{
 		_queue.Push( make_tuple(sessionId, pData) );
 	}
@@ -31,7 +31,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, SessionId sessionId )noexcept
+	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, SessionPK sessionId )noexcept
 	{
 		var message = *pData;
 		ClientKey key = {sessionId, 0};
@@ -96,7 +96,7 @@ namespace Jde::Markets::TwsWebSocket
 			_tws.calculateOptionPrice( _web.AddRequestSession(client), GetContract(r.contract_id()), r.volatility(), r.underlying_price(), {} );
 	}
 
-	void TwsSendWorker::ContractDetails( const Proto::Requests::RequestContractDetails& r, SessionId sessionId )noexcept
+	void TwsSendWorker::ContractDetails( const Proto::Requests::RequestContractDetails& r, SessionPK sessionId )noexcept
 	{
 		var clientRequestId = r.id();
 		flat_set<TickerId> requestIds;
@@ -116,12 +116,12 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void TwsSendWorker::HistoricalData( const Proto::Requests::RequestHistoricalData& r, SessionId sessionId )noexcept(false)
+	void TwsSendWorker::HistoricalData( const Proto::Requests::RequestHistoricalData& r, SessionPK sessionId )noexcept(false)
 	{
 		_tws.ReqHistoricalData( _web.AddRequestSession({sessionId,r.id()}), Contract{r.contract()}, Chrono::DaysSinceEpoch(Clock::from_time_t(r.date())), r.days(), r.bar_size(), r.display(), r.use_rth() );
 	}
 
-	void TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, SessionId sessionId )noexcept
+	void TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, SessionPK sessionId )noexcept
 	{
 		_web.AddExecutionRequest( sessionId );
 
@@ -131,7 +131,7 @@ namespace Jde::Markets::TwsWebSocket
 		_tws.reqExecutions( _web.AddRequestSession({sessionId,r.id()}), filter );
 	}
 
-	void TwsSendWorker::Order( const Proto::Requests::PlaceOrder& r, SessionId sessionId )noexcept
+	void TwsSendWorker::Order( const Proto::Requests::PlaceOrder& r, SessionPK sessionId )noexcept
 	{
 		var reqId = _web.AddRequestSession( {sessionId,r.id()}, r.order().id() );
 
@@ -154,12 +154,12 @@ namespace Jde::Markets::TwsWebSocket
 		}*/
 	}
 
-	void TwsSendWorker::Positions( const Proto::Requests::RequestPositions& r, SessionId sessionId )noexcept
+	void TwsSendWorker::Positions( const Proto::Requests::RequestPositions& r, SessionPK sessionId )noexcept
 	{
 		_tws.reqPositionsMulti( _web.AddRequestSession({sessionId,r.id()}), r.account_number(), r.model_code() );
 	}
 
-	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, SessionId sessionId )noexcept
+	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, SessionPK sessionId )noexcept
 	{
 		if( r.type()==ERequests::Positions )
 		{
@@ -203,7 +203,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
-				var ibId = _web.RequestFind( {sessionId, (ClientRequestId)r.ids(i)} );
+				var ibId = _web.RequestFind( {sessionId, (ClientPK)r.ids(i)} );
 				if( ibId )
 				{
 					_tws.cancelPositionsMulti( ibId );
@@ -233,7 +233,7 @@ namespace Jde::Markets::TwsWebSocket
 			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, r.type(), sessionId );
 	}
 
-	void TwsSendWorker::AccountUpdates( const Proto::Requests::RequestAccountUpdates& accountUpdates, SessionId sessionId )noexcept
+	void TwsSendWorker::AccountUpdates( const Proto::Requests::RequestAccountUpdates& accountUpdates, SessionPK sessionId )noexcept
 	{
 		var& account = accountUpdates.account_number();
 		var subscribe = accountUpdates.subscribe();
@@ -249,7 +249,7 @@ namespace Jde::Markets::TwsWebSocket
 			_tws.reqAccountUpdates( false, account );
 	}
 
-	void TwsSendWorker::AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& r, SessionId sessionId )noexcept
+	void TwsSendWorker::AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& r, SessionPK sessionId )noexcept
 	{
 		var reqId =  _web.AddRequestSession( {sessionId,r.id()} );
 		var& account = r.account_number();
@@ -257,7 +257,7 @@ namespace Jde::Markets::TwsWebSocket
 		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )"sv, reqId, sessionId, account, r.id() );
 		_tws.reqAccountUpdatesMulti( reqId, account, r.model_code(), r.ledger_and_nlv() );
 	}
-	void TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, SessionId sessionId )noexcept
+	void TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, SessionPK sessionId )noexcept
 	{
 		var contractId = r.contract_id();
 		::Contract contract; contract.conId = contractId; contract.exchange = "SMART";
@@ -272,7 +272,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		try
 		{
-			for( ClientRequestId underlyingId : underlyingIds )
+			for( ClientPK underlyingId : underlyingIds )
 			{
 				if( !underlyingId )
 					THROW( Exception("Requested underlyingId=='{}'.", underlyingId) );

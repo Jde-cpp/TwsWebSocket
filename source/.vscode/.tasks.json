@@ -38,7 +38,7 @@
 	{
 		"label": "release",
 		"type": "shell",
-		"command": "tput reset;./buildc.sh RelWithDebInfo 0 1",
+		"command": "tput reset;./buildc.sh release 0 1",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
@@ -49,7 +49,7 @@
 	{
 		"label": "rebuildRelease",
 		"type": "shell",
-		"command": "tput reset;./buildc.sh RelWithDebInfo 1 1",
+		"command": "tput reset;./buildc.sh release 1 1",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",

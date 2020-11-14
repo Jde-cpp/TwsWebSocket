@@ -4,13 +4,13 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	typedef uint32 SessionId;
-	typedef uint32 ClientRequestId;
+	typedef uint32 SessionPK;
+	typedef uint32 ClientPK;
 	struct ClientKey
 	{
-		bool operator==(const ClientKey& x)const noexcept{return x.SessionPK==SessionPK && x.ClientId==ClientId;}
-		SessionId SessionPK;
-		ClientRequestId ClientId;
+		bool operator==(const ClientKey& x)const noexcept{return x.SessionId==SessionId && x.ClientId==ClientId;}
+		SessionPK SessionId;
+		ClientPK ClientId;
 	};
 	typedef Proto::Results::MessageUnion MessageType; typedef sp<MessageType> MessageTypePtr;
 

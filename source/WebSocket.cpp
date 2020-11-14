@@ -151,12 +151,12 @@ namespace Jde::Markets::TwsWebSocket
 		DBG0( "Leaving WebSocket::DoSession"sv );
 	}
 
-	void WebSocket::AddOutgoing( MessageTypePtr pUnion, SessionId id )noexcept
+	void WebSocket::AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept
 	{
 		function<void(Queue<MessageType>&)> afterInsert = [pUnion]( Queue<MessageType>& queue ){ queue.Push( pUnion ); };
 		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
 	}
-	void WebSocket::AddOutgoing( const vector<MessageTypePtr>& messages, SessionId id )noexcept
+	void WebSocket::AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept
 	{
 		function<void(Queue<MessageType>&)> afterInsert = [&messages]( Queue<MessageType>& queue ){ for_each(messages.begin(), messages.end(), [&queue](auto& m){queue.Push( m );} ); };
 		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
@@ -167,8 +167,8 @@ namespace Jde::Markets::TwsWebSocket
 		if( !_outgoing.size() )
 			return;
 
-		map<SessionId,vector<char>> buffers;
-		std::function<void(const SessionId&, Queue<MessageType>&)> createBuffers = [&buffers]( const SessionId& id, Queue<MessageType>& queue )->void
+		map<SessionPK,vector<char>> buffers;
+		std::function<void(const SessionPK&, Queue<MessageType>&)> createBuffers = [&buffers]( const SessionPK& id, Queue<MessageType>& queue )->void
 		{
 			if( !queue.size() )
 				return;
@@ -186,7 +186,7 @@ namespace Jde::Markets::TwsWebSocket
 		};
 		_outgoing.ForEach( createBuffers );
 		_outgoing.eraseIf( [](const Queue<MessageType>& queue){ return queue.size()==0; } );
-		set<SessionId> brokenIds;
+		set<SessionPK> brokenIds;
 		for( var& [id, buffer] : buffers )
 		{
 			auto pSession = _sessions.Find( id );
@@ -213,7 +213,7 @@ namespace Jde::Markets::TwsWebSocket
 			EraseSession( id );
 	}
 
-	void WebSocket::EraseSession( SessionId id )noexcept
+	void WebSocket::EraseSession( SessionPK id )noexcept
 	{
 		DBG( "Removing session '{}'"sv, id );
 		_sessions.erase( id );

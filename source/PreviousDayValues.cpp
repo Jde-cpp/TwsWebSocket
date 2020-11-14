@@ -9,7 +9,7 @@ namespace Jde::Markets
 {
 namespace TwsWebSocket
 {
-	void fnctn( const TwsWebSocket::ProcessArg& arg, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept(false)//, TwsWebSocket::SessionId sessionId, TwsWebSocket::ClientRequestId requestId
+	void fnctn( const TwsWebSocket::ProcessArg& arg, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept(false)//, TwsWebSocket::SessionId sessionId, TwsWebSocket::ClientPK requestId
 	{
 		flat_map<DayIndex,Proto::Results::DaySummary*> bars;
 		try
@@ -136,8 +136,8 @@ namespace TwsWebSocket
 						}
 						auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_day_summary( pBar );
 						sentDays.push_back( day );
-						if( arg.SessionPK )
-							arg.WebSendPtr->Push( pUnion, arg.SessionPK );
+						if( arg.SessionId )
+							arg.WebSendPtr->Push( pUnion, arg.SessionId );
 					}
 					for( var day : sentDays )
 						bars.erase( day );
@@ -149,13 +149,13 @@ namespace TwsWebSocket
 				std::for_each( bars.begin(), bars.end(), [](auto& bar){delete bar.second;} );
 				bars.clear();
 			}
-			if( arg.SessionPK )
+			if( arg.SessionId )
 				arg.WebSendPtr->Push( EResults::MultiEnd, arg );
 		}
 		catch( const IBException& e )
 		{
 			std::for_each( bars.begin(), bars.end(), [](auto& bar){delete bar.second;} );
-			if( arg.SessionPK )
+			if( arg.SessionId )
 				arg.WebSendPtr->Push( e, arg );
 			else
 				throw e;

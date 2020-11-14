@@ -1,4 +1,5 @@
 #include "WebRequestWorker.h"
+#include "./BlocklyWorker.h"
 #include "./Flex.h"
 #include "./News.h"
 #include "./PreviousDayValues.h"
@@ -13,11 +14,12 @@ namespace Jde::Markets::TwsWebSocket
 {
 	WebRequestWorker::WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept:
 		_pTwsSend{ make_shared<TwsSendWorker>(webSend, pTwsClient) },
-		_pWebSend{webSend}
+		_pWebSend{webSend},
+		_pBlocklyWorker{ make_shared<BlocklyWorker>(_pWebSend) }
 	{
 		_pThread = make_shared<Threading::InterruptibleThread>( "WebRequestWorker", [&](){Run();} );
 	}
-	void WebRequestWorker::Push( SessionId sessionId, string&& data )noexcept
+	void WebRequestWorker::Push( SessionPK sessionId, string&& data )noexcept
 	{
 		QueueType x = std::make_tuple( sessionId, std::move(data) );
 		_queue.Push( std::move(x) );
@@ -26,22 +28,19 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.Empty() )
 		{
-			QueueType dflt{ make_tuple<SessionId,string&&>( 0, string{} ) };
+			QueueType dflt{ make_tuple<SessionPK,string&&>( 0, string{} ) };
 			if( _queue.TryPop(dflt, 5s) )
 				HandleRequest( get<0>(dflt), std::move(get<1>(dflt)) );
 		}
 	}
 #define ARG(x) {{sessionId, x}, _pWebSend}
-	void WebRequestWorker::HandleRequest( SessionId sessionId, string&& data )noexcept
+	void WebRequestWorker::HandleRequest( SessionPK sessionId, string&& data )noexcept
 	{
 		try
 		{
 			Proto::Requests::RequestTransmission transmission;
-			{
-				google::protobuf::io::CodedInputStream input( reinterpret_cast<const unsigned char*>(data.data()), (int)data.size() );
-				if( !transmission.MergePartialFromCodedStream(&input) )
-					THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
-			}
+			if( google::protobuf::io::CodedInputStream  stream{reinterpret_cast<const unsigned char*>(data.data()), (int)data.size()}; !transmission.MergePartialFromCodedStream(&stream) )
+				THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
 			while( transmission.messages().size() )
 			{
 				auto pMessage = sp<Proto::Requests::RequestUnion>( transmission.mutable_messages()->ReleaseLast() );
@@ -54,6 +53,15 @@ namespace Jde::Markets::TwsWebSocket
 					ReceiveFlex( sessionId, message.flex_executions() );
 				else if( message.has_edit_watch_list() )
 					WatchListData::Edit( message.edit_watch_list().file(), ARG(message.edit_watch_list().id()) );
+				else if( pMessage->has_blockly() )
+				{
+					auto p=pMessage->mutable_blockly();
+					//string_view msg = p->message();
+					//if( has && msg.size() )
+						_pBlocklyWorker->Push( {sessionId, p->id(), up<string>{p->release_message()}} );
+					//else
+					//	_pWebSend->PushError( -5, "No Blockly msg", {sessionId, p->id()} );
+				}
 				else if( message.has_std_dev() )
 					ReceiveStdDev( message.std_dev().contract_id(), message.std_dev().days(), message.std_dev().start(), ARG(message.std_dev().id()) );
 				else
@@ -81,7 +89,7 @@ namespace Jde::Markets::TwsWebSocket
 			WatchListData::Delete( name, {arg, _pWebSend} );
 
 	}
-	bool WebRequestWorker::ReceiveRequests( SessionId sessionId, const Proto::Requests::GenericRequests& request )noexcept
+	bool WebRequestWorker::ReceiveRequests( SessionPK sessionId, const Proto::Requests::GenericRequests& request )noexcept
 	{
 		bool handled = true;
 		if( request.type()==ERequests::RequsetPrevOptionValues )
@@ -97,7 +105,7 @@ namespace Jde::Markets::TwsWebSocket
 		return handled;
 
 	}
-	void WebRequestWorker::ReceiveFlex( SessionId sessionId, const Proto::Requests::FlexExecutions& req )noexcept
+	void WebRequestWorker::ReceiveFlex( SessionPK sessionId, const Proto::Requests::FlexExecutions& req )noexcept
 	{
 		var start = Chrono::BeginningOfDay( Clock::from_time_t(req.start()) );
 		var end = Chrono::EndOfDay( Clock::from_time_t(req.end()) );
@@ -128,7 +136,7 @@ namespace Jde::Markets::TwsWebSocket
 		} ).detach();
 	}
 
-	void WebRequestWorker::ReceiveOptions( SessionId sessionId, const Proto::Requests::RequestOptions& params )noexcept
+	void WebRequestWorker::ReceiveOptions( SessionPK sessionId, const Proto::Requests::RequestOptions& params )noexcept
 	{
 		std::thread( [params, web=ProcessArg ARG(params.id())]()
 		{
@@ -138,17 +146,17 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				//TODO see if I have, if not download it, else try getting from tws. (make sure have date.)
 				if( underlyingId==0 )
-					THROW( Exception("({}.{}) did not pass a contract id.", web.SessionPK, web.ClientId) );
+					THROW( Exception("({}.{}) did not pass a contract id.", web.SessionId, web.ClientId) );
 				var pDetails = _sync.ReqContractDetails( underlyingId ).get();
 				if( pDetails->size()!=1 )
-					THROW( Exception("({}.{}) '{}' had '{}' contracts", web.SessionPK, web.ClientId, underlyingId, pDetails->size()) );
+					THROW( Exception("({}.{}) '{}' had '{}' contracts", web.SessionId, web.ClientId, underlyingId, pDetails->size()) );
 				var contract = Contract{ pDetails->front() };
 				if( contract.SecType==SecurityType::Option )
-					THROW( Exception("({}.{})Passed in option contract ({})'{}', expected underlying", web.SessionPK, web.ClientId, underlyingId, contract.LocalSymbol) );
+					THROW( Exception("({}.{})Passed in option contract ({})'{}', expected underlying", web.SessionId, web.ClientId, underlyingId, contract.LocalSymbol) );
 
 				const std::array<string_view,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
 				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !params.start_expiration() )
-					THROW( Exception("({}.{})ReceiveOptions request for '{}' specified no date.", web.SessionPK, web.ClientId, contract.Symbol) );
+					THROW( Exception("({}.{})ReceiveOptions request for '{}' specified no date.", web.SessionId, web.ClientId, contract.Symbol) );
 
 				auto pResults = make_unique<Proto::Results::OptionValues>(); pResults->set_id( params.id() );
 				sp<Proto::Results::ExchangeContracts> pOptionParams;
@@ -225,7 +233,7 @@ namespace Jde::Markets::TwsWebSocket
 					web.Push( pUnion );
 				}
 				else
-					web.WebSendPtr->Push( IBException{"No previous dates found", -2}, {web.SessionPK, underlyingId} );
+					web.WebSendPtr->Push( IBException{"No previous dates found", -2}, {web.SessionId, underlyingId} );
 			}
 			catch( const IBException& e ){ web.Push( e ); }
 			catch( const Exception& e ){ web.Push( e ); }
