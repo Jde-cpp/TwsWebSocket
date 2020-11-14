@@ -5,7 +5,7 @@ namespace Jde::Markets::TwsWebSocket::WatchListData
 {
 	vector<string> Names( optional<bool> portfolio={} )noexcept(false);
 	void SendLists( bool portfolio, const ProcessArg& inputArg )noexcept;
-	sp<Proto::Watch::File> Content( const string& watchName )noexcept(false);
+	up<Proto::Watch::File> Content( const string& watchName )noexcept(false);
 	void SendList( const string& watchName, const ProcessArg& key )noexcept;
 //	void CreateList( const string& watchName )noexcept;
 	void Delete( const string& watchName, const ProcessArg& key )noexcept;

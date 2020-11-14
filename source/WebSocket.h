@@ -32,16 +32,16 @@ namespace TwsWebSocket
 		void Shutdown()noexcept override;
 		sp<WebSendGateway> WebSend()noexcept{ return _pWebSend; }
 
-		void AddOutgoing( MessageTypePtr pUnion, SessionId id )noexcept;
-		void AddOutgoing( const vector<MessageTypePtr>& messages, SessionId id )noexcept;
+		void AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept;
+		void AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept;
 
 	private:
-		void EraseSession( SessionId id )noexcept;
-		void AddRequest( SessionId id, long reqId )noexcept;
+		void EraseSession( SessionPK id )noexcept;
+		void AddRequest( SessionPK id, long reqId )noexcept;
 		void PushAccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept;
 
-		std::atomic<SessionId> _sessionId{0};
-		Collections::UnorderedMap<SessionId,Stream> _sessions;
+		std::atomic<SessionPK> _sessionId{0};
+		Collections::UnorderedMap<SessionPK,Stream> _sessions;
 
 		void Accept()noexcept;
 		WebSocket()=delete;
@@ -49,7 +49,7 @@ namespace TwsWebSocket
 		WebSocket& operator=( const WebSocket& )=delete;
 		WebSocket( uint16 port, sp<TwsClientSync> pClient )noexcept;
 
-		Collections::UnorderedMap<SessionId,Jde::Queue<MessageType>> _outgoing;
+		Collections::UnorderedMap<SessionPK,Jde::Queue<MessageType>> _outgoing;
 
 
 		UnorderedMapValue<TickerId,uint32> _historicalCrcs; mutable std::mutex _historicalCacheMutex;

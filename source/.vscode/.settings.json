@@ -93,7 +93,9 @@
 		"__functional_03": "cpp",
 		"span": "cpp",
 		"rope": "cpp",
-		"slist": "cpp"
+		"slist": "cpp",
+		"any": "cpp",
+		"source_location": "cpp"
 	},
 	"window.title": "WebSocketTws"
 }

@@ -7,10 +7,11 @@ link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 #Custom######################################################
 include_directories( "$ENV{REPO_DIR}/tws-api/source/cppclient/client" )
 #######################################################
-add_executable( Jde.TwsWebSocket main.cpp Flex.cpp News.cpp PreviousDayValues.cpp TwsSendWorker.cpp WebRequestWorker.cpp WebSendGateway.cpp WebSocket.cpp WrapperWeb.cpp WatchListData.cpp )
+add_executable( Jde.TwsWebSocket main.cpp BlocklyWorker.cpp Flex.cpp News.cpp PreviousDayValues.cpp TwsSendWorker.cpp WebRequestWorker.cpp WebSendGateway.cpp WebSocket.cpp WrapperWeb.cpp WatchListData.cpp )
 #######################################################
 target_link_libraries(Jde.TwsWebSocket Threads::Threads)
 target_link_libraries(Jde.TwsWebSocket Jde)
+target_link_libraries(Jde.TwsWebSocket Jde.Blockly)
 target_link_libraries(Jde.TwsWebSocket Jde.Markets)
 target_link_libraries(Jde.TwsWebSocket Jde.XZ)
 target_link_libraries(Jde.TwsWebSocket lzma)

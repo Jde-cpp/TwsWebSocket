@@ -41,7 +41,7 @@ namespace Jde::Markets::TwsWebSocket
 					os << flex.trades( i ).shares() << "," << flex.trades( i ).commission() << std::endl;
 				}
 			}
-			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, web.SessionPK, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
+			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, web.SessionId, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
 			auto pMsg = make_shared<Proto::Results::MessageUnion>(); pMsg->set_allocated_flex( pResults );
 			//Make _webSend global instance.tw
 			web.Push( pMsg );

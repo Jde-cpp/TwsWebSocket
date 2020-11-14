@@ -6,6 +6,7 @@ export CXX=clang++
 if [ $all -eq 1 ]; then
 	../../Framework/cmake/buildc.sh ../../Framework/source $type $clean || exit 1;
 	../../Framework/cmake/buildc.sh ../../MarketLibrary/source $type $clean || exit 1;
+	../../Framework/cmake/buildc.sh ../../Blockly/source $type $clean || exit 1;
 fi
 
 if [ ! -d .obj ]; then mkdir .obj; fi;
