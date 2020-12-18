@@ -26,11 +26,10 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WebRequestWorker::Run()noexcept
 	{
-		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.Empty() )
+		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.empty() )
 		{
-			QueueType dflt{ make_tuple<SessionPK,string&&>( 0, string{} ) };
-			if( _queue.TryPop(dflt, 5s) )
-				HandleRequest( get<0>(dflt), std::move(get<1>(dflt)) );
+			if( auto v =_queue.TryPop(5s); v )
+				HandleRequest( get<0>(*v), std::move(get<1>(*v)) );
 		}
 	}
 #define ARG(x) {{sessionId, x}, _pWebSend}
@@ -244,25 +243,26 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		std::thread( [current=PreviousTradingDay(), contractIds, web=ProcessArg{key,_pWebSend}]()
 		{
+			Threading::SetThreadDscrptn( "RatioReq" );
 			for( var contractId : contractIds )
 			{
-				sp<map<string,double>> pFundamentals;
 				try
 				{
-					var pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IF( pDetails->size()!=1, IBException(format("{} has {} contracts", contractId, pDetails->size()), -1) );
-					pFundamentals = _sync.ReqRatios( pDetails->front().contract ).get();//~~~
+					//var pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IF( pDetails->size()!=1, IBException(format("{} has {} contracts", contractId, pDetails->size()), -1) );
+					var tick = TickManager::Ratios( contractId ).get();
+					auto fundamentals = tick.Ratios();
+					auto pRatios = make_unique<Proto::Results::Fundamentals>();
+					pRatios->set_request_id( web.ClientId );
+					for( var& [name,value] : fundamentals )
+						(*pRatios->mutable_values())[name] = value;
+					auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_fundamentals( pRatios.release() );
+					web.Push( pUnion );
 				}
-				catch( const IBException& e )
+				catch( const Exception& e )
 				{
 					web.Push( e );
 					return;
 				}
-				auto pRatios = new Proto::Results::Fundamentals();
-				pRatios->set_request_id( web.ClientId );
-				for( var& [name,value] : *pFundamentals )
-					(*pRatios->mutable_values())[name] = value;
-				auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_fundamentals( pRatios );
-				web.Push( pUnion );
 			}
 			web.Push( EResults::MultiEnd );
 		} ).detach();

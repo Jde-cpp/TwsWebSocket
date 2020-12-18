@@ -5,6 +5,7 @@
 #define var const auto
 namespace Jde::Markets::TwsWebSocket
 {
+	using Blockly::Proto::ERequestType;
 	fs::path Path()
 	{
 		return IApplication::Instance().ApplicationDataFolder()/"blockly";
@@ -23,11 +24,11 @@ namespace Jde::Markets::TwsWebSocket
 
 	void BlocklyWorker::Run()noexcept
 	{
-		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.Empty() )
+		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.empty() )
 		{
 			BlocklyQueueType dflt;
-			if( _queue.TryPop(dflt, 5s) )
-				HandleRequest( std::move(dflt) );
+			if( auto v = _queue.TryPop(5s); v )
+				HandleRequest( std::move(*v) );
 		}
 	}
 	void BlocklyWorker::Send( BlocklyQueueType&& x, function<void(Blockly::Proto::ResultUnion&)> set )noexcept
@@ -50,27 +51,40 @@ namespace Jde::Markets::TwsWebSocket
 				THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
 			if( msg.has_save() )
 			{
-				Blockly::Save( Path(), msg.save() );
+				Blockly::Save( msg.save() );
 				Send( std::move(x), [](auto& out){out.set_success(true);} );
 			}
-			else if( msg.delete_id().size() )
+			else if( msg.has_copy() )
 			{
-				Blockly::Delete( Path(), msg.delete_id() );
+				Blockly::Copy( msg.copy().from_id(), msg.copy().to() );
 				Send( std::move(x), [](auto& out){out.set_success(true);} );
+			}
+			else if( msg.has_id_request() )
+			{
+				var type = msg.id_request().type(); var id = msg.id_request().id();
+				THROW_IF( id.empty(), Exception("Request {}, passed empty id", id) );
+				if( type==ERequestType::Load )
+					Send( std::move(x), [p=Blockly::Load(id).release()](auto& out)mutable{out.set_allocated_function(p);} );
+				else
+				{
+					if( type==ERequestType::Delete )
+						Blockly::Delete( id );
+					else if( type==ERequestType::Build )
+						Blockly::Build( id );
+					else if( type==ERequestType::DeleteBuild )
+						Blockly::DeleteBuild( id );
+					else if( type==ERequestType::Enable )
+						Blockly::Enable( id );
+					else if( type==ERequestType::Disable )
+						Blockly::Disable( id );
+
+					Send( std::move(x), [](auto& out){out.set_success(true);} );
+				}
 			}
 			else
 			{
-				var& id = msg.load_id();
-				if( id.size() )
-				{
-					auto pFunction = Blockly::Load( Path(), id );
-					Send( std::move(x), [&pFunction](auto& out){out.set_allocated_function(pFunction.release());} );
-				}
-				else
-				{
-					auto pFunctions = Blockly::Load( Path() );
-					Send( std::move(x), [&pFunctions](auto& out){out.set_allocated_functions(pFunctions.release());} );
-				}
+				auto pFunctions = Blockly::Load();
+				Send( std::move(x), [&pFunctions](auto& out){out.set_allocated_functions(pFunctions.release());} );
 			}
 		}
 		catch( const IOException& e )

@@ -34,6 +34,7 @@ namespace TwsWebSocket
 
 		void AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept;
 		void AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept;
+		void AddOutgoing( const vector<const Proto::Results::MessageUnion>& messages, SessionPK id )noexcept;
 
 	private:
 		void EraseSession( SessionPK id )noexcept;
@@ -49,7 +50,7 @@ namespace TwsWebSocket
 		WebSocket& operator=( const WebSocket& )=delete;
 		WebSocket( uint16 port, sp<TwsClientSync> pClient )noexcept;
 
-		Collections::UnorderedMap<SessionPK,Jde::Queue<MessageType>> _outgoing;
+		Collections::UnorderedMap<SessionPK,Jde::Queue<MessageType>> _outgoing;//TODO move into regular container.
 
 
 		UnorderedMapValue<TickerId,uint32> _historicalCrcs; mutable std::mutex _historicalCacheMutex;

@@ -2,6 +2,8 @@
 #include "News.h"
 #include "WebRequestWorker.h"
 #include "../../MarketLibrary/source/types/MyOrder.h"
+#include "../../MarketLibrary/source/TickManager.h"
+#include "../../Blockly/source/Blockly.h"
 #include "../../Framework/source/io/ProtoUtilities.h"
 
 #define var const auto
@@ -11,7 +13,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	TwsSendWorker::TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept:
-		_queue{ make_tuple(0,sp<Proto::Requests::RequestUnion>{}) },
+//		_queue{ make_tuple(0,sp<Proto::Requests::RequestUnion>{}) },
 		_webSendPtr{ webSendPtr },
 		_twsPtr{ pTwsClient }
 	{
@@ -25,9 +27,8 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.Empty() )
 		{
-			var [sessionId, pData] = _queue.WaitAndPop( 5s );
-			if( pData )
-				HandleRequest( pData, sessionId );
+			if( auto p = _queue.WaitAndPop(5s); p )
+				HandleRequest( get<1>(*p), get<0>(*p) );
 		}
 	}
 
@@ -87,13 +88,13 @@ namespace Jde::Markets::TwsWebSocket
 	void TwsSendWorker::CalculateImpliedVolatility( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedVolatility>& requests, const ClientKey& client )noexcept(false)
 	{
 		for( var& r : requests )
-			_tws.calculateImpliedVolatility( _web.AddRequestSession(client), GetContract(r.contract_id()), r.option_price(), r.underlying_price(), {} );
+			TickManager::CalcImpliedVolatility( client.Handle(), GetContract(r.contract_id()), r.option_price(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
 	void TwsSendWorker::CalculateImpliedPrice( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedPrice>& requests, const ClientKey& client )noexcept
 	{
 		for( var& r : requests )
-			_tws.calculateOptionPrice( _web.AddRequestSession(client), GetContract(r.contract_id()), r.volatility(), r.underlying_price(), {} );
+			TickManager::CalculateOptionPrice( client.Handle(), GetContract(r.contract_id()), r.volatility(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
 	void TwsSendWorker::ContractDetails( const Proto::Requests::RequestContractDetails& r, SessionPK sessionId )noexcept
@@ -134,11 +135,13 @@ namespace Jde::Markets::TwsWebSocket
 	void TwsSendWorker::Order( const Proto::Requests::PlaceOrder& r, SessionPK sessionId )noexcept
 	{
 		var reqId = _web.AddRequestSession( {sessionId,r.id()}, r.order().id() );
-
-		var pIbContract = Jde::Markets::Contract{ r.contract() }.ToTws();
+		const Jde::Markets::Contract contract{ r.contract() };
+		var pIbContract = contract.ToTws();
 		const MyOrder order{ reqId, r.order() };
 		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, sessionId, pIbContract->symbol, order.lmtPrice, order.totalQuantity );
 		_tws.placeOrder( *pIbContract, order );
+		if( r.block_id().size() )
+			Blockly::Execute( r.block_id(), order, contract, _twsPtr );
 /*		if( !order.whatIf && r.stop()>0 )
 		{
 			var parentId = _tws.RequestId();
@@ -189,14 +192,7 @@ namespace Jde::Markets::TwsWebSocket
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
 				var contractId = r.ids( i );
-				unique_lock<std::mutex> l{_mktDataMutex};
-				if( var [reqId,ticks] = _web.RemoveMarketDataSubscription(contractId, sessionId); reqId )
-				{
-					if( ticks.size() )
-						Try( [&,reqId2=reqId, &ticks=ticks](){ _tws.reqMktData( reqId2, GetContract(contractId), StringUtilities::AddCommas(ticks), false/*snapshot*/, false/*regulatory*/, {} ); } );
-					else
-						_tws.cancelMktData( reqId );
-				}
+				TickManager::CancelProto( (uint)sessionId << 32, contractId );
 			}
 		}
 		else if( r.type()==ERequests::CancelPositionsMulti )
@@ -259,13 +255,10 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, SessionPK sessionId )noexcept
 	{
-		var contractId = r.contract_id();
-		::Contract contract; contract.conId = contractId; contract.exchange = "SMART";
 		flat_set<Proto::Requests::ETickList> ticks;
 		for_each( r.tick_list().begin(), r.tick_list().end(), [&ticks]( auto item ){ ticks.emplace((Proto::Requests::ETickList)item); } );
-
-		if( var [reqId, newTicks] = _web.AddMarketDataSubscription(contractId, move(ticks), sessionId); reqId )
-			_tws.reqMktData( reqId, contract, StringUtilities::AddCommas(newTicks), r.snapshot(), false, {} );
+		_webSendPtr->AddMarketDataSubscription( sessionId, r.contract_id(), ticks );
+		TickManager::Subscribe( (uint)sessionId << 32, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
 	void TwsSendWorker::RequestOptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const ClientKey& key )noexcept

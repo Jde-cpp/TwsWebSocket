@@ -15,6 +15,9 @@ namespace Jde::Markets::TwsWebSocket
 		void accountDownloadEnd( const std::string& accountName )noexcept override;
 		void accountUpdateMulti( int reqId, const std::string& account, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept override;
 		void accountUpdateMultiEnd( int reqId )noexcept override;
+		//void accountSummary( int reqId, const std::string& account, const std::string& tag, const std::string& value, const std::string& curency)noexcept override;
+		//void accountSummaryEnd( int reqId)noexcept override;
+
 		void contractDetails( int reqId, const ContractDetails& contractDetails)noexcept override;
 		void contractDetailsEnd( int reqId)noexcept override;
 		void commissionReport( const CommissionReport& commissionReport)noexcept override;
@@ -34,12 +37,12 @@ namespace Jde::Markets::TwsWebSocket
 		void positionMulti( int reqId, const std::string& account,const std::string& modelCode, const ::Contract& contract, double pos, double avgCost)noexcept override;
 		void positionMultiEnd( int reqId)noexcept override;
 
-		void tickGeneric(TickerId tickerId, TickType tickType, double value)noexcept override;
-		void tickOptionComputation( TickerId tickerId, TickType tickType, int tickAttrib, double impliedVol, double delta,	double optPrice, double pvDividend, double gamma, double vega, double theta, double undPrice)noexcept override;
-		void tickPrice( TickerId tickerId, TickType field, double price, const TickAttrib& attrib)noexcept override;
-		void tickSize( TickerId tickerId, TickType field, int size)noexcept override;
+		//void tickGeneric(TickerId tickerId, TickType tickType, double value)noexcept override;
+		//void tickOptionComputation( TickerId tickerId, TickType tickType, int tickAttrib, double impliedVol, double delta,	double optPrice, double pvDividend, double gamma, double vega, double theta, double undPrice)noexcept override;
+		//void tickPrice( TickerId tickerId, TickType field, double price, const TickAttrib& attrib)noexcept override;
+		//void tickSize( TickerId tickerId, TickType field, int size)noexcept override;
 		void tickSnapshotEnd( int reqId)noexcept override;
-		void tickString(TickerId tickerId, TickType tickType, const std::string& value)noexcept override;
+		//void tickString(TickerId tickerId, TickType tickType, const std::string& value)noexcept override;
 
 		//need to cache values between calls.
 		void updateAccountValue( const std::string& key, const std::string& val, const std::string& currency, const std::string& accountName )noexcept override;
@@ -48,11 +51,12 @@ namespace Jde::Markets::TwsWebSocket
 
 		bool AddCanceled( TickerId id )noexcept{ return _canceledItems.emplace(id); }
 
-		void tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept override;
+		//void tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept override;
 		void newsArticle( int requestId, int articleType, const std::string& articleText )noexcept override;
 		void historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept override;
 		void historicalNewsEnd( int requestId, bool hasMore )noexcept override;
 		void SetWebSend( sp<WebSendGateway> pWebSend )noexcept{ _pWebSend = pWebSend; }
+		void AddAccountUpdateCallback( string account, function<void(const Proto::Results::AccountUpdate&)> callback )noexcept;
 	private:
 		WrapperWeb()noexcept;
 		sp<TwsClientSync> CreateClient( uint twsClientId )noexcept override;
@@ -62,6 +66,7 @@ namespace Jde::Markets::TwsWebSocket
 		void HandleBadTicker( TickerId ibReqId )noexcept;
 		static sp<WrapperWeb> _pInstance;
 
+		//vector<function<void(const Proto::Results::AccountUpdate&)> _accountCallbacks;
 		flat_map<TickerId,up<Proto::Results::HistoricalData>> _historicalData; mutex _historicalDataMutex;
 		flat_map<int,up<Proto::Results::OptionExchanges>> _optionParams;
 		const map<string,string> _accounts;

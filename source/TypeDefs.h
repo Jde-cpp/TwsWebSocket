@@ -8,7 +8,8 @@ namespace Jde::Markets::TwsWebSocket
 	typedef uint32 ClientPK;
 	struct ClientKey
 	{
-		bool operator==(const ClientKey& x)const noexcept{return x.SessionId==SessionId && x.ClientId==ClientId;}
+		bool operator==(const ClientKey& x)const noexcept{ return x.SessionId==SessionId && x.ClientId==ClientId; }
+		size_t Handle()const noexcept{ return (size_t)SessionId << 32 | ClientId; }
 		SessionPK SessionId;
 		ClientPK ClientId;
 	};

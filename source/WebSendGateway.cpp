@@ -1,12 +1,13 @@
 #include "WebSendGateway.h"
 #include "WebSocket.h"
+#include "../../MarketLibrary/source/TickManager.h"
 
 #define var const auto
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
 	WebSendGateway::WebSendGateway( WebSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept:
-		_queue{ make_tuple(0, MessageTypePtr{}) },
+//		_queue{},
 		_webSocket{ webSocketParent },
 		_pClientSync{ pClientSync }
 	{
@@ -45,30 +46,7 @@ namespace Jde::Markets::TwsWebSocket
 				++pAccountSessionIds;
 		}
 
-		auto pLock = make_unique<std::unique_lock<mutex>>( _marketSubscriptionsMutex );
-		for( auto pContractSessions = _marketSessionSubscriptions.begin(); pContractSessions!=_marketSessionSubscriptions.end(); )
-		{
-			if( auto pDoomedTicks = pContractSessions->second.find( id ); pDoomedTicks!=pContractSessions->second.end() )
-			{
-				var contractId = pContractSessions->first;
-				if( var [reqId,ticks] = RemoveMarketDataSubscription(contractId, id, true); reqId )//~~~
-				{
-					if( ticks.size() )
-						Try( [&,reqId2=reqId, &ticks=ticks]()
-						{
-							var pDetails = _pClientSync->ReqContractDetails( contractId ).get();
-							if( pDetails->size()!=1 )
-								THROW( Exception("contractId={} returned {} records"sv, contractId, pDetails->size()) );
-							_client.reqMktData( reqId2, pDetails->front().contract, StringUtilities::AddCommas(ticks), false/*snapshot*/, false/*regulatory*/, {} );
-						} );
-					else
-						_client.cancelMktData( reqId );
-				}
-				pContractSessions = _marketSessionSubscriptions.upper_bound( contractId );
-			}
-			else
-				++pContractSessions;
-		}
+		TickManager::CancelProto( (uint)id << 32, 0 );
 	}
 
 	void WebSendGateway::AddMultiRequest( const flat_set<TickerId>& ids, const ClientKey& key )
@@ -111,7 +89,7 @@ namespace Jde::Markets::TwsWebSocket
 			DBG( "Could not find account('{}') subscription for sessionId='{}'"sv, account, sessionId );
 		return cancel;
 	}
-	tuple<TickerId, flat_set<Proto::Requests::ETickList>> WebSendGateway::MarketDataTicks( ContractPK contractId )noexcept
+/*	tuple<TickerId, flat_set<Proto::Requests::ETickList>> WebSendGateway::MarketDataTicks( ContractPK contractId )noexcept
 	{
 		flat_set<Proto::Requests::ETickList> ticks;
 
@@ -151,6 +129,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		return make_tuple( reqId, ticks );
 	}
+
 	tuple<TickerId,flat_set<Proto::Requests::ETickList>> WebSendGateway::AddMarketDataSubscription( ContractPK contractId, flat_set<Proto::Requests::ETickList>&& ticks, SessionPK sessionId )noexcept
 	{
 		std::unique_lock l{ _marketSubscriptionsMutex };
@@ -179,7 +158,7 @@ namespace Jde::Markets::TwsWebSocket
 		else
 			DBG( "Could not find market data subscription('{}') sessionId='{}'"sv, contractId, sessionId );
 		return MarketDataTicks( contractId );
-	}
+	}*/
 
 	TickerId WebSendGateway::RequestFind( const ClientKey& key )const noexcept
 	{
@@ -220,6 +199,23 @@ namespace Jde::Markets::TwsWebSocket
 		_webSocket.AddOutgoing( messages, id );
 	}
 
+	void WebSendGateway::PushTick( const vector<const Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false)
+	{
+		shared_lock l{ _marketSubscriptionMutex };
+		if( var p=_marketSubscriptions.find(contractId); p!=_marketSubscriptions.end() )
+		{
+			if( p->second.empty() )
+			{
+				_marketSubscriptions.erase( p );
+				THROW( Exception("Could not find any market subscriptions.") );
+			}
+			for( var& sessionTicks : p->second )
+				_webSocket.AddOutgoing( messages, sessionTicks.first );
+		}
+		else
+			THROW( Exception("Could not find any market subscriptions.") );
+	}
+
 	void WebSendGateway::PushError( int errorCode, string_view errorString, TickerId id )noexcept
 	{
 		if( id>0 )
@@ -240,8 +236,8 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WebSendGateway::PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept
 	{
-		auto pError = new Proto::Results::Error(); pError->set_request_id(key.ClientId); pError->set_code(errorCode); pError->set_message(errorString);
-		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_error( pError );
+		auto pError = make_unique<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code(errorCode); pError->set_message(errorString);
+		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_error( pError.release() );
 		Push( pMessage, key.SessionId );
 	}
 
@@ -285,7 +281,14 @@ namespace Jde::Markets::TwsWebSocket
 		return sessionId;
 	}
 
-	void WebSendGateway::PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept
+	void WebSendGateway::AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept
+	{
+		unique_lock l{ _marketSubscriptionMutex };
+		auto& contractSubscriptions = _marketSubscriptions.try_emplace( contractId ).first->second;
+		contractSubscriptions[sessionId] = ticks;
+	}
+
+/*	void WebSendGateway::PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept
 	{
 		bool cancel = false; ContractPK contractId = 0;
 		{
@@ -318,7 +321,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( cancel )
 			_pClientSync->cancelMktData( id );
 	}
-
+*/
 	void WebSendGateway::ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, ReqId reqId )noexcept
 	{
 		var [sessionId, clientReqId] = _requestSession.Find( reqId, ClientKey{} );
