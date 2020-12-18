@@ -14,7 +14,7 @@ namespace Jde::Markets::TwsWebSocket
 		void AddExecutionRequest( SessionPK id ){ unique_lock l{_executionRequestMutex}; _executionRequests.emplace( id ); }
 		void AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept;
 		bool AddAccountSubscription( const string& account, SessionPK sessionId )noexcept;
-		tuple<TickerId,flat_set<Proto::Requests::ETickList>> AddMarketDataSubscription( ContractPK contractId, flat_set<Proto::Requests::ETickList>&& ticks, SessionPK sessionId )noexcept;
+		void AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept;
 		tuple<TickerId,flat_set<Proto::Requests::ETickList>> RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock=false )noexcept;
 		bool CancelAccountSubscription( const string& account, SessionPK sessionId )noexcept;
 		void AddMultiRequest( const flat_set<TickerId>& ids, const ClientKey& key );
@@ -34,13 +34,15 @@ namespace Jde::Markets::TwsWebSocket
 
 		void Push( MessageTypePtr pUnion, SessionPK id )noexcept;
 		void Push( const vector<MessageTypePtr>& pUnion, SessionPK id )noexcept;
+		void PushTick( const vector<const Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false);
+
 
 		void Push( EResults eResults, const ClientKey& key )noexcept;
 		void Push( EResults eResults, TickerId ibReqId )noexcept;
 		void Push( EResults eResults, function<void(MessageType&)> set )noexcept;
 
 		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
-		void PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
+		//void PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 
 		void PushAccountDownloadEnd( const string& accountNumber )noexcept;
 		void Push( const Proto::Results::PortfolioUpdate& pMessage )noexcept;
@@ -71,10 +73,10 @@ namespace Jde::Markets::TwsWebSocket
 		UnorderedMapValue<TickerId,ClientKey> _requestSession;//single session single call
 		Collections::UnorderedMap<Proto::Results::EResults,UnorderedSet<SessionPK>> _requestSessions;//multiple sessions can request item, ie market data.
 		flat_map<OrderId,flat_set<SessionPK>> _orderSubscriptions; mutable std::mutex _orderSubscriptionMutex;
-		tuple<TickerId, flat_set<Proto::Requests::ETickList>> MarketDataTicks( ContractPK contractId )noexcept;
+		//tuple<TickerId, flat_set<Proto::Requests::ETickList>> MarketDataTicks( ContractPK contractId )noexcept;
 
-		flat_map<TickerId,ContractPK> _marketTicketContractMap;//todo move _market* to class
-		flat_map<ContractPK,flat_map<SessionPK,flat_set<Proto::Requests::ETickList>>> _marketSessionSubscriptions;
-		flat_map<ContractPK,tuple<TickerId,flat_set<Proto::Requests::ETickList>>> _marketSubscriptions; std::mutex _marketSubscriptionsMutex;
+		//flat_map<TickerId,ContractPK> _marketTicketContractMap;//todo move _market* to class
+		flat_map<ContractPK,flat_map<SessionPK,flat_set<Proto::Requests::ETickList>>> _marketSubscriptions; std::shared_mutex _marketSubscriptionMutex;
+		//flat_map<ContractPK,tuple<TickerId,flat_set<Proto::Requests::ETickList>>> _marketSubscriptions; std::mutex _marketSubscriptionsMutex;
 	};
 }

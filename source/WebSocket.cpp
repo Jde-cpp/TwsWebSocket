@@ -161,7 +161,14 @@ namespace Jde::Markets::TwsWebSocket
 		function<void(Queue<MessageType>&)> afterInsert = [&messages]( Queue<MessageType>& queue ){ for_each(messages.begin(), messages.end(), [&queue](auto& m){queue.Push( m );} ); };
 		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
 	}
-
+	void WebSocket::AddOutgoing( const vector<const Proto::Results::MessageUnion>& messages, SessionPK id )noexcept
+	{
+		function<void(Queue<MessageType>&)> afterInsert = [&messages]( Queue<MessageType>& queue )
+		{
+			for_each( messages.begin(), messages.end(), [&queue](auto& m){queue.Push( make_shared<MessageType>(move(m)) );} );
+		};
+		_outgoing.Insert( afterInsert, id, make_shared<Queue<MessageType>>() );
+	}
 	void WebSocket::OnTimeout()noexcept//TODO fire when queue has items, not on timeout.
 	{
 		if( !_outgoing.size() )
@@ -185,6 +192,8 @@ namespace Jde::Markets::TwsWebSocket
 			transmission.SerializeToArray( buffer.data(), (int)buffer.size() );
 		};
 		_outgoing.ForEach( createBuffers );
+		if( !buffers.size() )
+			DBG0( "!buffers.size()"sv );
 		_outgoing.eraseIf( [](const Queue<MessageType>& queue){ return queue.size()==0; } );
 		set<SessionPK> brokenIds;
 		for( var& [id, buffer] : buffers )

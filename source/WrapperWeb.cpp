@@ -77,7 +77,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( !_pWebSend ) return;
 		auto p = make_unique<Proto::Results::OpenOrder>();
 		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
-		p->set_allocated_order( MyOrder{order}.ToProto(true).get() );
+		p->set_allocated_order( MyOrder{order}.ToProto().release() );
 		p->set_allocated_state( MyOrder::ToAllocatedProto(state) );
 		_pWebSend->Push( EResults::OpenOrder_, [&p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
 		_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_web_id(id); msg.set_allocated_open_order( p.release() );} );
@@ -186,22 +186,23 @@ namespace Jde::Markets::TwsWebSocket
 			TwsClientSync::Instance().cancelMktData( reqId );
 		}
 	}
-	void WrapperWeb::tickPrice( TickerId reqId, TickType field, double price, const TickAttrib& attrib )noexcept
+/*	void WrapperWeb::tickPrice( TickerId reqId, TickType field, double price, const TickAttrib& attrib )noexcept
 	{
 		if( WrapperSync::TickPrice(reqId, field, price, attrib) )
 			return;
 
-		auto pAttributes = new Proto::Results::TickAttrib(); pAttributes->set_can_auto_execute( attrib.canAutoExecute ); pAttributes->set_past_limit( attrib.pastLimit ); pAttributes->set_pre_open( attrib.preOpen );
-		auto p = new Proto::Results::TickPrice(); p->set_tick_type( (ETickType)field ); p->set_price( price ); p->set_allocated_attributes( pAttributes );
-		_pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_price(p); } );
+		_pTickWorker->PushPrice( reqId, (ETickType)field, price );
+		// auto pAttributes = new Proto::Results::TickAttrib(); pAttributes->set_can_auto_execute( attrib.canAutoExecute ); pAttributes->set_past_limit( attrib.pastLimit ); pAttributes->set_pre_open( attrib.preOpen );
+		// auto p = new Proto::Results::TickPrice(); p->set_tick_type( (ETickType)field ); p->set_price( price ); p->set_allocated_attributes( pAttributes );
+		// _pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_price(p); } );
 	}
 	void WrapperWeb::tickSize( TickerId reqId, TickType field, int size )noexcept
 	{
 		if( WrapperSync::TickSize(reqId, field, size) )
 			return;
-
-		auto p = new Proto::Results::TickSize(); p->set_tick_type( (ETickType)field ); p->set_size( size );
-		_pWebSend->PushMarketData( reqId, [p]( MessageType& msg, ClientPK id ){ p->set_request_id(id); msg.set_allocated_tick_size(p); } );
+		_pTickWorker->Push( reqId, (ETickType)field, size );
+		// auto p = new Proto::Results::TickSize(); p->set_tick_type( (ETickType)field ); p->set_size( size );
+		// _pWebSend->PushMarketData( reqId, [p]( MessageType& msg, ClientPK id ){ p->set_request_id(id); msg.set_allocated_tick_size(p); } );
 	}
 
 	void WrapperWeb::tickGeneric( TickerId reqId, TickType field, double value )noexcept
@@ -209,32 +210,46 @@ namespace Jde::Markets::TwsWebSocket
 		if( WrapperSync::TickGeneric(reqId, field, value) )
 			return;
 
-		auto p = new Proto::Results::TickGeneric(); p->set_tick_type( (ETickType)field ); p->set_value( value );
-		_pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_generic(p); } );
+		_pTickWorker->Push( reqId, (ETickType)field, value );
+		//auto p = new Proto::Results::TickGeneric(); p->set_tick_type( (ETickType)field ); p->set_value( value );
+		//_pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_generic(p); } );
 	}
 
 	void WrapperWeb::tickOptionComputation( TickerId reqId, TickType tickType, int tickAttrib, double impliedVol, double delta, double optPrice, double pvDividend, double gamma, double vega, double theta, double undPrice )noexcept
 	{
-		auto p = make_unique<Proto::Results::OptionCalculation>(); p->set_tick_type( (ETickType)tickType ); p->set_price_based( tickAttrib==1 ); p->set_implied_volatility( impliedVol ); p->set_delta( delta ); p->set_option_price( optPrice ); p->set_pv_dividend( pvDividend ); p->set_gamma( gamma ); p->set_vega( vega ); p->set_theta( theta ); p->set_underlying_price( undPrice );
-		_pWebSend->PushMarketData( reqId, [&p2=p](MessageType& msg, ClientPK id){ p2->set_request_id(id); msg.set_allocated_option_calculation(p2.release());} );
+		_pTickWorker->Push( reqId, (ETickType)tickType, tickAttrib, impliedVol, delta, optPrice, pvDividend, gamma, vega, theta, undPrice );
+		//auto p = make_unique<Proto::Results::OptionCalculation>(); p->set_tick_type( (ETickType)tickType ); p->set_price_based( tickAttrib==1 ); p->set_implied_volatility( impliedVol ); p->set_delta( delta ); p->set_option_price( optPrice ); p->set_pv_dividend( pvDividend ); p->set_gamma( gamma ); p->set_vega( vega ); p->set_theta( theta ); p->set_underlying_price( undPrice );
+		//_pWebSend->PushMarketData( reqId, [&p2=p](MessageType& msg, ClientPK id){ p2->set_request_id(id); msg.set_allocated_option_calculation(p2.release());} );
+	}
+	void WrapperWeb::tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept
+	{
+		_pTickWorker->Push( tickerId, timeStamp, providerCode, articleId, headline, extraData );
+		// auto pUpdate = new Proto::Results::TickNews();//TODO remove all new
+		// pUpdate->set_time( static_cast<uint32>(timeStamp) );
+		// pUpdate->set_provider_code( providerCode );
+		// pUpdate->set_article_id( articleId );
+		// pUpdate->set_headline( headline );
+		// pUpdate->set_extra_data( extraData );
+
+		// _pWebSend->PushMarketData( tickerId, [p=pUpdate](MessageType& msg, ClientPK id){p->set_id( id ); msg.set_allocated_tick_news(p);} );
 	}
 
 	void WrapperWeb::tickString( TickerId reqId, TickType field, const std::string& value )noexcept
 	{
 		if( WrapperSync::TickString(reqId, field, value) )
 			return;
-
-		auto p = new Proto::Results::TickString();  p->set_tick_type( (ETickType)field ); p->set_value( value );
-		_pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_string(p); } );
+		_pTickWorker->Push( reqId, (ETickType)field, value );
+//		auto p = new Proto::Results::TickString();  p->set_tick_type( (ETickType)field ); p->set_value( value );
+//		_pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_string(p); } );
 	}
-
+*/
 	void WrapperWeb::tickSnapshotEnd( int reqId )noexcept
 	{
 		WrapperLog::tickSnapshotEnd( reqId );
 		_pWebSend->Push( Proto::Results::EResults::TickSnapshotEnd, reqId );
 	}
 
-	void WrapperWeb::updateAccountValue(const std::string& key, const std::string& value, const std::string& currency, const std::string& accountName )noexcept
+	void WrapperWeb::updateAccountValue( const std::string& key, const std::string& value, const std::string& currency, const std::string& accountName )noexcept
 	{
 		WrapperLog::updateAccountValue( key, value, currency, accountName );
 		Proto::Results::AccountUpdate update;
@@ -340,18 +355,6 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		WrapperLog::execDetailsEnd( reqId );
 		_pWebSend->Push( EResults::ExecutionDataEnd, reqId );
-	}
-
-	void WrapperWeb::tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept
-	{
-		auto pUpdate = new Proto::Results::TickNews();//TODO remove all new
-		pUpdate->set_time( static_cast<uint32>(timeStamp) );
-		pUpdate->set_provider_code( providerCode );
-		pUpdate->set_article_id( articleId );
-		pUpdate->set_headline( headline );
-		pUpdate->set_extra_data( extraData );
-
-		_pWebSend->PushMarketData( tickerId, [p=pUpdate](MessageType& msg, ClientPK id){p->set_id( id ); msg.set_allocated_tick_news(p);} );
 	}
 
 	void WrapperWeb::newsArticle( int requestId, int articleType, const std::string& articleText )noexcept

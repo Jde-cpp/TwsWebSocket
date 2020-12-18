@@ -30,7 +30,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		::Contract GetContract( ContractPK contractId )noexcept(false);
 		void Requests( const Proto::Requests::GenericRequests& request, SessionPK sessionId )noexcept;
-		flat_map<ContractPK,TickerId> _mktData; mutable std::mutex _mktDataMutex;
+		//flat_map<ContractPK,TickerId> _mktData; mutable std::mutex _mktDataMutex;
 		sp<Threading::InterruptibleThread> _pThread;
 		QueueValue<QueueType> _queue;
 		sp<WebSendGateway> _webSendPtr;

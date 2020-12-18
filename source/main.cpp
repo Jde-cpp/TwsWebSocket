@@ -58,6 +58,7 @@ namespace Jde::Markets
 			while( !Threading::GetThreadInterruptFlag().IsSet() && !TwsClientSync::IsConnected() )
 				std::this_thread::yield();
 		}
+		return;
 		try
 		{
 			var symbol = ""sv;//"AAPL"sv;
