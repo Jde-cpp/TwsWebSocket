@@ -1,4 +1,6 @@
 #include "WebSocket.h"
+#include <boost/beast/core/buffers_to_string.hpp>
+#include <boost/beast/core/multi_buffer.hpp>
 #include <EClient.h>
 #include "WrapperWeb.h"
 #include "EWebReceive.h"
@@ -161,7 +163,7 @@ namespace Jde::Markets::TwsWebSocket
 		function<void(Queue<MessageType>&)> afterInsert = [&messages]( Queue<MessageType>& queue ){ for_each(messages.begin(), messages.end(), [&queue](auto& m){queue.Push( m );} ); };
 		_outgoing.Insert( afterInsert, id, sp<Queue<MessageType>>{new Queue<MessageType>()} );
 	}
-	void WebSocket::AddOutgoing( const vector<const Proto::Results::MessageUnion>& messages, SessionPK id )noexcept
+	void WebSocket::AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept
 	{
 		function<void(Queue<MessageType>&)> afterInsert = [&messages]( Queue<MessageType>& queue )
 		{

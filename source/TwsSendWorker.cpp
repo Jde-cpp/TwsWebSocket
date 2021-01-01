@@ -3,7 +3,8 @@
 #include "WebRequestWorker.h"
 #include "../../MarketLibrary/source/types/MyOrder.h"
 #include "../../MarketLibrary/source/TickManager.h"
-#include "../../Blockly/source/Blockly.h"
+#include "../../Blockly/source/BlocklyLibrary.h"
+#include "../jde/blockly/IBlockly.h"
 #include "../../Framework/source/io/ProtoUtilities.h"
 
 #define var const auto
@@ -88,13 +89,13 @@ namespace Jde::Markets::TwsWebSocket
 	void TwsSendWorker::CalculateImpliedVolatility( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedVolatility>& requests, const ClientKey& client )noexcept(false)
 	{
 		for( var& r : requests )
-			TickManager::CalcImpliedVolatility( client.Handle(), GetContract(r.contract_id()), r.option_price(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
+			TickManager::CalcImpliedVolatility( client.SessionId, client.ClientId, GetContract(r.contract_id()), r.option_price(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
 	void TwsSendWorker::CalculateImpliedPrice( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedPrice>& requests, const ClientKey& client )noexcept
 	{
 		for( var& r : requests )
-			TickManager::CalculateOptionPrice( client.Handle(), GetContract(r.contract_id()), r.volatility(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
+			TickManager::CalculateOptionPrice( client.SessionId, client.ClientId, GetContract(r.contract_id()), r.volatility(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
 	void TwsSendWorker::ContractDetails( const Proto::Requests::RequestContractDetails& r, SessionPK sessionId )noexcept
@@ -141,7 +142,17 @@ namespace Jde::Markets::TwsWebSocket
 		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, sessionId, pIbContract->symbol, order.lmtPrice, order.totalQuantity );
 		_tws.placeOrder( *pIbContract, order );
 		if( r.block_id().size() )
-			Blockly::Execute( r.block_id(), order, contract, _twsPtr );
+		{
+			auto p = up<sp<Markets::MBlockly::IBlockly>>( Blockly::CreateAllocatedExecutor(r.block_id(), order.orderId, contract.Id) );
+			//todo allow cancel
+/*			std::thread{ [ pBlockly=*p ]() 
+			{
+				pBlockly->Run();
+				while( pBlockly->Running() )
+					std::this_thread::sleep_for( 5s );
+			}}.detach();
+*/
+		}
 /*		if( !order.whatIf && r.stop()>0 )
 		{
 			var parentId = _tws.RequestId();
@@ -192,7 +203,7 @@ namespace Jde::Markets::TwsWebSocket
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
 				var contractId = r.ids( i );
-				TickManager::CancelProto( (uint)sessionId << 32, contractId );
+				TickManager::CancelProto( sessionId , 0, contractId );
 			}
 		}
 		else if( r.type()==ERequests::CancelPositionsMulti )
@@ -256,9 +267,9 @@ namespace Jde::Markets::TwsWebSocket
 	void TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, SessionPK sessionId )noexcept
 	{
 		flat_set<Proto::Requests::ETickList> ticks;
-		for_each( r.tick_list().begin(), r.tick_list().end(), [&ticks]( auto item ){ ticks.emplace((Proto::Requests::ETickList)item); } );
+		std::for_each( r.tick_list().begin(), r.tick_list().end(), [&ticks]( auto item ){ ticks.emplace((Proto::Requests::ETickList)item); } );
 		_webSendPtr->AddMarketDataSubscription( sessionId, r.contract_id(), ticks );
-		TickManager::Subscribe( (uint)sessionId << 32, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
+		TickManager::Subscribe( sessionId, 0, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
 	void TwsSendWorker::RequestOptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const ClientKey& key )noexcept

@@ -23,6 +23,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -47,14 +48,14 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir).bin\$(Configuration)\</OutDir>
     <IntDir>.obj\$(Configuration)\</IntDir>
-    <IncludePath>$(IncludePath)</IncludePath>
+    <IncludePath>..;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(LibraryPath);$(REPO_DIR)/tws-api/source/cppclient/client/.bin/Debug;../../MarketLibrary/source/.bin/debug</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir).bin\$(Configuration)\</OutDir>
     <IntDir>.obj\$(Configuration)\</IntDir>
-    <IncludePath>$(IncludePath)</IncludePath>
+    <IncludePath>..;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(LibraryPath);$(REPO_DIR)/tws-api/source/cppclient/client/.bin/Release;../../MarketLibrary/source/.bin/release</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -62,20 +63,23 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>BOOST_ALL_DYN_LINK;_WIN32_WINDOWS=0x0A00;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>BOOST_ALL_DYN_LINK;_WIN32_WINDOWS=0x0A00;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;PROTOBUF_USE_DLLS;PROTOBUF_USE_EXCEPTIONS=0;NOMINMAX;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
-      <DisableSpecificWarnings>4068;4251;4275;4297</DisableSpecificWarnings>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <DisableSpecificWarnings>4068;4251;4275;4297;5105;5104</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>../framework/source;../MarketLibrary/source/</AdditionalIncludeDirectories>
-      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/Zc:preprocessor /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <StringPooling>true</StringPooling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>TwsSocketClient.lib;fmt.lib;libprotobufd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TwsSocketClient.lib;libprotobufd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -85,14 +89,16 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>BOOST_ALL_DYN_LINK;_WIN32_WINDOWS=0x0A00;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>BOOST_ALL_DYN_LINK;_WIN32_WINDOWS=0x0A00;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;PROTOBUF_USE_DLLS;PROTOBUF_USE_EXCEPTIONS=0;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
-      <DisableSpecificWarnings>4068;4251;4275;4297</DisableSpecificWarnings>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <DisableSpecificWarnings>4068;4251;4275;4297;5105;5104</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>../framework/source;../MarketLibrary/source/</AdditionalIncludeDirectories>
-      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/Zc:preprocessor /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -100,10 +106,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>TwsSocketClient.lib;fmt.lib;libprotobuf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TwsSocketClient.lib;libprotobuf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BlocklyWorker.cpp" />
     <ClCompile Include="Flex.cpp" />
     <ClCompile Include="News.cpp" />
     <ClCompile Include="pc.h">

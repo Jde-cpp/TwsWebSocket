@@ -1,5 +1,6 @@
 #pragma once
 
+namespace Jde::Markets{ struct TwsClientSync; }
 namespace Jde::Markets::TwsWebSocket
 {
 	struct WebSendGateway; struct ClientKey; struct WrapperWeb;

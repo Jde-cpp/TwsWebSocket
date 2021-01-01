@@ -46,7 +46,7 @@ namespace Jde::Markets::TwsWebSocket
 				++pAccountSessionIds;
 		}
 
-		TickManager::CancelProto( (uint)id << 32, 0 );
+		TickManager::CancelProto( (uint32)id, 0, 0 );
 	}
 
 	void WebSendGateway::AddMultiRequest( const flat_set<TickerId>& ids, const ClientKey& key )
@@ -199,7 +199,7 @@ namespace Jde::Markets::TwsWebSocket
 		_webSocket.AddOutgoing( messages, id );
 	}
 
-	void WebSendGateway::PushTick( const vector<const Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false)
+	void WebSendGateway::PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false)
 	{
 		shared_lock l{ _marketSubscriptionMutex };
 		if( var p=_marketSubscriptions.find(contractId); p!=_marketSubscriptions.end() )

@@ -10,7 +10,7 @@
 	#define TWSAPIDLLEXP
 	#define IB_POSIX
 #endif
-
+//#include <memory>
 #include <cassert>
 #include <list>
 #include <shared_mutex>
@@ -20,21 +20,18 @@
 #include <boost/crc.hpp>
 #pragma warning( default : 4245)
 #pragma warning( default : 4701)
-#include <boost/asio.hpp>
-#include <boost/beast/core.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/beast/core/buffers_to_string.hpp>
+
+//#include <boost/beast/core.hpp>
+
 #include <boost/container/flat_set.hpp>
 #include <boost/core/noncopyable.hpp>
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-
+/*
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/fmt/ostr.h>
-
-#include <nlohmann/json.hpp>
+*/
+//#include <nlohmann/json.hpp>
 #include <EClientSocket.h>
 #include <EWrapper.h>
 #include <Execution.h>
@@ -46,29 +43,24 @@
 #include "../../Framework/source/application/Application.h"
 #include "../../Framework/source/DateTime.h"
 #include "../../Framework/source/threading/Thread.h"
-//#include "io/Buffer.h"
 
-#include "../../Framework/source/io/File.h"
-#include "../../Framework/source/Settings.h"
-#include "../../Framework/source/threading/Interrupt.h"
-#include "../../Framework/source/threading/InterruptibleThread.h"
-#include "../../Framework/source/collections/Queue.h"
-#include "../../Framework/source/collections/UnorderedMap.h"
 #include "../../Framework/source/collections/UnorderedMapValue.h"
-#include "../../Framework/source/StringUtilities.h"
+#include "../../Framework/source/collections/UnorderedMap.h"
 #include "../../Framework/source/collections/UnorderedSet.h"
-
-#include "../../MarketLibrary/source/TypeDefs.h"
-#include "../../MarketLibrary/source/TwsProcessor.h"
+#include "../../Framework/source/threading/Interrupt.h"
+#include "../../Framework/source/io/File.h"
+#include "../../Framework/source/StringUtilities.h"
+/*
 #include "../../MarketLibrary/source/types/MyOrder.h"
 #include "../../MarketLibrary/source/types/Exchanges.h"
-#include "../../MarketLibrary/source/client/TwsClientSync.h"
+*/
+#include "../../MarketLibrary/source/TwsProcessor.h"
+#include "../../Framework/source/threading/InterruptibleThread.h"
+#include "../../Framework/source/collections/Queue.h"
+#include "../../MarketLibrary/source/TypeDefs.h"
 #include "../../MarketLibrary/source/types/IBException.h"
 //#include "markets/types/messages/IBEnums.h"
-
-//#include <Eigen/Dense>
-//#include <Eigen/Sparse>
-
+/*
 #pragma warning(disable:4100)
 #pragma warning(disable:4127)
 #pragma warning(disable:4244)
@@ -77,5 +69,5 @@
 #include "../../MarketLibrary/source/types/proto/results.pb.h"
 #pragma warning(default:4100)
 #pragma warning(default:4127)
-#pragma warning(default:4244)
+#pragma warning(default:4244)*/
 #include "TypeDefs.h"

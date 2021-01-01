@@ -1,6 +1,7 @@
 #pragma once
+#include <boost/asio.hpp>
+#include <boost/beast/websocket.hpp>
 #include "WebRequestWorker.h"
-
 
 //https://www.boost.org/doc/libs/1_71_0/libs/beast/example/websocket/server/sync/websocket_server_sync.cpp
 
@@ -34,7 +35,7 @@ namespace TwsWebSocket
 
 		void AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept;
 		void AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept;
-		void AddOutgoing( const vector<const Proto::Results::MessageUnion>& messages, SessionPK id )noexcept;
+		void AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept;
 
 	private:
 		void EraseSession( SessionPK id )noexcept;

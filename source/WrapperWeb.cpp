@@ -6,7 +6,6 @@
 
 #include "../../Framework/source/Settings.h"
 #include "../../Framework/source/collections/Collections.h"
-#include "../../Framework/source/collections/UnorderedSet.h"
 #include "EWebReceive.h"
 #include "WebSocket.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
@@ -17,6 +16,8 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
+	extern shared_ptr<Settings::Container> SettingsPtr;
+
 #define _socket WebSocket::Instance()
 #define _client TwsClientSync::Instance()
 #define _webSend if( _pWebSend ) (*_pWebSend)
