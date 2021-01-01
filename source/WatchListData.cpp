@@ -6,6 +6,8 @@
 //#define _socket WebSocket::Instance()
 namespace Jde::Markets::TwsWebSocket
 {
+	extern shared_ptr<Settings::Container> SettingsPtr;
+
 	fs::path GetDir()noexcept(false)
 	{
 		var dir = SettingsPtr->Get<fs::path>( "watchDir", IApplication::Instance().ApplicationDataFolder()/"watches" );

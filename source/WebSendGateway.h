@@ -1,11 +1,13 @@
 #pragma once
-//#include <span>
+#include <boost/container/flat_map.hpp>
 #include <boost/core/noncopyable.hpp>
+#include "../../MarketLibrary/source/client/TwsClientSync.h"
 
+//namespace Jde::Markets{ struct TwsClientSync;}
 namespace Jde::Markets::TwsWebSocket
 {
 	class WebSocket;
-	struct WebSendGateway : enable_shared_from_this<WebSendGateway>, boost::noncopyable //TODO not a worker, WebSendGateway
+	struct WebSendGateway : std::enable_shared_from_this<WebSendGateway>, boost::noncopyable //TODO not a worker, WebSendGateway
 	{
 		typedef tuple<SessionPK,MessageTypePtr> QueueType;
 		WebSendGateway( WebSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
@@ -34,7 +36,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		void Push( MessageTypePtr pUnion, SessionPK id )noexcept;
 		void Push( const vector<MessageTypePtr>& pUnion, SessionPK id )noexcept;
-		void PushTick( const vector<const Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false);
+		void PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false);
 
 
 		void Push( EResults eResults, const ClientKey& key )noexcept;

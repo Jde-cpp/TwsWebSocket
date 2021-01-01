@@ -45,3 +45,6 @@ setup/Release/*
 setup/Debug/*
 
 *.diff
+/source/UpgradeLog*.htm
+jde/*
+source/packages/*

@@ -1,10 +1,11 @@
 #pragma once
-#include "./TypeDefs.h"
+//#include "./TypeDefs.h"
 #include "./TwsSendWorker.h"
 #include "./WebSendGateway.h"
 
 namespace Jde::Markets::TwsWebSocket
 {
+//	struct WebSendGateway;
 	struct ProcessArg : ClientKey
 	{
 		ProcessArg( const ClientKey& key, sp<WebSendGateway> webSendPtr ): ClientKey{ key }, WebSendPtr{ webSendPtr } {}

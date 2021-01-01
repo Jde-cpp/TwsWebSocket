@@ -1,6 +1,11 @@
 #include "Flex.h"
+#include <fstream>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+
 #include "WebSocket.h"
 #include "../../MarketLibrary/source/types/Contract.h"
+#include "../../Framework/source/Settings.h"
 #include "../../Framework/source/Cache.h"
 
 #define var const auto
@@ -9,6 +14,8 @@
 using boost::property_tree::ptree;
 namespace Jde::Markets::TwsWebSocket
 {
+	extern shared_ptr<Settings::Container> SettingsPtr;
+
 	typedef map<uint16,Proto::Results::Flex> CacheType;
 	shared_mutex _cacheMutex;
 	constexpr string_view CacheName{ "Flex::SendTrades" };
@@ -25,7 +32,7 @@ namespace Jde::Markets::TwsWebSocket
 
 			shared_lock l{ _cacheMutex };
 			auto pResults = new Proto::Results::Flex(); pResults->set_id( web.ClientId );
-			ofstream os("/tmp/trades.csv");
+			std::ofstream os("/tmp/trades.csv");
 			for( auto day=startDay; day<=endDay; ++day )
 			{
 				auto pConfirms = pData->find( day );

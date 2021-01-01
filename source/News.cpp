@@ -1,11 +1,13 @@
 #include "News.h"
-#include "WebSocket.h"
+//#include "WebSocket.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
+#include "WebRequestWorker.h"
 #include "../../Framework/source/io/ProtoUtilities.h"
 
-#define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
+//#define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 #define _sync TwsClientSync::Instance()
-#define _socket WebSocket::Instance()
+//#define _socket WebSocket::Instance()
+
 #define var const auto
 namespace Jde::Markets::TwsWebSocket
 {

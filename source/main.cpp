@@ -18,12 +18,6 @@ int main( int argc, char** argv )
 	int result = 0;//EXIT_SUCCESS;
 	try
 	{
-		std::queue<tuple<int,std::string&&>> queue;
-		auto x = make_tuple( 9, std::string{"Hi"} );
-		queue.push( std::move(x) );
-		auto y = std::move( queue.front() );
-		auto one = std::get<1>( y );
-
 		Jde::OSApp::Startup( argc, argv, "TwsWebSocket" );
 
 		Jde::Markets::TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
