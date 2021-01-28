@@ -4,9 +4,13 @@
 #include "./News.h"
 #include "./PreviousDayValues.h"
 #include "./WatchListData.h"
-#include "./WebSocket.h"
+#include "./WebCoSocket.h"
+//#include "../../Framework/source/um/UM.h"
+#include "../../Framework/source/db/GraphQL.h"
 #include "../../MarketLibrary/source/data/HistoricalDataCache.h"
 #include "../../MarketLibrary/source/data/OptionData.h"
+#include "../../Google/source/TokenInfo.h"
+#include "../../Ssl/source/Ssl.h"
 
 #define _sync TwsClientSync::Instance()
 #define var const auto
@@ -19,82 +23,128 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_pThread = make_shared<Threading::InterruptibleThread>( "WebRequestWorker", [&](){Run();} );
 	}
-	void WebRequestWorker::Push( SessionPK sessionId, string&& data )noexcept
+	void WebRequestWorker::Push( QueueType&& msg )noexcept
 	{
-		QueueType x = std::make_tuple( sessionId, std::move(data) );
-		_queue.Push( std::move(x) );
+		_queue.Push( std::move(msg) );
 	}
 	void WebRequestWorker::Run()noexcept
 	{
 		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.empty() )
 		{
 			if( auto v =_queue.TryPop(5s); v )
-				HandleRequest( get<0>(*v), std::move(get<1>(*v)) );
+				HandleRequest( std::move(*v) );
 		}
 	}
-#define ARG(x) {{sessionId, x}, _pWebSend}
-	void WebRequestWorker::HandleRequest( SessionPK sessionId, string&& data )noexcept
+#define ARG(x) {{{session}, x}, _pWebSend}
+	void WebRequestWorker::HandleRequest( QueueType&& msg )noexcept
 	{
 		try
 		{
 			Proto::Requests::RequestTransmission transmission;
-			if( google::protobuf::io::CodedInputStream  stream{reinterpret_cast<const unsigned char*>(data.data()), (int)data.size()}; !transmission.MergePartialFromCodedStream(&stream) )
+			var data = std::move( msg.Data );
+			if( google::protobuf::io::CodedInputStream stream{reinterpret_cast<const unsigned char*>(data.data()), (int)data.size()}; !transmission.MergePartialFromCodedStream(&stream) )
 				THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
-			while( transmission.messages().size() )
-			{
-				auto pMessage = sp<Proto::Requests::RequestUnion>( transmission.mutable_messages()->ReleaseLast() );
-				var& message = *pMessage;
-				if( message.has_string_request() )
-					Receive( message.string_request().type(), message.string_request().name(), {sessionId, message.string_request().id()} );
-				else if( message.has_options() )
-					ReceiveOptions( sessionId, message.options() );
-				else if( message.has_flex_executions() )
-					ReceiveFlex( sessionId, message.flex_executions() );
-				else if( message.has_edit_watch_list() )
-					WatchListData::Edit( message.edit_watch_list().file(), ARG(message.edit_watch_list().id()) );
-				else if( pMessage->has_blockly() )
-				{
-					auto p=pMessage->mutable_blockly();
-					//string_view msg = p->message();
-					//if( has && msg.size() )
-						_pBlocklyWorker->Push( {sessionId, p->id(), up<string>{p->release_message()}} );
-					//else
-					//	_pWebSend->PushError( -5, "No Blockly msg", {sessionId, p->id()} );
-				}
-				else if( message.has_std_dev() )
-					ReceiveStdDev( message.std_dev().contract_id(), message.std_dev().days(), message.std_dev().start(), ARG(message.std_dev().id()) );
-				else
-				{
-					bool handled = false;
-					if( message.has_generic_requests() )
-						handled = ReceiveRequests( sessionId, message.generic_requests() );
-					if( !handled )
-						_pTwsSend->Push( pMessage, sessionId );
-				}
-			}
+			HandleRequest( move(transmission), move(msg) );
 		}
 		catch( const IOException& e )
 		{
 			ERR( "IOExeption returned: '{}'"sv, e.what() );
-			_pWebSend->Push( e, {sessionId, 0} );
+			_pWebSend->Push( e, {msg, 0} );
+		}
+	}
+	void WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& session )noexcept
+	{
+		while( transmission.messages().size() )
+		{
+			auto pMessage = sp<Proto::Requests::RequestUnion>( transmission.mutable_messages()->ReleaseLast() );
+			var& message = *pMessage;
+			if( message.has_string_request() )
+				Receive( message.string_request().type(), message.string_request().name(), {session, message.string_request().id()} );
+			else if( message.has_options() )
+				ReceiveOptions( session, message.options() );
+			else if( message.has_flex_executions() )
+				ReceiveFlex( session, message.flex_executions() );
+			else if( message.has_edit_watch_list() )
+				WatchListData::Edit( message.edit_watch_list().file(), ARG(message.edit_watch_list().id()) );
+			else if( pMessage->has_blockly() )
+			{
+				auto p=pMessage->mutable_blockly();
+				//string_view msg = p->message();
+				//if( has && msg.size() )
+					_pBlocklyWorker->Push( { {session, p->id()}, up<string>{p->release_message()} } );
+				//else
+				//	_pWebSend->PushError( -5, "No Blockly msg", {sessionKey, p->id()} );
+			}
+			else if( message.has_std_dev() )
+				ReceiveStdDev( message.std_dev().contract_id(), message.std_dev().days(), message.std_dev().start(), ARG(message.std_dev().id()) );
+			else
+			{
+				bool handled = false;
+				if( message.has_generic_requests() )
+					handled = ReceiveRequests( session, message.generic_requests() );
+				if( !handled )
+					_pTwsSend->Push( pMessage, session );
+			}
 		}
 	}
 
 	void WebRequestWorker::Receive( ERequests type, const string& name, const ClientKey& arg )noexcept
 	{
-		if( type==ERequests::WatchList )
+		if( type==ERequests::Query )
+		{
+			var result = DB::Query( name, arg.UserId );//TODO make async
+			auto p = make_unique<Proto::Results::StringResult>(); p->set_id( arg.ClientId ); p->set_type( EResults::Query ); p->set_value( result.dump() );
+			MessageType msg; msg.set_allocated_string_result( p.release() );
+			_pWebSend->Push( move(msg), arg.SessionId );
+		}
+		else if( type==ERequests::GoogleLogin )
+		{
+			try
+			{
+				var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
+				THROW_IF( token.Aud!=Settings::Global().Get2<string>("GoogleAuthClientId"), Exception("Invalid client id") );
+				THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", Exception("Invalid iss") );
+				var expiration = Clock::from_time_t( token.Expiration );
+				THROW_IF( expiration<Clock::now(), Exception("token expired") );
+				if( auto p = WebCoSocket::Instance(); p )
+					p->SetLogin( arg.SessionId, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
+			}
+			catch( const std::exception& e )
+			{
+				WARN0( string{e.what()} );
+				_pWebSend->Push( e, arg );
+			}
+		}
+		else if( type==ERequests::WatchList )
 			WatchListData::SendList( name, {arg, _pWebSend} );
 		else if( type==ERequests::DeleteWatchList )
 			WatchListData::Delete( name, {arg, _pWebSend} );
-
+		else if( type==ERequests::WatchList )
+			WatchListData::SendList( name, {arg, _pWebSend} );
 	}
-	bool WebRequestWorker::ReceiveRequests( SessionPK sessionId, const Proto::Requests::GenericRequests& request )noexcept
+
+/*	void WebRequestWorker::ReceiveRest( const ClientKey& arg, Proto::Requests::ERequests type, sv url, sv item )noexcept
+	{
+		if( UM::IsTarget(url) )
+		{
+			if( type==ERequests::RestGet )
+				UM::Get( url, arg.UserId );
+			else if( type==ERequests::RestDelete )
+				UM::Delete( url, arg.UserId );
+			else if( type==ERequests::RestPatch )
+				UM::Patch( url, arg.UserId, item );
+			else if( type==ERequests::RestPost )
+				UM::Post( url, arg.UserId, item );
+		}
+	}*/
+
+	bool WebRequestWorker::ReceiveRequests( const SessionKey& session, const Proto::Requests::GenericRequests& request )noexcept
 	{
 		bool handled = true;
 		if( request.type()==ERequests::RequsetPrevOptionValues )
 			PreviousDayValues( request.ids(), ARG(request.id()) );
 		else if( request.type()==ERequests::RequestFundamentalData )
-			RequestFundamentalData( request.ids(), {sessionId, request.id()} );
+			RequestFundamentalData( request.ids(), {session, request.id()} );
 		else if( request.type()==ERequests::Portfolios )
 			WatchListData::SendLists( true, ARG(request.id()) );
 		else if( request.type()==ERequests::WatchLists )
@@ -104,7 +154,7 @@ namespace Jde::Markets::TwsWebSocket
 		return handled;
 
 	}
-	void WebRequestWorker::ReceiveFlex( SessionPK sessionId, const Proto::Requests::FlexExecutions& req )noexcept
+	void WebRequestWorker::ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept
 	{
 		var start = Chrono::BeginningOfDay( Clock::from_time_t(req.start()) );
 		var end = Chrono::EndOfDay( Clock::from_time_t(req.end()) );
@@ -125,8 +175,8 @@ namespace Jde::Markets::TwsWebSocket
 					THROW( Exception("Contract '{}' return '{}' records"sv, contractId, pDetails->size()) );
 				var pStats = HistoricalDataCache::ReqStats( {pDetails->front()}, days, start );
 				auto p = new Proto::Results::Statistics(); p->set_request_id(inputArg.ClientId); p->set_count(static_cast<uint32>(pStats->Count)); p->set_average(pStats->Average);p->set_variance(pStats->Variance);p->set_min(pStats->Min); p->set_max(pStats->Max);
-				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_statistics( p );
-				inputArg.Push( pUnion );
+				MessageType msg; msg.set_allocated_statistics( p );
+				inputArg.Push( move(msg) );
 			}
 			catch( const Exception& e )
 			{
@@ -135,7 +185,7 @@ namespace Jde::Markets::TwsWebSocket
 		} ).detach();
 	}
 
-	void WebRequestWorker::ReceiveOptions( SessionPK sessionId, const Proto::Requests::RequestOptions& params )noexcept
+	void WebRequestWorker::ReceiveOptions( const SessionKey& session, const Proto::Requests::RequestOptions& params )noexcept
 	{
 		std::thread( [params, web=ProcessArg ARG(params.id())]()
 		{
@@ -228,11 +278,11 @@ namespace Jde::Markets::TwsWebSocket
 
 				if( pResults->option_days_size() )
 				{
-					auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_options( pResults.release() );
-					web.Push( pUnion );
+					MessageType msg; msg.set_allocated_options( pResults.release() );
+					web.Push( move(msg)  );
 				}
 				else
-					web.WebSendPtr->Push( IBException{"No previous dates found", -2}, {web.SessionId, underlyingId} );
+					web.WebSendPtr->Push( IBException{"No previous dates found", -2}, {{web.SessionId}, underlyingId} );
 			}
 			catch( const IBException& e ){ web.Push( e ); }
 			catch( const Exception& e ){ web.Push( e ); }
@@ -255,8 +305,8 @@ namespace Jde::Markets::TwsWebSocket
 					pRatios->set_request_id( web.ClientId );
 					for( var& [name,value] : fundamentals )
 						(*pRatios->mutable_values())[name] = value;
-					auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_fundamentals( pRatios.release() );
-					web.Push( pUnion );
+					MessageType msg; msg.set_allocated_fundamentals( pRatios.release() );
+					web.Push( move(msg) );
 				}
 				catch( const Exception& e )
 				{

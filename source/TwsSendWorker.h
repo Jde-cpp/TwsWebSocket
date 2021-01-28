@@ -8,34 +8,33 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept;
 
-		typedef tuple<SessionPK,sp<Proto::Requests::RequestUnion>> QueueType;
+		typedef tuple<SessionKey,sp<Proto::Requests::RequestUnion>> QueueType;
 
-		void Push( sp<Proto::Requests::RequestUnion> pData, SessionPK sessionId )noexcept;
+		void Push( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionInfo )noexcept;
 		void Shutdown()noexcept{ _pThread->Interrupt(); _pThread->Join(); }
 	private:
 		void Run()noexcept;
-		void HandleRequest( sp<Proto::Requests::RequestUnion> pData, SessionPK sessionId )noexcept;
+		void HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& key )noexcept;
 
-		void AccountUpdates( const Proto::Requests::RequestAccountUpdates& request, SessionPK sessionId )noexcept;
-		void AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& accountUpdates, SessionPK sessionId )noexcept;
+		void AccountUpdates( const Proto::Requests::RequestAccountUpdates& request, const SessionKey& key )noexcept;
+		void AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& accountUpdates, const SessionKey& key )noexcept;
 		void CalculateImpliedPrice( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedPrice>& requests, const ClientKey& client )noexcept;
 		void CalculateImpliedVolatility( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedVolatility>& requests, const ClientKey& client )noexcept(false);
-		void ContractDetails( const Proto::Requests::RequestContractDetails& request, SessionPK sessionId )noexcept;
-		void Executions( const Proto::Requests::RequestExecutions& request, SessionPK sessionId )noexcept;
-		void HistoricalData( const Proto::Requests::RequestHistoricalData& req, SessionPK sessionId )noexcept(false);
-		void MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& request, SessionPK sessionId )noexcept;
-		void OptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, SessionPK sessionId )noexcept;
-		void Order( const Proto::Requests::PlaceOrder& order, SessionPK sessionId )noexcept;
-		void Positions( const Proto::Requests::RequestPositions& request, SessionPK sessionId )noexcept;
-		void RequestOptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const ClientKey& key )noexcept;
+		void ContractDetails( const Proto::Requests::RequestContractDetails& request, const SessionKey& key )noexcept;
+		void Executions( const Proto::Requests::RequestExecutions& request, const SessionKey& key )noexcept;
+		void HistoricalData( const Proto::Requests::RequestHistoricalData& req, const SessionKey& key )noexcept(false);
+		void MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& request, const SessionKey& key )noexcept;
+		void OptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept;
+		void Order( const Proto::Requests::PlaceOrder& order, const SessionKey& key )noexcept;
+		void Positions( const Proto::Requests::RequestPositions& request, const SessionKey& key )noexcept;
+		void RequestOptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept;
 
 		::Contract GetContract( ContractPK contractId )noexcept(false);
-		void Requests( const Proto::Requests::GenericRequests& request, SessionPK sessionId )noexcept;
+		void Requests( const Proto::Requests::GenericRequests& request, const SessionKey& key )noexcept;
 		//flat_map<ContractPK,TickerId> _mktData; mutable std::mutex _mktDataMutex;
 		sp<Threading::InterruptibleThread> _pThread;
 		QueueValue<QueueType> _queue;
 		sp<WebSendGateway> _webSendPtr;
 		sp<TwsClientSync> _twsPtr;
-		//sp<WrapperWeb> _wrapperPtr;
 	};
 }

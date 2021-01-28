@@ -6,6 +6,7 @@
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
+	using Proto::Results::MessageUnion;
 	WebSendGateway::WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept:
 //		_queue{},
 		_webSocket{ webSocketParent },
@@ -171,46 +172,58 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			sessionIds.ForEach( [&](const SessionPK& sessionId )
 			{
-				auto pMessageUnion = make_shared<MessageType>();
-				set( *pMessageUnion ); ASSERT( pMessageUnion->Value_case()!=MessageType::ValueCase::VALUE_NOT_SET );
-				Push( pMessageUnion, sessionId );
+				MessageType msg;
+				set( msg ); ASSERT( msg.Value_case()!=MessageType::ValueCase::VALUE_NOT_SET );
+				Push( move(msg), sessionId );
 			});
 		});
 	}
 	void WebSendGateway::Push( Proto::Results::EResults messageId, TickerId ibReqId )noexcept
 	{
-		var [sessionId,clientId] = GetClientRequest( ibReqId );
-		if( sessionId )
+		var clientKey = GetClientRequest( ibReqId );
+		if( clientKey.SessionId )
 		{
-			auto pMessage = new Proto::Results::MessageValue(); pMessage->set_int_value( clientId ); pMessage->set_type( messageId );
-			auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_message( pMessage );
-			Push( pUnion, sessionId );
+			auto pMessage = new Proto::Results::MessageValue(); pMessage->set_int_value( clientKey.ClientId ); pMessage->set_type( messageId );
+			MessageType msg; msg.set_allocated_message( pMessage );
+			Push( move(msg), clientKey.SessionId );
 		}
 		else
 			DBG( "Could not find session for messageId:  '{}' req:  '{}'."sv, messageId, ibReqId );
 	}
 
-	void WebSendGateway::Push( MessageTypePtr pUnion, SessionPK id )noexcept
+	void WebSendGateway::Push( MessageType&& msg, SessionPK id )noexcept
 	{
-		_webSocket.AddOutgoing( pUnion, id );
+		_webSocket.AddOutgoing( move(msg), id );
 	}
-	void WebSendGateway::Push( const vector<MessageTypePtr>& messages, SessionPK id )noexcept
+	void WebSendGateway::Push( vector<MessageType>&& messages, SessionPK id )noexcept
 	{
-		_webSocket.AddOutgoing( messages, id );
+		_webSocket.AddOutgoing( move(messages), id );
 	}
 
-	void WebSendGateway::PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false)
+	void WebSendGateway::PushTick( const vector<MessageUnion>& messages, ContractPK contractId )noexcept(false)
 	{
-		shared_lock l{ _marketSubscriptionMutex };
-		if( var p=_marketSubscriptions.find(contractId); p!=_marketSubscriptions.end() )
+		unique_lock l{ _marketSubscriptionMutex };
+		if( auto p=_marketSubscriptions.find(contractId); p!=_marketSubscriptions.end() )
 		{
 			if( p->second.empty() )
 			{
 				_marketSubscriptions.erase( p );
 				THROW( Exception("Could not find any market subscriptions.") );
 			}
-			for( var& sessionTicks : p->second )
-				_webSocket.AddOutgoing( messages, sessionTicks.first );
+			typedef flat_map<SessionPK,flat_set<Proto::Requests::ETickList>>::iterator X;
+			for( X pSession = p->second.begin(); pSession != p->second.end(); )
+			{
+				try
+				{
+					_webSocket.AddOutgoing( messages, pSession->first );
+					++pSession;
+				}
+				catch( const Exception& e )
+				{
+					DBG( "Removing session='{}' for contract id='{}'"sv, pSession->first, contractId );
+					pSession = p->second.erase( pSession );
+				}
+			}
 		}
 		else
 			THROW( Exception("Could not find any market subscriptions.") );
@@ -237,8 +250,8 @@ namespace Jde::Markets::TwsWebSocket
 	void WebSendGateway::PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept
 	{
 		auto pError = make_unique<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code(errorCode); pError->set_message(errorString);
-		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_error( pError.release() );
-		Push( pMessage, key.SessionId );
+		MessageUnion msg; msg.set_allocated_error( pError.release() );
+		Push( move(msg), key.SessionId );
 	}
 
 	void WebSendGateway::AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept
@@ -271,14 +284,14 @@ namespace Jde::Markets::TwsWebSocket
 */
 	bool WebSendGateway::Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept
 	{
-		var [sessionId, clientReqId] = _requestSession.Find( id, ClientKey{} );
-		if( sessionId )
+		var clientKey = GetClientRequest( id );
+		if( clientKey.SessionId )
 		{
-			auto pUnion = make_shared<MessageType>();
-			set( *pUnion, clientReqId );
-			Push( pUnion, sessionId );
+			MessageType msg;
+			set( msg, clientKey.ClientId );
+			Push( move(msg), clientKey.SessionId );
 		}
-		return sessionId;
+		return clientKey.SessionId;
 	}
 
 	void WebSendGateway::AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept
@@ -324,17 +337,17 @@ namespace Jde::Markets::TwsWebSocket
 */
 	void WebSendGateway::ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, ReqId reqId )noexcept
 	{
-		var [sessionId, clientReqId] = _requestSession.Find( reqId, ClientKey{} );
-		if( !sessionId )
+		var clientKey = _requestSession.Find( reqId, ClientKey{} );
+		if( !clientKey.SessionId )
 		{
 			DBG( "Could not find session for ContractDetailsEnd req:  '{}'."sv, reqId );
 			return;
 		}
 		bool multi=false;//web call requested multiple contract details
-		sp<MessageType> pComplete;
+		optional<MessageType> pComplete;
 		{
 			unique_lock l{_multiRequestMutex};
-			auto pMultiRequests = _multiRequests.find( clientReqId );
+			auto pMultiRequests = _multiRequests.find( clientKey.ClientId );
 			multi = pMultiRequests!=_multiRequests.end();
 			if( multi )
 			{
@@ -343,18 +356,17 @@ namespace Jde::Markets::TwsWebSocket
 				if( reqIds.size()==0 )
 				{
 					_multiRequests.erase( pMultiRequests );
-					auto pMessage = new Proto::Results::MessageValue(); pMessage->set_type( Proto::Results::EResults::MultiEnd ); pMessage->set_int_value( clientReqId );
-					pComplete = make_shared<MessageType>();  pComplete->set_allocated_message( pMessage );
+					auto pMessage = new Proto::Results::MessageValue(); pMessage->set_type( Proto::Results::EResults::MultiEnd ); pMessage->set_int_value( clientKey.ClientId );
+					pComplete = MessageType{};  pComplete->set_allocated_message( pMessage );
 				}
 			}
 		}
-		pDetails->set_request_id( clientReqId );
-		auto pUnion = make_shared<MessageType>();
-		pUnion->set_allocated_contract_details( pDetails.release() );
+		pDetails->set_request_id( clientKey.ClientId );
+		MessageType msg; msg.set_allocated_contract_details( pDetails.release() );
 		if( pComplete )
-			Push( {pUnion,pComplete}, sessionId );
+			Push( {msg,*pComplete}, clientKey.SessionId );
 		else
-			Push( pUnion, sessionId );
+			Push( move(msg), clientKey.SessionId );
 		if( pComplete || !multi )
 			_requestSession.erase( reqId );
 	}
@@ -389,9 +401,9 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			for( var sessionId : pAccountNumberSessions->second )
 			{
-				auto pUnion = make_shared<MessageType>();
-				setMessage( *pUnion );
-				Push( pUnion, sessionId );
+				MessageType msg;
+				setMessage( msg );
+				Push( move(msg), sessionId );
 			}
 		}
 	}
@@ -418,8 +430,8 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			for( var sessionId : pAccountNumberSessions->second )
 			{
-				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_account_update( new Proto::Results::AccountUpdate{accountUpdate} );
-				Push( pUnion, sessionId );
+				MessageType msg; msg.set_allocated_account_update( new Proto::Results::AccountUpdate{accountUpdate} );
+				Push( move(msg), sessionId );
 			}
 		}
 	}
@@ -429,15 +441,15 @@ namespace Jde::Markets::TwsWebSocket
 		std::shared_lock<std::shared_mutex> l( _executionRequestMutex );
 		for( var sessionId : _executionRequests )
 		{
-			auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_commission_report( new Proto::Results::CommissionReport{report} );
-			Push( pUnion, sessionId );
+			MessageType msg; msg.set_allocated_commission_report( new Proto::Results::CommissionReport{report} );
+			Push( move(msg), sessionId );
 		}
 	}
 
 	void WebSendGateway::Push( Proto::Results::EResults messageId, const ClientKey& key )noexcept
 	{
 		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_int_value( key.ClientId ); pMessage->set_type( messageId );
-		auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_message( pMessage );
-		Push( pUnion, key.SessionId );
+		MessageType msg; msg.set_allocated_message( pMessage );
+		Push( move(msg), key.SessionId );
 	}
 }

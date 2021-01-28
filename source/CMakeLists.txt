@@ -11,10 +11,11 @@ add_executable( Jde.TwsWebSocket main.cpp BlocklyWorker.cpp Flex.cpp News.cpp Pr
 #######################################################
 target_link_libraries(Jde.TwsWebSocket Threads::Threads)
 target_link_libraries(Jde.TwsWebSocket Jde)
+target_link_libraries(Jde.TwsWebSocket Jde.UM)
 target_link_libraries(Jde.TwsWebSocket Jde.Blockly)
 target_link_libraries(Jde.TwsWebSocket Jde.Markets)
 target_link_libraries(Jde.TwsWebSocket Jde.XZ)
-#target_link_libraries(Jde.TwsWebSocket Jde.Blockly.Orders.1)
+target_link_libraries(Jde.TwsWebSocket Jde.Ssl)
 target_link_libraries(Jde.TwsWebSocket lzma)
 target_link_libraries(Jde.TwsWebSocket Ib)
 target_link_libraries(Jde.TwsWebSocket protobuf)

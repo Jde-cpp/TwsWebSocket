@@ -112,8 +112,8 @@ namespace Jde::Markets::TwsWebSocket
 		if( !_sessions.Find(sessionId) )
 			return;
 		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_type( Proto::Results::EResults::Accept ); pMessage->set_int_value( sessionId );
-		auto pMessageUnion = make_shared<MessageType>();  pMessageUnion->set_allocated_message( pMessage );
-		_pWebSend->Push( pMessageUnion, sessionId );
+		MessageType msg;  msg.set_allocated_message( pMessage );
+		_pWebSend->Push( move(msg), sessionId );
 		DBG( "Listening to session #{}"sv, sessionId );
 		UnPause();
 		while( !Threading::GetThreadInterruptFlag().IsSet() )
@@ -123,7 +123,7 @@ namespace Jde::Markets::TwsWebSocket
 				boost::beast::multi_buffer buffers;
 				pSession->read( buffers );
 				auto data = boost::beast::buffers_to_string( buffers.data() );
-				_requestWorker.Push( sessionId, std::move(data) );
+				_requestWorker.Push( {{sessionId}, std::move(data)} );
 			}
 			catch(boost::system::system_error const& se)
 			{

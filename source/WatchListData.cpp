@@ -47,8 +47,8 @@ namespace Jde::Markets::TwsWebSocket
 				auto pNames = new Proto::Results::StringList(); pNames->set_request_id( arg.ClientId );
 				vector<string> names = Names( portfolio );
 				for_each( names.begin(), names.end(), [pNames](var& name){ pNames->add_values(name);} );
-				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_string_list( pNames );
-				arg.Push( pUnion );
+				MessageType msg; msg.set_allocated_string_list( pNames );
+				arg.Push( move(msg) );
 			}
 			catch( const Exception& e )
 			{
@@ -76,8 +76,8 @@ namespace Jde::Markets::TwsWebSocket
 				var pWatchList = new Proto::Results::WatchList();
 				pWatchList->set_request_id( arg.ClientId );
 				pWatchList->set_allocated_file( pFile.release() );
-				auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_watch_list( pWatchList );
-				arg.Push( pUnion );
+				MessageType msg; msg.set_allocated_watch_list( pWatchList );
+				arg.Push( move(msg) );
 			}
 			catch( const Exception& e )
 			{

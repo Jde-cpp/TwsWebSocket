@@ -34,8 +34,8 @@ namespace Jde::Markets::TwsWebSocket
 		void PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept;
 
 
-		void Push( MessageTypePtr pUnion, SessionPK id )noexcept;
-		void Push( const vector<MessageTypePtr>& pUnion, SessionPK id )noexcept;
+		void Push( MessageType&& pUnion, SessionPK id )noexcept;
+		void Push( vector<MessageType>&& pUnion, SessionPK id )noexcept;
 		void PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false);
 
 
@@ -58,7 +58,7 @@ namespace Jde::Markets::TwsWebSocket
 		void SetClientSync( sp<TwsClientSync> pClient )noexcept{ DBG0( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
 	private:
 		void Push( string&& data, SessionPK sessionId )noexcept;
-		ClientKey GetClientRequest( TickerId ibReqId )noexcept{return _requestSession.Find( ibReqId, {0,0} ); }
+		ClientKey GetClientRequest( TickerId ibReqId )noexcept{return _requestSession.Find( ibReqId, {} ); }
 
 		void Run()noexcept;
 		void HandleRequest( SessionPK sessionId, string&& data )noexcept;
