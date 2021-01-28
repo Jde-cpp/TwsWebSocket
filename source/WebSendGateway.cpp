@@ -394,8 +394,20 @@ namespace Jde::Markets::TwsWebSocket
 		var pAccountNumberSessions = _accountSubscriptions.find( accountNumber );
 		if( pAccountNumberSessions==_accountSubscriptions.end() )
 		{
-			WARN( "No listeners for portfolio update '{}'"sv, accountNumber );
-			_client.reqAccountUpdates( false, accountNumber );
+			unique_lock l2{_canceledAccountMutex};
+			bool found = false;
+			for( auto p = _canceledAccounts.begin(); p!=_canceledAccounts.end(); )
+			{
+				if( p->first==accountNumber )
+					found = true;
+				p = !found && p->second< Clock::now()-1min ? _canceledAccounts.erase( p ) : next( p );
+			}
+			if( !found )
+			{
+				_canceledAccounts.emplace( accountNumber, Clock::now() );
+				TRACE( "No current listeners for account update '{}', reqAccountUpdates"sv, accountNumber );
+				_client.reqAccountUpdates( false, accountNumber );
+			}
 		}
 		else
 		{
@@ -416,22 +428,34 @@ namespace Jde::Markets::TwsWebSocket
 		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::AccountDownloadEnd ); pValue->set_string_value( accountNumber );
 		AccountRequest( accountNumber, [pValue](MessageType& msg){msg.set_allocated_message(pValue);} );
 	}
-	void WebSendGateway::Push( const Proto::Results::AccountUpdate& accountUpdate )noexcept
+	void WebSendGateway::Push( const Proto::Results::AccountUpdate& accountUpdate, bool haveCallback )noexcept
 	{
 		var accountNumber = accountUpdate.account();
 		std::shared_lock<std::shared_mutex> l( _accountSubscriptionMutex );
-		var pAccountNumberSessions = _accountSubscriptions.find( accountNumber );
-		if( pAccountNumberSessions==_accountSubscriptions.end() )
-		{
-			WARN( "No current listeners for account update '{}', reqAccountUpdates"sv, accountNumber );
-			_client.reqAccountUpdates( false, accountNumber );
-		}
-		else
+		if( var pAccountNumberSessions = _accountSubscriptions.find( accountNumber ); pAccountNumberSessions!=_accountSubscriptions.end() )
 		{
 			for( var sessionId : pAccountNumberSessions->second )
 			{
 				MessageType msg; msg.set_allocated_account_update( new Proto::Results::AccountUpdate{accountUpdate} );
 				Push( move(msg), sessionId );
+			}
+		}
+		else if( !haveCallback )
+		{
+			l.unlock();
+			unique_lock l2{_canceledAccountMutex};
+			bool found = false;
+			for( auto p = _canceledAccounts.begin(); p!=_canceledAccounts.end(); )
+			{
+				if( p->first==accountNumber )
+					found = true;
+				p = !found && p->second< Clock::now()-1min ? _canceledAccounts.erase( p ) : next( p );
+			}
+			if( !found )
+			{
+				_canceledAccounts.emplace( accountNumber, Clock::now() );
+				TRACE( "No current listeners for account update '{}', reqAccountUpdates"sv, accountNumber );
+				_client.reqAccountUpdates( false, accountNumber );
 			}
 		}
 	}
