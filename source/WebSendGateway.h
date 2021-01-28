@@ -6,11 +6,11 @@
 //namespace Jde::Markets{ struct TwsClientSync;}
 namespace Jde::Markets::TwsWebSocket
 {
-	class WebSocket;
-	struct WebSendGateway : std::enable_shared_from_this<WebSendGateway>, boost::noncopyable //TODO not a worker, WebSendGateway
+	struct WebCoSocket;
+	struct WebSendGateway : enable_shared_from_this<WebSendGateway>, boost::noncopyable //TODO not a worker, WebSendGateway
 	{
 		typedef tuple<SessionPK,MessageTypePtr> QueueType;
-		WebSendGateway( WebSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
+		WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
 		void Shutdown()noexcept{ _pThread->Interrupt(); _pThread->Join(); }
 		void EraseSession( SessionPK id )noexcept;
 		void AddExecutionRequest( SessionPK id ){ unique_lock l{_executionRequestMutex}; _executionRequests.emplace( id ); }
@@ -69,7 +69,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		sp<Threading::InterruptibleThread> _pThread;
 		QueueValue<QueueType> _queue;
-		WebSocket& _webSocket;
+		WebCoSocket& _webSocket;
 		sp<TwsClientSync> _pClientSync;
 		UnorderedMapValue<TickerId,uint32> _historicalCrcs; //mutable std::mutex _historicalCacheMutex;
 		UnorderedMapValue<TickerId,ClientKey> _requestSession;//single session single call

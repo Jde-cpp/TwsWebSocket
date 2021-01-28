@@ -66,7 +66,7 @@
 		"type": "shell",
 		"label": "compile",
 		"command": "ccache",
-		"args": ["clang++", "-O0","-g","-I${env:REPO_DIR}/boostorg/boost_1_74_0","-I${env:REPO_DIR}/tws-api/source/cppclient/client","-I${env:REPO_DIR}/spdlog/include", "-I${env:REPO_DIR}/json/include", "-std=c++20", "-stdlib=libc++", "-Wall", "-Wno-unknown-pragmas","-fsanitize=address","-fno-omit-frame-pointer","-pthread","-include","${workspaceFolder}/.obj/asan/CMakeFiles/Jde.TwsWebSocket.dir/CMakeFiles/Jde.TwsWebSocket.dir/cmake_pch.hxx","-o","${workspaceFolder}/.obj/asan/CMakeFiles/Jde.TwsWebSocket.dir/${fileBasename}.o","-c", "${file}"],
+		"args": ["clang++", "-O0","-g","-I${env:REPO_DIR}/boostorg/boost_1_74_0","-I${env:REPO_DIR}/tws-api/source/cppclient/client","-I${env:REPO_DIR}/spdlog/include", "-I${env:REPO_DIR}/json/include", "-std=c++20", "-stdlib=libc++", "-Wall", "-Wno-unknown-pragmas", "-Wno-#pragma-messages","-fsanitize=address","-fno-omit-frame-pointer","-pthread","-include","${workspaceFolder}/.obj/asan/CMakeFiles/Jde.TwsWebSocket.dir/CMakeFiles/Jde.TwsWebSocket.dir/cmake_pch.hxx","-o","${workspaceFolder}/.obj/asan/CMakeFiles/Jde.TwsWebSocket.dir/${fileBasename}.o","-c", "${file}"],
 		"problemMatcher": ["$gcc"],
 		"dependsOrder": "sequence",
 		"dependsOn": ["echo"],

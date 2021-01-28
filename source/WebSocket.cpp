@@ -19,7 +19,7 @@ namespace Jde::Markets::TwsWebSocket
 		Threading::Interrupt( "webSocket", 100ms, true ),
 		_port{ port },
 		_pClientSync{ pClient },
-		_pWebSend{ make_shared<WebSendGateway>(*this, _pClientSync) },
+	//	_pWebSend{ make_shared<WebSendGateway>(*this, _pClientSync) },
 		_requestWorker{ /**this,*/ _pWebSend, _pClientSync }
 	{
 		_pAcceptor = make_shared<Threading::InterruptibleThread>( "wsAcceptor", [&](){Accept();} );//accesses members, so not initialized above.
