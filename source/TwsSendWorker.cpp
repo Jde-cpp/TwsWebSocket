@@ -145,7 +145,17 @@ namespace Jde::Markets::TwsWebSocket
 		_tws.placeOrder( *pIbContract, order );
 		if( r.block_id().size() )
 		{
-			auto p = up<sp<Markets::MBlockly::IBlockly>>( Blockly::CreateAllocatedExecutor(r.block_id(), order.orderId, contract.Id) );
+			try
+			{
+				auto pp = up<sp<Markets::MBlockly::IBlockly>>( Blockly::CreateAllocatedExecutor(r.block_id(), order.orderId, contract.Id) );
+				auto p = *pp;
+				p->Run();
+			}
+			catch( const Exception& e )
+			{
+				e.Log();
+				_webSendPtr->Push( e, {sessionId, r.id()} );
+			}
 			//todo allow cancel
 /*			std::thread{ [ pBlockly=*p ]()
 			{
