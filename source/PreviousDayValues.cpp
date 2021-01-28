@@ -134,10 +134,10 @@ namespace TwsWebSocket
 							pBar->set_high( high );
 							pBar->set_low( low==std::numeric_limits<double>::max() ? 0 : low );
 						}
-						auto pUnion = make_shared<Proto::Results::MessageUnion>(); pUnion->set_allocated_day_summary( pBar );
+						Proto::Results::MessageUnion msg; msg.set_allocated_day_summary( pBar );
 						sentDays.push_back( day );
 						if( arg.SessionId )
-							arg.WebSendPtr->Push( pUnion, arg.SessionId );
+							arg.WebSendPtr->Push( move(msg), arg.SessionId );
 					}
 					for( var day : sentDays )
 						bars.erase( day );

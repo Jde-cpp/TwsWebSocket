@@ -4,10 +4,8 @@ namespace Jde::Blockly::Proto{ class ResultUnion; }
 namespace Jde::Markets::TwsWebSocket
 {
 	struct WebSendGateway;
-	struct BlocklyQueueType
+	struct BlocklyQueueType : ClientKey
 	{
-		SessionPK SessionId;
-		ClientPK ClientId;
 		up<string> MessagePtr;
 	};
 	struct BlocklyWorker

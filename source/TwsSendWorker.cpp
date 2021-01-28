@@ -20,9 +20,9 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_pThread = make_shared<Threading::InterruptibleThread>( "TwsSendWorker", [&](){Run();} );
 	}
-	void TwsSendWorker::Push( sp<Proto::Requests::RequestUnion> pData, SessionPK sessionId )noexcept
+	void TwsSendWorker::Push( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionInfo )noexcept
 	{
-		_queue.Push( make_tuple(sessionId, pData) );
+		_queue.Push( {sessionInfo, pData} );
 	}
 	void TwsSendWorker::Run()noexcept
 	{
@@ -33,48 +33,50 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, SessionPK sessionId )noexcept
+	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionKey )noexcept
 	{
-		var message = *pData;
-		ClientKey key = {sessionId, 0};
+		ClientPK clientId{0};
+		//ClientKey key{key2};
+		var& message = *pData;
+		//ClientKey key = {sessionId, 0, 0};
 		try
 		{
 			if( message.has_generic_requests() )
-				Requests( message.generic_requests(), sessionId );
+				Requests( message.generic_requests(), sessionKey );
 			else if( message.has_account_updates() )
-				AccountUpdates( message.account_updates(), sessionId );
+				AccountUpdates( message.account_updates(), sessionKey );
 			else if( message.has_account_updates_multi() )
-				AccountUpdatesMulti( message.account_updates_multi(), sessionId );
+				AccountUpdatesMulti( message.account_updates_multi(), sessionKey );
 			else if( message.has_market_data_smart() )
-				MarketDataSmart( message.market_data_smart(), sessionId );
+				MarketDataSmart( message.market_data_smart(), sessionKey );
 			else if( message.has_contract_details() )
-				ContractDetails( message.contract_details(), sessionId );
+				ContractDetails( message.contract_details(), sessionKey );
 			else if( message.has_historical_data() )
-				HistoricalData( message.historical_data(), sessionId );
+				HistoricalData( message.historical_data(), sessionKey );
 			else if( message.has_place_order() )
-				Order( message.place_order(), sessionId );
+				Order( message.place_order(), sessionKey );
 			else if( message.has_request_positions() )
-				Positions( message.request_positions(), sessionId );
+				Positions( message.request_positions(), sessionKey );
 			else if( message.has_request_executions() )
-				Executions( message.request_executions(), sessionId );
+				Executions( message.request_executions(), sessionKey );
 			else if( message.has_news_article_request() )
-				News::RequestArticle( message.news_article_request().provider_code(), message.news_article_request().article_id(), {key={sessionId, message.news_article_request().id()}, _webSendPtr} );
+				News::RequestArticle( message.news_article_request().provider_code(), message.news_article_request().article_id(), {sessionKey, clientId=message.news_article_request().id(), _webSendPtr} );
 			else if( message.has_historical_news_request() )
-				News::RequestHistorical( message.historical_news_request().contract_id(), message.historical_news_request().provider_codes(), message.historical_news_request().total_results(), message.historical_news_request().start(), message.historical_news_request().end(), {key={sessionId, message.historical_news_request().id()}, _webSendPtr} );
+				News::RequestHistorical( message.historical_news_request().contract_id(), message.historical_news_request().provider_codes(), message.historical_news_request().total_results(), message.historical_news_request().start(), message.historical_news_request().end(), {sessionKey, clientId=message.historical_news_request().id(), _webSendPtr} );
 			else if( message.has_implied_volatility() )
-				CalculateImpliedVolatility( message.implied_volatility().contracts(), key={sessionId, message.implied_volatility().id()} );
+				CalculateImpliedVolatility( message.implied_volatility().contracts(), {sessionKey, clientId=message.implied_volatility().id()} );
 			else if( message.has_implied_price() )
-				CalculateImpliedPrice( message.implied_price().contracts(), key={sessionId, message.implied_price().id()} );
+				CalculateImpliedPrice( message.implied_price().contracts(), {sessionKey, clientId=message.implied_price().id()} );
 			else
 				ERR( "Unknown Message '{}'"sv, message.Value_case() );
 		}
 		catch( const IBException& e )
 		{
-			_webSendPtr->Push( e, key );
+			_webSendPtr->Push( e, {sessionKey, clientId} );
 		}
 		catch( const Exception& e )
 		{
-			_webSendPtr->Push( e, key );
+			_webSendPtr->Push( e, {sessionKey, clientId} );
 		}
 	}
 
@@ -98,18 +100,18 @@ namespace Jde::Markets::TwsWebSocket
 			TickManager::CalculateOptionPrice( client.SessionId, client.ClientId, GetContract(r.contract_id()), r.volatility(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
-	void TwsSendWorker::ContractDetails( const Proto::Requests::RequestContractDetails& r, SessionPK sessionId )noexcept
+	void TwsSendWorker::ContractDetails( const Proto::Requests::RequestContractDetails& r, const SessionKey& key )noexcept
 	{
 		var clientRequestId = r.id();
 		flat_set<TickerId> requestIds;
 		for( int i=0; i<r.contracts_size(); ++i )
 			requestIds.emplace( _tws.RequestId() );
-		_web.AddMultiRequest( requestIds, {sessionId, clientRequestId} );
+		_web.AddMultiRequest( requestIds, {{key.SessionId}, clientRequestId} );
 		int i=0;
 		for( var reqId : requestIds )
 		{
 			const Contract contract{ r.contracts(i++) };//
-			TRACE( "({}.{})ContractDetails( contract='{}' )"sv, sessionId, reqId, contract.Symbol );
+			TRACE( "({}.{})ContractDetails( contract='{}' )"sv, key.SessionId, reqId, contract.Symbol );
 
 			if( !contract.Id && contract.SecType==SecurityType::Option )
 				((TwsClientCache&)_tws).ReqContractDetails( reqId, TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right) );
@@ -118,34 +120,34 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void TwsSendWorker::HistoricalData( const Proto::Requests::RequestHistoricalData& r, SessionPK sessionId )noexcept(false)
+	void TwsSendWorker::HistoricalData( const Proto::Requests::RequestHistoricalData& r, const SessionKey& session )noexcept(false)
 	{
-		_tws.ReqHistoricalData( _web.AddRequestSession({sessionId,r.id()}), Contract{r.contract()}, Chrono::DaysSinceEpoch(Clock::from_time_t(r.date())), r.days(), r.bar_size(), r.display(), r.use_rth() );
+		_tws.ReqHistoricalData( _web.AddRequestSession({{session.SessionId},r.id()}), Contract{r.contract()}, Chrono::DaysSinceEpoch(Clock::from_time_t(r.date())), r.days(), r.bar_size(), r.display(), r.use_rth() );
 	}
 
-	void TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, SessionPK sessionId )noexcept
+	void TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, const SessionKey& session )noexcept
 	{
-		_web.AddExecutionRequest( sessionId );
+		_web.AddExecutionRequest( session.SessionId );
 
 		DateTime time{ r.time() };
 		var timeString = format( "{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", time.Year(), time.Month(), time.Day(), time.Hour(), time.Minute(), time.Second() );
 		ExecutionFilter filter; filter.m_clientId=r.client_id(); filter.m_acctCode=r.account_number(); filter.m_time=timeString; filter.m_symbol=r.symbol(); filter.m_secType=r.security_type(); filter.m_exchange=r.exchange(); filter.m_side=r.side();
-		_tws.reqExecutions( _web.AddRequestSession({sessionId,r.id()}), filter );
+		_tws.reqExecutions( _web.AddRequestSession({{session.SessionId},r.id()}), filter );
 	}
 
-	void TwsSendWorker::Order( const Proto::Requests::PlaceOrder& r, SessionPK sessionId )noexcept
+	void TwsSendWorker::Order( const Proto::Requests::PlaceOrder& r, const SessionKey& session )noexcept
 	{
-		var reqId = _web.AddRequestSession( {sessionId,r.id()}, r.order().id() );
+		var reqId = _web.AddRequestSession( {{session.SessionId},r.id()}, r.order().id() );
 		const Jde::Markets::Contract contract{ r.contract() };
 		var pIbContract = contract.ToTws();
 		const MyOrder order{ reqId, r.order() };
-		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, sessionId, pIbContract->symbol, order.lmtPrice, order.totalQuantity );
+		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, session.SessionId, pIbContract->symbol, order.lmtPrice, order.totalQuantity );
 		_tws.placeOrder( *pIbContract, order );
 		if( r.block_id().size() )
 		{
 			auto p = up<sp<Markets::MBlockly::IBlockly>>( Blockly::CreateAllocatedExecutor(r.block_id(), order.orderId, contract.Id) );
 			//todo allow cancel
-/*			std::thread{ [ pBlockly=*p ]() 
+/*			std::thread{ [ pBlockly=*p ]()
 			{
 				pBlockly->Run();
 				while( pBlockly->Running() )
@@ -168,34 +170,34 @@ namespace Jde::Markets::TwsWebSocket
 		}*/
 	}
 
-	void TwsSendWorker::Positions( const Proto::Requests::RequestPositions& r, SessionPK sessionId )noexcept
+	void TwsSendWorker::Positions( const Proto::Requests::RequestPositions& r, const SessionKey& session )noexcept
 	{
-		_tws.reqPositionsMulti( _web.AddRequestSession({sessionId,r.id()}), r.account_number(), r.model_code() );
+		_tws.reqPositionsMulti( _web.AddRequestSession({{session.SessionId},r.id()}), r.account_number(), r.model_code() );
 	}
 
-	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, SessionPK sessionId )noexcept
+	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, const SessionKey& session )noexcept
 	{
 		if( r.type()==ERequests::Positions )
 		{
-			_web.AddRequestSessions( sessionId, {EResults::PositionEnd, EResults::PositionData} );
+			_web.AddRequestSessions( session.SessionId, {EResults::PositionEnd, EResults::PositionData} );
 			//if( _web.Add(ERequests::Positions) ) TODO test how this works with multiple calls.  and if canceled appropriately.
 				//_tws.reqPositions();
 			ERR0( "reqPositions not implemented."sv );
-			_web.PushError( -1, "reqPositions not implemented.", {sessionId, r.id()} );
+			_web.PushError( -1, "reqPositions not implemented.", {{session.SessionId}, r.id()} );
 		}
 		else if( r.type()==ERequests::ManagedAccounts )
 		{
-			_web.AddRequestSessions( sessionId, {EResults::ManagedAccounts} );
+			_web.AddRequestSessions( session.SessionId, {EResults::ManagedAccounts} );
 			_tws.reqManagedAccts();
 		}
 		else if( r.type()==ERequests::RequestOpenOrders )
 		{
-			_web.AddRequestSessions( sessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
+			_web.AddRequestSessions( session.SessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
 			_tws.reqOpenOrders();
 		}
 		else if( r.type()==ERequests::RequestAllOpenOrders )
 		{
-			_web.AddRequestSessions( sessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );
+			_web.AddRequestSessions( session.SessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );
 			_tws.reqAllOpenOrders();//not a subscription.
 		}
 		else if( r.type()==ERequests::CancelMarketData )
@@ -203,21 +205,21 @@ namespace Jde::Markets::TwsWebSocket
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
 				var contractId = r.ids( i );
-				TickManager::CancelProto( sessionId , 0, contractId );
+				TickManager::CancelProto( session.SessionId , 0, contractId );
 			}
 		}
 		else if( r.type()==ERequests::CancelPositionsMulti )
 		{
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
-				var ibId = _web.RequestFind( {sessionId, (ClientPK)r.ids(i)} );
+				var ibId = _web.RequestFind( {{session.SessionId}, (ClientPK)r.ids(i)} );
 				if( ibId )
 				{
 					_tws.cancelPositionsMulti( ibId );
 					_web.RequestErase( ibId );
 				}
 				else
-					WARN( "({})Could not find MktData clientID='{}'"sv, sessionId, r.ids(i) );
+					WARN( "({})Could not find MktData clientID='{}'"sv, session.SessionId, r.ids(i) );
 			}
 		}
 		else if( r.type()==ERequests::CancelOrder )
@@ -225,54 +227,54 @@ namespace Jde::Markets::TwsWebSocket
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
 				var orderId = r.ids(i);
-				_web.AddOrderSubscription( orderId, sessionId );
+				_web.AddOrderSubscription( orderId, session.SessionId );
 				_tws.cancelOrder( orderId );
 			}
 		}
 		else if( r.type()==ERequests::RequestOptionParams )
-			RequestOptionParams( r.ids(), {sessionId, r.id()} );
+			RequestOptionParams( r.ids(), {session.SessionId, r.id()} );
 		else if( r.type()==ERequests::ReqNewsProviders )
 		{
-			_web.AddRequestSessions( sessionId, {EResults::NewsProviders} );
+			_web.AddRequestSessions( session.SessionId, {EResults::NewsProviders} );
 			_cache.RequestNewsProviders();
 		}
 		else
-			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, r.type(), sessionId );
+			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, r.type(), session.SessionId );
 	}
 
-	void TwsSendWorker::AccountUpdates( const Proto::Requests::RequestAccountUpdates& accountUpdates, SessionPK sessionId )noexcept
+	void TwsSendWorker::AccountUpdates( const Proto::Requests::RequestAccountUpdates& accountUpdates, const SessionKey& session )noexcept
 	{
 		var& account = accountUpdates.account_number();
 		var subscribe = accountUpdates.subscribe();
 		if( subscribe )
 		{
-			if( _web.AddAccountSubscription(account, sessionId) )
+			if( _web.AddAccountSubscription(account, session.SessionId) )
 			{
 				DBG( "Subscribe to account updates '{}'"sv, account );
 				_tws.reqAccountUpdates( true, account );
 			}
 		}
-		else if( _web.CancelAccountSubscription(account, sessionId) )
+		else if( _web.CancelAccountSubscription(account, session.SessionId) )
 			_tws.reqAccountUpdates( false, account );
 	}
 
-	void TwsSendWorker::AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& r, SessionPK sessionId )noexcept
+	void TwsSendWorker::AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& r, const SessionKey& session )noexcept
 	{
-		var reqId =  _web.AddRequestSession( {sessionId,r.id()} );
+		var reqId =  _web.AddRequestSession( {{session.SessionId},r.id()} );
 		var& account = r.account_number();
 
-		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )"sv, reqId, sessionId, account, r.id() );
+		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )"sv, reqId, session.SessionId, account, r.id() );
 		_tws.reqAccountUpdatesMulti( reqId, account, r.model_code(), r.ledger_and_nlv() );
 	}
-	void TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, SessionPK sessionId )noexcept
+	void TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, const SessionKey& session )noexcept
 	{
 		flat_set<Proto::Requests::ETickList> ticks;
 		std::for_each( r.tick_list().begin(), r.tick_list().end(), [&ticks]( auto item ){ ticks.emplace((Proto::Requests::ETickList)item); } );
-		_webSendPtr->AddMarketDataSubscription( sessionId, r.contract_id(), ticks );
-		TickManager::Subscribe( sessionId, 0, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
+		_webSendPtr->AddMarketDataSubscription( session.SessionId, r.contract_id(), ticks );
+		TickManager::Subscribe( session.SessionId, 0, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
-	void TwsSendWorker::RequestOptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const ClientKey& key )noexcept
+	void TwsSendWorker::RequestOptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept
 	{
 		try
 		{
@@ -280,12 +282,12 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				if( !underlyingId )
 					THROW( Exception("Requested underlyingId=='{}'.", underlyingId) );
-				_cache.ReqSecDefOptParams( _web.AddRequestSession(key), underlyingId, GetContract(underlyingId).localSymbol );
+				_cache.ReqSecDefOptParams( _web.AddRequestSession({key}), underlyingId, GetContract(underlyingId).localSymbol );
 			}
 		}
 		catch( const Exception& e )
 		{
-			_web.Push( e, key );
+			_web.Push( e, {key} );
 		}
 	}
 }

@@ -1,4 +1,4 @@
-#include "WebSocket.h"
+#include "WebCoSocket.h"
 #include "Flex.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "./WatchListData.h"
@@ -19,16 +19,7 @@ int main( int argc, char** argv )
 	try
 	{
 		Jde::OSApp::Startup( argc, argv, "TwsWebSocket" );
-
-		Jde::Markets::TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
-		auto [pClient,pWrapper] = Jde::Markets::TwsWebSocket::WrapperWeb::CreateInstance();
-
-		var webSocketPort = Jde::Markets::TwsWebSocket::SettingsPtr->Get<Jde::uint16>( "webSocketPort" );
-		auto& socket = Jde::Markets::TwsWebSocket::WebSocket::Create( webSocketPort, pClient );
-		//auto pSend = ;
-		pWrapper->SetWebSend( socket.WebSend() );
-
-		Jde::IApplication::AddThread( make_shared<Jde::Threading::InterruptibleThread>("LoadPositions", [&](){Jde::Markets::TwsWebSocket::Startup();}) );
+		Jde::IApplication::AddThread( make_shared<Jde::Threading::InterruptibleThread>("Startup", [&](){Jde::Markets::TwsWebSocket::Startup();}) );
 
 		Jde::IApplication::Pause();
 		Jde::IApplication::CleanUp();
@@ -46,6 +37,14 @@ namespace Jde::Markets
 {
 	void TwsWebSocket::Startup( bool initialCall )noexcept
 	{
+		TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
+		auto [pClient,pWrapper] = TwsWebSocket::WrapperWeb::CreateInstance();
+
+		//var webSocketPort = TwsWebSocket::SettingsPtr->Get<Jde::uint16>( "webSocketPort" );
+		auto pSocket = TwsWebSocket::WebCoSocket::Create( *TwsWebSocket::SettingsPtr, pClient );
+		pWrapper->SetWebSend( pSocket->WebSend() );
+
+
 		if( initialCall )
 		{
 			Threading::SetThreadDscrptn( "Startup" );

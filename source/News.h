@@ -1,4 +1,4 @@
-#include "../../../MarketLibrary/source/TypeDefs.h"
+#include "../../MarketLibrary/source/TypeDefs.h"
 
 namespace Jde::Markets::TwsWebSocket{ struct ProcessArg;}
 namespace Jde::Markets::TwsWebSocket::News
