@@ -1,12 +1,12 @@
 #include "WebSendGateway.h"
-#include "WebSocket.h"
+#include "WebCoSocket.h"
 #include "../../MarketLibrary/source/TickManager.h"
 
 #define var const auto
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
-	WebSendGateway::WebSendGateway( WebSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept:
+	WebSendGateway::WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept:
 //		_queue{},
 		_webSocket{ webSocketParent },
 		_pClientSync{ pClientSync }
