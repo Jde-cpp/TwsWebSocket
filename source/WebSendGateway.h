@@ -49,7 +49,7 @@ namespace Jde::Markets::TwsWebSocket
 		void PushAccountDownloadEnd( const string& accountNumber )noexcept;
 		void Push( const Proto::Results::PortfolioUpdate& pMessage )noexcept;
 		//void PushAllocated( unique_ptr<Proto::Results::AccountUpdateMulti> pMessage )noexcept;
-		void Push( const Proto::Results::AccountUpdate& accountUpdate )noexcept;
+		void Push( const Proto::Results::AccountUpdate& accountUpdate, bool haveCallback )noexcept;
 		void ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, TickerId tickerId )noexcept;
 		void Push( const Proto::Results::CommissionReport& report )noexcept;
 		void AccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept;
@@ -66,6 +66,7 @@ namespace Jde::Markets::TwsWebSocket
 		flat_map<string,boost::container::flat_set<SessionPK>> _accountSubscriptions; std::shared_mutex _accountSubscriptionMutex;
 		flat_map<ClientPK,flat_set<TickerId>> _multiRequests; mutable std::mutex _multiRequestMutex;//ie ask for multiple contractDetails
 		flat_set<SessionPK> _executionRequests; mutable std::shared_mutex _executionRequestMutex;
+		flat_map<string,TimePoint> _canceledAccounts; mutable std::mutex _canceledAccountMutex;//ie ask for multiple contractDetails
 
 		sp<Threading::InterruptibleThread> _pThread;
 		QueueValue<QueueType> _queue;
