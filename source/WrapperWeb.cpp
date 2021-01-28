@@ -252,14 +252,14 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WrapperWeb::updateAccountValue( const std::string& key, const std::string& value, const std::string& currency, const std::string& accountName )noexcept
 	{
-		WrapperLog::updateAccountValue( key, value, currency, accountName );
+		var haveCallback = WrapperLog::updateAccountValue2( key, value, currency, accountName );
 		Proto::Results::AccountUpdate update;
 		update.set_account( accountName );
 		update.set_key( key );
 		update.set_value( value );
 		update.set_currency( currency );
 
-		_pWebSend->Push( update );
+		_pWebSend->Push( update, haveCallback );
 	}
 	void WrapperWeb::updatePortfolio( const ::Contract& contract, double position, double marketPrice, double marketValue, double averageCost, double unrealizedPNL, double realizedPNL, const std::string& accountNumber )noexcept
 	{
