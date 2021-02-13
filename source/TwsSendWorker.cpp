@@ -154,7 +154,7 @@ namespace Jde::Markets::TwsWebSocket
 			catch( const Exception& e )
 			{
 				e.Log();
-				_webSendPtr->Push( e, {sessionId, r.id()} );
+				_webSendPtr->Push( e, {{session.SessionId}, r.id()} );
 			}
 			//todo allow cancel
 /*			std::thread{ [ pBlockly=*p ]()

@@ -208,7 +208,7 @@ namespace Jde::Markets::TwsWebSocket
 			if( p->second.empty() )
 			{
 				_marketSubscriptions.erase( p );
-				THROW( Exception("Could not find any market subscriptions.") );
+				THROW( Exception("Could not find any market subscriptions. contractId{} empty", contractId) );
 			}
 			typedef flat_map<SessionPK,flat_set<Proto::Requests::ETickList>>::iterator X;
 			for( X pSession = p->second.begin(); pSession != p->second.end(); )

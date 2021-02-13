@@ -1,6 +1,7 @@
 #include "WebCoSocket.h"
 #include "Flex.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
+#include "../../Framework/source/um/UM.h"
 #include "./WatchListData.h"
 #include "PreviousDayValues.h"
 #include "WrapperWeb.h"
@@ -37,14 +38,24 @@ namespace Jde::Markets
 {
 	void TwsWebSocket::Startup( bool initialCall )noexcept
 	{
-		TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
+		auto pSettings = TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
+		auto pUserSettings = Jde::Settings::Global().SubContainer( "um" );
+		if( pUserSettings && pUserSettings->Get2<bool>("use").value_or(false) )
+		{
+			try
+			{
+				UM::Configure();
+			}
+			catch( const Exception& e )
+			{
+				CRITICAL( "Could not configure user tables. - {}"sv, e.what() );
+				std::this_thread::sleep_for( 1s );
+				std::terminate();
+			}
+		}
 		auto [pClient,pWrapper] = TwsWebSocket::WrapperWeb::CreateInstance();
-
-		//var webSocketPort = TwsWebSocket::SettingsPtr->Get<Jde::uint16>( "webSocketPort" );
-		auto pSocket = TwsWebSocket::WebCoSocket::Create( *TwsWebSocket::SettingsPtr, pClient );
+		auto pSocket = TwsWebSocket::WebCoSocket::Create( *pSettings, pClient );
 		pWrapper->SetWebSend( pSocket->WebSend() );
-
-
 		if( initialCall )
 		{
 			Threading::SetThreadDscrptn( "Startup" );
