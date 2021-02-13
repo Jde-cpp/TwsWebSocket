@@ -23,13 +23,18 @@ namespace Jde::Markets::TwsWebSocket
 		beast::error_code ErrorCode;
 	};
 
+#ifdef HTTPS
 	typedef websocket::stream<beast::ssl_stream<beast::tcp_stream>> SocketStream;
+#else
+	typedef websocket::stream<beast::tcp_stream> SocketStream;
+#endif
 
 	enum class EAuthType : uint8
 	{
 		None = 0,
 		Google=1
 	};
+
 	struct SessionInfo
 	{
 		sp<SocketStream> StreamPtr;
@@ -53,12 +58,13 @@ namespace Jde::Markets::TwsWebSocket
 		void AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept;
 		void AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept;
 		//void AddOutgoing( vector<Proto::Results::MessageUnion>&& messages, SessionPK id )noexcept;
-		void AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept;
+		void AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false);
 
 		SessionPK AddConnection( sp<SocketStream> stream )noexcept;
+
 		void HandleIncoming( WebRequestMessage&& data )noexcept{ _requestWorker.Push(move(data)); }
 		sp<WebSendGateway> WebSend(){ return _pWebSend; }
-		void SetLogin( SessionPK sessionId, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept;
+		void SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept;
 		UserPK UserId( SessionPK sessionId )noexcept(false);
 	private:
 		WebCoSocket( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept;

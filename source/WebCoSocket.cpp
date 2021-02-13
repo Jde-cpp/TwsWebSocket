@@ -70,7 +70,7 @@ namespace Jde::Markets::TwsWebSocket
 		ASSERT( false );
 	}
 
-	void WebCoSocket::AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept
+	void WebCoSocket::AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false)
 	{
 		Proto::Results::Transmission transmission;
 		for( auto&& msg : messages )
@@ -82,8 +82,7 @@ namespace Jde::Markets::TwsWebSocket
 		sp<SocketStream> pStream; sp<atomic<bool>> pMutex;
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( id );
-			RETURN_IF( p==_sessions.end(), "({})Could not find session."sv, id );
+			var p = _sessions.find( id ); THROW_IF( p==_sessions.end(), Exception("({})Could not find session."sv, id) );
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}
@@ -111,18 +110,21 @@ namespace Jde::Markets::TwsWebSocket
 		return p->second.UserId;
 	}
 
-	/*void load_server_certificate( boost::asio::ssl::context& ctx )
-	{
-		throw "not implemented";
-	}*/
+	string _host;
 	void DoSession( sp<SocketStream> pStream, net::yield_context yld )
 	{
 		Threading::SetThreadDscrptn( "WebSession" );
 		beast::error_code ec;
-		beast::get_lowest_layer(*pStream).expires_after( 30s );
+		//beast::get_lowest_layer(*pStream).expires_after( 30s );
 		try
 		{
-			pStream->next_layer().async_handshake( ssl::stream_base::server, yld[ec] ); THROW_IF( ec, BeastException("handshake", move(ec)) );
+			// Set SNI Hostname (many hosts need this to handshake successfully)
+			//THROW_IF( !SSL_set_tlsext_host_name(pStream->next_layer().native_handle(), _host.c_str()), boost::system::system_error(boost::system::error_code((int)ERR_get_error(), boost::asio::error::get_ssl_category())) );
+			//pStream->next_layer().async_handshake( ssl::stream_base::server, yld[ec] );
+#ifdef HTTPS
+			pStream->next_layer().handshake( ssl::stream_base::server, ec );
+#endif
+			//THROW_IF( ec, BeastException("handshake", move(ec)) );
 			beast::get_lowest_layer(*pStream).expires_never();		// Turn off the timeout on the tcp_stream, because the websocket stream has its own timeout system.
 			pStream->set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );// Set suggested timeout settings for the websocket
 			pStream->set_option( websocket::stream_base::decorator( [](websocket::response_type& res)  // Set a decorator to change the Server of the handshake
@@ -151,8 +153,11 @@ namespace Jde::Markets::TwsWebSocket
 			DBG( "Session Terminated on exception {}"sv, e.what() );
 		}
 	}
-
-	void Listen1( net::io_context& ioc, ssl::context& ctx, tcp::endpoint endpoint, net::yield_context yld )noexcept
+#ifdef HTTPS
+	void Listen1( net::io_context& ioc, sp<ssl::context> pContext, tcp::endpoint endpoint, net::yield_context yld )noexcept
+#else
+	void Listen1( net::io_context& ioc, tcp::endpoint endpoint, net::yield_context yld )noexcept
+#endif
 	{
 		Threading::SetThreadDscrptn("WebListener");
 		tcp::acceptor acceptor( ioc );
@@ -171,9 +176,14 @@ namespace Jde::Markets::TwsWebSocket
 					BeastException::LogCode( "accept", ec  );
 				else
 				{
+#ifdef HTTPS
 					auto pStream = make_shared<SocketStream>( std::move(socket), ctx );
+#else
+					auto pStream = make_shared<SocketStream>( std::move(socket) );
+#endif
 					pStream->binary( true );
 					boost::asio::spawn( acceptor.get_executor(), std::bind( &DoSession, pStream, std::placeholders::_1) );
+						//boost::asio::spawn( acceptor.get_executor(), std::bind(&DoSession, make_shared<Stream>(move(socket), pContext)), std::placeholders::_1) );
 				}
 			}
 		}
@@ -186,11 +196,14 @@ namespace Jde::Markets::TwsWebSocket
 	void WebCoSocket::Run()noexcept
 	{
 		net::io_context ioc{_threadCount};
+		auto const address = net::ip::make_address( "0.0.0.0" );
+#ifdef HTTPS
 		ssl::context ctx{ssl::context::tlsv12};// The SSL context is required, and holds certificates
 		load_server_certificate( ctx );// TODO: settings
-		auto const address = net::ip::make_address( "0.0.0.0" );
-		//var listen = [&](){ Listen(pSession); };
 		boost::asio::spawn( ioc, std::bind(&Listen1, std::ref(ioc), std::ref(ctx), tcp::endpoint{address, _port}, std::placeholders::_1) );// Spawn a listening port
+#else
+		boost::asio::spawn( ioc, std::bind(&Listen1, std::ref(ioc), tcp::endpoint{address, _port}, std::placeholders::_1) );// Spawn a listening port
+#endif
 		std::vector<std::thread> v; v.reserve( _threadCount - 1 );
 		for( uint i = _threadCount - 1; i > 0; --i )
 		{
@@ -203,18 +216,12 @@ namespace Jde::Markets::TwsWebSocket
 			ioc.run(); //TODO see about interuptable threads
 	}
 
-	void WebCoSocket::SetLogin( SessionPK sessionId, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept
+	void WebCoSocket::SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept
 	{
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( sessionId );
-			RETURN_IF( p==_sessions.end(), "({})Could not find session."sv, sessionId );
+			var p = _sessions.find( client.SessionId ); RETURN_IF( p==_sessions.end(), "({})Could not find session."sv, client.SessionId );
 			auto& settings = p->second;
-			/*std::random_device r;
-			std::default_random_engine e1(r());
-			std::uniform_int_distribution<size_t> uniform_dist( 0 );
-			size_t key = uniform_dist( e1 );
-			THROW_IF( key==0, Exception("key==0") );*/
 			settings.AuthType = type;
 			settings.Email = email;
 			settings.EmailVerified = emailVerified;
@@ -223,9 +230,8 @@ namespace Jde::Markets::TwsWebSocket
 			settings.Expiration = expiration;
 		}
 
-		auto pValue = make_unique<Proto::Results::MessageValue>(); pValue->set_type( Proto::Results::EResults::Authentication ); pValue->set_int_value( 0 );
+		auto pValue = make_unique<Proto::Results::MessageValue>(); pValue->set_type( Proto::Results::EResults::Authentication ); pValue->set_int_value( client.ClientId );
 		MessageType msg; msg.set_allocated_message( pValue.release() );
-		AddOutgoing( move(msg), sessionId );
-
+		AddOutgoing( move(msg), client.SessionId );
 	}
 }

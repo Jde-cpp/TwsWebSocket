@@ -92,10 +92,29 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		if( type==ERequests::Query )
 		{
-			var result = DB::Query( name, arg.UserId );//TODO make async
-			auto p = make_unique<Proto::Results::StringResult>(); p->set_id( arg.ClientId ); p->set_type( EResults::Query ); p->set_value( result.dump() );
-			MessageType msg; msg.set_allocated_string_result( p.release() );
-			_pWebSend->Push( move(msg), arg.SessionId );
+			auto p = make_unique<Proto::Results::StringResult>(); p->set_id( arg.ClientId ); p->set_type( EResults::Query );
+			MessageType msg;
+			try
+			{
+				var result = DB::Query( name, arg.UserId );//TODO make async
+				if( !result.is_null() )
+				{
+					p->set_value( result.dump() );
+					DBG( p->value() );
+				}
+				msg.set_allocated_string_result( p.release() );
+				_pWebSend->Push( move(msg), arg.SessionId );
+			}
+			catch( const json::exception& e )
+			{
+				DBG( string{e.what()} );
+				_pWebSend->Push( Exception("could not parse query"), arg );
+			}
+			catch( const Exception& e )
+			{
+				e.Log();
+				_pWebSend->Push( e, arg );
+			}
 		}
 		else if( type==ERequests::GoogleLogin )
 		{
@@ -104,10 +123,9 @@ namespace Jde::Markets::TwsWebSocket
 				var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
 				THROW_IF( token.Aud!=Settings::Global().Get2<string>("GoogleAuthClientId"), Exception("Invalid client id") );
 				THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", Exception("Invalid iss") );
-				var expiration = Clock::from_time_t( token.Expiration );
-				THROW_IF( expiration<Clock::now(), Exception("token expired") );
-				if( auto p = WebCoSocket::Instance(); p )
-					p->SetLogin( arg.SessionId, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
+				var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), Exception("token expired") );
+				auto p = WebCoSocket::Instance(); THROW_IF( !p, Exception("no websockets") );
+				p->SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
 			}
 			catch( const std::exception& e )
 			{
