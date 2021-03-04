@@ -1,17 +1,28 @@
+//x1 - User access.
+//x2 - Global access.
+//x3 - change user access.
+//x4 - change global access.
+//5 - fix mysql provider.
+
 #include "WrapperWeb.h"
 #include <thread>
 #include <TickAttrib.h>
 #include <CommissionReport.h>
 #include <Execution.h>
 
+#include "EWebReceive.h"
+#include "WebCoSocket.h"
+#include "../../Framework/source/um/UM.h"
 #include "../../Framework/source/Settings.h"
 #include "../../Framework/source/collections/Collections.h"
-#include "EWebReceive.h"
-#include "WebSocket.h"
+#include "../../Framework/source/db/Database.h"
+#include "../../Framework/source/db/GraphQL.h"
+#include "../../Framework/source/db/Syntax.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../MarketLibrary/source/types/Contract.h"
 #include "../../MarketLibrary/source/types/MyOrder.h"
 #include "../../MarketLibrary/source/types/OrderEnums.h"
+
 #define var const auto
 
 namespace Jde::Markets::TwsWebSocket
@@ -25,11 +36,10 @@ namespace Jde::Markets::TwsWebSocket
 	using Proto::Results::EResults;
 	sp<WrapperWeb> WrapperWeb::_pInstance{nullptr};
 
-	WrapperWeb::WrapperWeb()noexcept:
-		_accounts{ SettingsPtr->Map<string>("accounts") }
+	WrapperWeb::WrapperWeb()noexcept
 	{}
 
-	tuple<sp<TwsClientSync>,sp<WrapperWeb>> WrapperWeb::CreateInstance()noexcept
+	tuple<sp<TwsClientSync>,sp<WrapperWeb>> WrapperWeb::CreateInstance()noexcept(false)
 	{
 		ASSERT( !_pInstance );
 		_pInstance = sp<WrapperWeb>( new WrapperWeb() );
@@ -41,9 +51,37 @@ namespace Jde::Markets::TwsWebSocket
 		ASSERT( _pInstance );
 		return *_pInstance;
 	}
-	sp<TwsClientSync> WrapperWeb::CreateClient( uint twsClientId )noexcept
+	sp<TwsClientSync> WrapperWeb::CreateClient( uint twsClientId )noexcept(false)
 	{
 		return WrapperSync::CreateClient( twsClientId );
+	}
+
+	bool WrapperWeb::TryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept{auto p = _pInstance; return p ? p->tryTestAccess( requested, name, sessionId, allowDeleted ) : false; }
+	bool WrapperWeb::tryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept
+	{
+		var pSocket = WebCoSocket::Instance();
+		return pSocket ? TryTestAccess( requested, pSocket->TryUserId(sessionId), name, allowDeleted ) : false;
+	}
+	bool WrapperWeb::TryTestAccess( UM::EAccess requested, UserPK userId, sv name, bool allowDeleted )noexcept{auto p = _pInstance; return p ? p->tryTestAccess( requested, userId, name, allowDeleted ) : false; }
+	bool WrapperWeb::tryTestAccess( UM::EAccess requested, UserPK userId, sv name, bool allowDeleted )noexcept
+	{
+		shared_lock l{ _accountMutex };
+		 if( !allowDeleted && _deletedAccounts.find( string{name} )!=_deletedAccounts.end() )
+		 	return false;
+		bool haveAccess = false;
+
+		if( var pIdAccount = _accounts.find( string{name} ); pIdAccount!=_accounts.end() )
+		{
+			var& account = pIdAccount->second;
+			if( var pAccount = account.Access.find(userId); pAccount != account.Access.end() )
+				haveAccess = (pAccount->second & requested)!=UM::EAccess::None;
+			else if( var pAccount = account.Access.find(std::numeric_limits<UserPK>::max()); userId!=0 && pAccount != account.Access.end() )
+				haveAccess = (pAccount->second & requested)!=UM::EAccess::None;
+		}
+		if( var pUser = _minimumAccess.find(userId); !haveAccess && pUser!=_minimumAccess.end() )
+			haveAccess = (pUser->second & requested)!=UM::EAccess::None;
+
+		return haveAccess;
 	}
 
 	void WrapperWeb::nextValidId( ::OrderId orderId)noexcept
@@ -105,17 +143,88 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::positionMultiEnd( reqId );
 		_pWebSend->Push( EResults::PositionMultiEnd, reqId );
 	}
+	void WrapperWeb::LoadAccess()noexcept
+	{
+		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource"sv );
+		unique_lock l{ _accountMutex };
+		_deletedAccounts.clear();
+		_accounts.clear();
+		if( !pDataSource->TrySelect( format("select name, description, {}, id from ib_accounts", DB::DefaultSyntax()->DateTimeSelect("deleted")), [&]( const DB::IRow& row )
+		{
+			var name = row.GetString( 0 ); var description = row.GetString( 1 ); var pDeleted = row.GetDateTimeOpt( 2 );
+			if( pDeleted )
+				_deletedAccounts.emplace( name );
+			else
+				_accounts.emplace( name, Account{description.size() ? description : name, row.GetUInt(3)} );
+		}) ) return;
+		pDataSource->TrySelect( "SELECT account_id, user_id, right_id  FROM ib_account_roles ib join um_group_roles gr on gr.role_id=ib.role_id join um_user_groups ug on gr.group_id=ug.user_id", [&]( const DB::IRow& row )
+		{
+			var accountId = row.GetUInt( 0 );
+			var pAccount = std::find_if( _accounts.begin(), _accounts.end(), [&]( var& x ){ return x.second.Id==accountId; } ); THROW_IF( pAccount==_accounts.end(), Exception(std::to_string(accountId)) );
+			pAccount->second.Access.emplace( row.GetUInt(1), (UM::EAccess)row.GetUInt16(2) );
+		} );
+	}
+	void WrapperWeb::LoadMinimumAccess()noexcept
+	{
+		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource"sv );
+		unique_lock l{ _accountMutex };
+		_minimumAccess.clear();
+		if( !pDataSource->TrySelect( "SELECT user_id, right_id from um_permissions p join um_apis apis on p.api_id=apis.id and apis.name='TWS' and p.name is null join um_role_permissions rp on rp.permission_id=p.id join um_group_roles gr on gr.role_id=rp.role_id join um_user_groups ug on gr.group_id=ug.user_id", [&]( const DB::IRow& row )
+		{
+			_minimumAccess[row.GetUInt(0)] = (UM::EAccess)row.GetUInt16( 1 );
+		}) ) return;
 
+	}
+	static bool _setAccounts{false};
 	void WrapperWeb::managedAccounts( const std::string& accountsList )noexcept
 	{
 		WrapperLog::managedAccounts( accountsList );
 		Proto::Results::StringMap accountList;
-		accountList.set_result( EResults::ManagedAccounts );
 		var accounts = StringUtilities::Split( accountsList );
+		if( !_setAccounts )
+		{
+			LoadAccess();
+			LoadMinimumAccess();
+			shared_lock l{ _accountMutex };
+			auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource"sv );
+			for( var& name : accounts )
+			{
+				if( !_deletedAccounts.contains(name) && !_accounts.contains(name) && pDataSource->TryExecuteProc("ib_account_insert( ?, 0, ?, ? )", {name,nullptr,name}) )
+				{
+					_accounts.emplace( name, Account{name} );
+					INFO( "inserted account '{}'."sv, name );
+				}
+			}
+			DB::AddMutationListener( "ib", [this](const DB::MutationQL& m, PK id)
+			{
+				if( m.JsonName.ends_with( "AccountRoles") || m.JsonName.ends_with( "RoleAccounts") )
+					LoadAccess();
+			} );
+			DB::AddMutationListener( "um", [this]( const DB::MutationQL& m, PK id )
+			{
+				if( m.JsonName.ends_with( "RolePermissions") || m.JsonName.ends_with( "PermissionRoles") )
+					LoadMinimumAccess();
+			} );
+		}
+		_setAccounts = true;
+		shared_lock l{ _accountMutex };
 		for( var& account : accounts )
-			(*accountList.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second : account;
-
-		_webSend.Push( EResults::ManagedAccounts, [&accountList]( auto& m ){ m.set_allocated_string_map(new Proto::Results::StringMap{accountList});} );
+		{
+			//if( !_deletedAccounts.contains(account) )
+			(*accountList.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second.Description : account;
+		}
+		_webSend.Push( EResults::ManagedAccounts, [&accountList, this]( auto& m, SessionPK sessionId )
+		{
+			var pSocket = WebCoSocket::Instance(); if( !pSocket ) return;
+			var userId = pSocket->TryUserId( sessionId );
+			Proto::Results::StringMap userList; userList.set_result( EResults::ManagedAccounts );
+			for( var& [name,description] : accountList.values() )
+			{
+				if( tryTestAccess(UM::EAccess::Read, userId, name) )
+					(*userList.mutable_values())[name] = description;
+			}
+			m.set_allocated_string_map( new Proto::Results::StringMap{userList} );
+		});
 	}
 	void WrapperWeb::accountDownloadEnd( const std::string& accountName )noexcept
 	{

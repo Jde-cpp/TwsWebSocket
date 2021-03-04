@@ -11,6 +11,9 @@
 #define _tws (*_twsPtr)
 #define _web (*_webSendPtr)
 #define _cache (*static_pointer_cast<TwsClientCache>(_twsPtr))
+
+#define TwsPtr(sessionId, clientId) auto pTws = static_pointer_cast<TwsClientCache>(_twsPtr); if( !pTws ) return _web.PushError( -5, "Server not connected to TWS.", {{sessionId}, clientId} )
+
 namespace Jde::Markets::TwsWebSocket
 {
 	TwsSendWorker::TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept:
@@ -103,9 +106,10 @@ namespace Jde::Markets::TwsWebSocket
 	void TwsSendWorker::ContractDetails( const Proto::Requests::RequestContractDetails& r, const SessionKey& key )noexcept
 	{
 		var clientRequestId = r.id();
+		TwsPtr( key.SessionId, clientRequestId );
 		flat_set<TickerId> requestIds;
 		for( int i=0; i<r.contracts_size(); ++i )
-			requestIds.emplace( _tws.RequestId() );
+			requestIds.emplace( pTws->RequestId() );
 		_web.AddMultiRequest( requestIds, {{key.SessionId}, clientRequestId} );
 		int i=0;
 		for( var reqId : requestIds )
@@ -114,9 +118,9 @@ namespace Jde::Markets::TwsWebSocket
 			TRACE( "({}.{})ContractDetails( contract='{}' )"sv, key.SessionId, reqId, contract.Symbol );
 
 			if( !contract.Id && contract.SecType==SecurityType::Option )
-				((TwsClientCache&)_tws).ReqContractDetails( reqId, TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right) );
+				((TwsClientCache&)*pTws).ReqContractDetails( reqId, TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right) );
 			else
-				((TwsClientCache&)_tws).ReqContractDetails( reqId, *contract.ToTws() );
+				((TwsClientCache&)*pTws).ReqContractDetails( reqId, *contract.ToTws() );
 		}
 	}
 
@@ -192,7 +196,7 @@ namespace Jde::Markets::TwsWebSocket
 			_web.AddRequestSessions( session.SessionId, {EResults::PositionEnd, EResults::PositionData} );
 			//if( _web.Add(ERequests::Positions) ) TODO test how this works with multiple calls.  and if canceled appropriately.
 				//_tws.reqPositions();
-			ERR0( "reqPositions not implemented."sv );
+			ERR( "reqPositions not implemented."sv );
 			_web.PushError( -1, "reqPositions not implemented.", {{session.SessionId}, r.id()} );
 		}
 		else if( r.type()==ERequests::ManagedAccounts )

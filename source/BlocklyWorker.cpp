@@ -36,7 +36,7 @@ namespace Jde::Markets::TwsWebSocket
 		set( output );
 		string bytes;
 		if( !output.SerializeToString(&bytes) )
-			ERR0( "output.SerializeToString(&bytes) returned false"sv );
+			ERR( "output.SerializeToString(&bytes) returned false"sv );
 		auto pCustom = make_unique<Proto::Results::Custom>(); pCustom->set_request_id( x.ClientId ); pCustom->set_message( bytes );
 		MessageType result; result.set_allocated_custom( pCustom.release() );
 		_webSendPtr->Push( move(result), x.SessionId );

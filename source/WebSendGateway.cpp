@@ -1,5 +1,7 @@
 #include "WebSendGateway.h"
 #include "WebCoSocket.h"
+#include "WrapperWeb.h"
+#include "../../Framework/source/um/UM.h"
 #include "../../MarketLibrary/source/TickManager.h"
 
 #define var const auto
@@ -14,16 +16,13 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		DBG0( "WebSendGateway::WebSendGateway"sv );
 	}
-
-	void WebSendGateway::EraseSession( SessionPK id )noexcept
+	void WebSendGateway::EraseRequestSession( SessionPK id )noexcept
 	{
-		DBG( "Removing session '{}'"sv, id );
-//		_sessions.erase( id );
-		std::function<void(const EResults&, UnorderedSet<SessionPK>& )> func = [id]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
+		DBG( "EraseRequestSession( {} )"sv, id );
+		std::function<void(const EResults&, UnorderedSet<SessionPK>& )> fnctn = [id]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
 		{
-			//sessions.EraseIf( [&](const SessionPK& id){return !_sessions.Find(id);} );//if lost others.
 			sessions.erase( id );
-			if( messageId==EResults::PositionData )
+			//if( messageId==EResults::PositionData )//why just positionData?
 			{
 				sessions.IfEmpty( [&]()
 				{
@@ -32,7 +31,12 @@ namespace Jde::Markets::TwsWebSocket
 				});
 			}
 		};
-		_requestSessions.ForEach( func );
+		_requestSessions.ForEach( fnctn );
+	}
+	void WebSendGateway::EraseSession( SessionPK id )noexcept
+	{
+		DBG( "Removing session '{}'"sv, id );
+		EraseRequestSession( id );
 		std::unique_lock<std::shared_mutex> l( _accountSubscriptionMutex );
 		for( auto pAccountSessionIds = _accountSubscriptions.begin(); pAccountSessionIds!=_accountSubscriptions.end();  )
 		{
@@ -68,9 +72,21 @@ namespace Jde::Markets::TwsWebSocket
 	bool WebSendGateway::AddAccountSubscription( const string& account, SessionPK sessionId )noexcept
 	{
 		DBG( "Account('{}') subscription for sessionId='{}'"sv, account, sessionId );
-		unique_lock l{ _accountSubscriptionMutex };
-		auto [pValue, inserted] = _accountSubscriptions.try_emplace( account );
-		pValue->second.emplace( sessionId );
+		auto inserted = false;
+		if( WrapperWeb::TryTestAccess( UM::EAccess::Read, account, sessionId) )
+		{
+			unique_lock l{ _accountSubscriptionMutex };
+			auto [pValue, inserted2] = _accountSubscriptions.try_emplace( account );
+			pValue->second.emplace( sessionId );
+			if( !inserted2 )
+			{
+				//Assign
+			}
+			else
+				inserted = inserted2;
+		}
+		else
+			PushError( -6, format("No access to {}.", account), {{sessionId}} );
 		return inserted;
 	}
 	bool WebSendGateway::CancelAccountSubscription( const string& account, SessionPK sessionId )noexcept
@@ -166,17 +182,49 @@ namespace Jde::Markets::TwsWebSocket
 		auto values = _requestSession.Find( [&key]( const auto& value ){ return value==key; } );
 		return values.size() ? values.begin()->first : 0;
 	}
-	void WebSendGateway::Push( EResults type, function<void(MessageType&)> set )noexcept
+	void WebSendGateway::Push( EResults type, function<void(MessageType&, SessionPK)> set )noexcept
 	{
+		vector<SessionPK> orphans;
 		_requestSessions.Where( type, [&]( const auto& sessionIds )
 		{
-			sessionIds.ForEach( [&](const SessionPK& sessionId )
+			sessionIds.ForEach( [&]( const SessionPK& sessionId )
+			{
+				MessageType msg;
+				set( msg, sessionId ); ASSERT( msg.Value_case()!=MessageType::ValueCase::VALUE_NOT_SET );
+				try
+				{
+					Push( move(msg), sessionId );
+				}
+				catch( Exception& e )
+				{
+					e.Log();
+					orphans.emplace_back( sessionId );
+				}
+			});
+		});
+		for_each( orphans.begin(), orphans.end(), [this](auto id){ EraseRequestSession( id ); } );
+	}
+	void WebSendGateway::Push( EResults type, function<void(MessageType&)> set )noexcept
+	{
+		vector<SessionPK> orphans;
+		_requestSessions.Where( type, [&]( const auto& sessionIds )
+		{
+			sessionIds.ForEach( [&]( const SessionPK& sessionId )
 			{
 				MessageType msg;
 				set( msg ); ASSERT( msg.Value_case()!=MessageType::ValueCase::VALUE_NOT_SET );
-				Push( move(msg), sessionId );
+				try
+				{
+					Push( move(msg), sessionId );
+				}
+				catch( Exception& e )
+				{
+					e.Log();
+					orphans.emplace_back( sessionId );
+				}
 			});
 		});
+		for_each( orphans.begin(), orphans.end(), [this](auto id){ EraseRequestSession( id ); } );
 	}
 	void WebSendGateway::Push( Proto::Results::EResults messageId, TickerId ibReqId )noexcept
 	{
@@ -191,7 +239,7 @@ namespace Jde::Markets::TwsWebSocket
 			DBG( "Could not find session for messageId:  '{}' req:  '{}'."sv, messageId, ibReqId );
 	}
 
-	void WebSendGateway::Push( MessageType&& msg, SessionPK id )noexcept
+	void WebSendGateway::Push( MessageType&& msg, SessionPK id )noexcept(false)
 	{
 		_webSocket.AddOutgoing( move(msg), id );
 	}
@@ -243,11 +291,18 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			_requestSession.ForEach( [errorCode, &errorString, pThis=shared_from_this()](auto /*key*/, const auto& key)
 			{
-				pThis->Push( IBException{errorString, errorCode}, key );
+				try
+				{
+					pThis->Push( IBException{errorString, errorCode}, key );
+				}
+				catch( const Exception& e )
+				{
+					e.Log();
+				}
 			});
 		}
 	}
-	void WebSendGateway::PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept
+	void WebSendGateway::PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept(false)
 	{
 		auto pError = make_unique<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code(errorCode); pError->set_message(errorString);
 		MessageUnion msg; msg.set_allocated_error( pError.release() );
@@ -390,7 +445,7 @@ namespace Jde::Markets::TwsWebSocket
 */
 	void WebSendGateway::AccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept
 	{
-		std::shared_lock<std::shared_mutex> l( _accountSubscriptionMutex );
+		std::shared_lock<std::shared_mutex> l3( _accountSubscriptionMutex );
 		var pAccountNumberSessions = _accountSubscriptions.find( accountNumber );
 		if( pAccountNumberSessions==_accountSubscriptions.end() )
 		{
@@ -411,12 +466,23 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		else
 		{
+			vector<SessionPK> orphans;
 			for( var sessionId : pAccountNumberSessions->second )
 			{
 				MessageType msg;
 				setMessage( msg );
-				Push( move(msg), sessionId );
+				try
+				{
+					Push(move(msg), sessionId );
+				}
+				catch( Exception& e )
+				{
+					e.Log();
+					orphans.push_back( sessionId );
+				}
 			}
+			l3.unlock();
+			for_each( orphans.begin(), orphans.end(), [this](auto id){ EraseRequestSession( id ); } );
 		}
 	}
 	void WebSendGateway::Push( const Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept
@@ -437,7 +503,7 @@ namespace Jde::Markets::TwsWebSocket
 			for( var sessionId : pAccountNumberSessions->second )
 			{
 				MessageType msg; msg.set_allocated_account_update( new Proto::Results::AccountUpdate{accountUpdate} );
-				Push( move(msg), sessionId );
+				TRY( Push(move(msg), sessionId) );
 			}
 		}
 		else if( !haveCallback )
@@ -470,7 +536,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void WebSendGateway::Push( Proto::Results::EResults messageId, const ClientKey& key )noexcept
+	void WebSendGateway::Push( Proto::Results::EResults messageId, const ClientKey& key )noexcept(false)
 	{
 		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_int_value( key.ClientId ); pMessage->set_type( messageId );
 		MessageType msg; msg.set_allocated_message( pMessage );
