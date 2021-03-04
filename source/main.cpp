@@ -2,9 +2,12 @@
 #include "Flex.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../Framework/source/um/UM.h"
+#include "../../Framework/source/db/Database.h"
 #include "./WatchListData.h"
 #include "PreviousDayValues.h"
 #include "WrapperWeb.h"
+#include "../../Ssl/source/Ssl.h"
+
 
 #define var const auto
 
@@ -53,14 +56,27 @@ namespace Jde::Markets
 				std::terminate();
 			}
 		}
-		auto [pClient,pWrapper] = TwsWebSocket::WrapperWeb::CreateInstance();
-		auto pSocket = TwsWebSocket::WebCoSocket::Create( *pSettings, pClient );
-		pWrapper->SetWebSend( pSocket->WebSend() );
-		if( initialCall )
+		sp<TwsClientSync> pClient;
+		sp<WrapperWeb> pWrapper;
+		try
 		{
-			Threading::SetThreadDscrptn( "Startup" );
-			while( !Threading::GetThreadInterruptFlag().IsSet() && !TwsClientSync::IsConnected() )
-				std::this_thread::yield();
+			auto p = TwsWebSocket::WrapperWeb::CreateInstance();
+			pClient = get<0>(p); pWrapper = get<1>(p);
+		}
+		catch( const Exception& e )
+		{
+			e.Log();
+		}
+		auto pSocket = TwsWebSocket::WebCoSocket::Create( *pSettings, pClient );
+		if( pWrapper )
+		{
+			pWrapper->SetWebSend( pSocket->WebSend() );
+			if( initialCall )
+			{
+				Threading::SetThreadDscrptn( "Startup" );
+				while( !Threading::GetThreadInterruptFlag().IsSet() && !TwsClientSync::IsConnected() )
+					std::this_thread::yield();
+			}
 		}
 		return;
 		try

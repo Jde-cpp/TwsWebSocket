@@ -1,5 +1,6 @@
 #include "WebCoSocket.h"
 #include "server_certificate.hpp"
+#include "../../Framework/source/db/Database.h"
 #include <boost/beast/core.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket.hpp>
@@ -98,7 +99,7 @@ namespace Jde::Markets::TwsWebSocket
 				_sessions.erase( id );
 			}
 		};
-		while( pMutex->exchange(true) )//TODO This function shouldn't lock.  async_write only wants one write at a time
+		while( pMutex->exchange(true) )//TODO This function shouldn't lock.  async_write only wants one write at a time.  also, locked up program once
 			std::this_thread::yield();
 		pStream->async_write( boost::asio::buffer(pBuffer->data(), pBuffer->size()), handler );
 	}
@@ -106,7 +107,7 @@ namespace Jde::Markets::TwsWebSocket
 	UserPK WebCoSocket::UserId( SessionPK sessionId )noexcept(false)
 	{
 		shared_lock l{ _sessionMutex };
-		var p = _sessions.find( sessionId ); THROW_IF( p==_sessions.end(), Exception("({})Could not find session", sessionId) );
+		var p = _sessions.find( sessionId ); THROW_IF( p==_sessions.end(), Exception("({})Could not find session for UserId", sessionId) );
 		return p->second.UserId;
 	}
 
@@ -220,7 +221,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( client.SessionId ); RETURN_IF( p==_sessions.end(), "({})Could not find session."sv, client.SessionId );
+			var p = _sessions.find( client.SessionId ); RETURN_IF( p==_sessions.end(), "({})Could not find session for Login."sv, client.SessionId );
 			auto& settings = p->second;
 			settings.AuthType = type;
 			settings.Email = email;
@@ -228,6 +229,7 @@ namespace Jde::Markets::TwsWebSocket
 			settings.Name = name;
 			settings.PictureUrl = pictureUrl;
 			settings.Expiration = expiration;
+			settings.UserId = DB::TryScaler<UserPK>( "select id from um_users where name=? and authenticator_id=?", {email,(uint)type} ).value_or( 0 );
 		}
 
 		auto pValue = make_unique<Proto::Results::MessageValue>(); pValue->set_type( Proto::Results::EResults::Authentication ); pValue->set_int_value( client.ClientId );

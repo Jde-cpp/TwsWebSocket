@@ -106,7 +106,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( const std::exception& e )
 			{
-				ERR0( string(e.what()) );
+				ERR( string(e.what()) );
 			}
 		}
 		if( !_sessions.Find(sessionId) )

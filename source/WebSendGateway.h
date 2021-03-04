@@ -12,6 +12,7 @@ namespace Jde::Markets::TwsWebSocket
 		typedef tuple<SessionPK,MessageTypePtr> QueueType;
 		WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
 		void Shutdown()noexcept{ _pThread->Interrupt(); _pThread->Join(); }
+		void EraseRequestSession( SessionPK id )noexcept;
 		void EraseSession( SessionPK id )noexcept;
 		void AddExecutionRequest( SessionPK id ){ unique_lock l{_executionRequestMutex}; _executionRequests.emplace( id ); }
 		void AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept;
@@ -29,19 +30,20 @@ namespace Jde::Markets::TwsWebSocket
 		bool HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
 
 		void Push( const Exception& e, const ClientKey& key )noexcept{ PushError( -1, e.what(), key );}
-		void Push( const IBException& e, const ClientKey& key )noexcept{ PushError( e.ErrorCode, e.what(), key );}
+		void Push( const IBException& e, const ClientKey& key )noexcept(false){ PushError( e.ErrorCode, e.what(), key );}
 		void PushError( int errorCode, string_view errorString, TickerId id )noexcept;
-		void PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept;
+		void PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept(false);
 
 
-		void Push( MessageType&& pUnion, SessionPK id )noexcept;
+		void Push( MessageType&& pUnion, SessionPK id )noexcept(false);
 		void Push( vector<MessageType>&& pUnion, SessionPK id )noexcept;
 		void PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false);
 
 
-		void Push( EResults eResults, const ClientKey& key )noexcept;
+		void Push( EResults eResults, const ClientKey& key )noexcept(false);
 		void Push( EResults eResults, TickerId ibReqId )noexcept;
 		void Push( EResults eResults, function<void(MessageType&)> set )noexcept;
+		void Push( EResults eResults, function<void(MessageType&, SessionPK)> set )noexcept;
 
 		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 		//void PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;

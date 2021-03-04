@@ -112,14 +112,56 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( const Exception& e )
 			{
+				DBG( name );
 				e.Log();
 				_pWebSend->Push( e, arg );
 			}
 		}
-		else if( type==ERequests::GoogleLogin )
+		else if( type==ERequests::GoogleLogin )//https://ncona.com/2015/02/consuming-a-google-id-token-from-a-server/
 		{
 			try
 			{
+				/*
+		var parts = StringUtilities::Split( name, '.' );
+		for( var& part : parts )
+			DBG( part );
+		var header = json::parse( Ssl::Decode64(parts[0]) );//{"alg":"RS256","kid":"fed80fec56db99233d4b4f60fbafdbaeb9186c73","typ":"JWT"}
+		DBG( header.dump() );
+		var bodyBuf = Ssl::Decode64( parts[1] );
+		DBG( bodyBuf );
+
+		//var encryptedBuf = Ssl::Decode64( parts[2] );
+		//DBG( encryptedBuf );
+
+/ *	json jOpenidConfiguration = json::parse( Ssl::Get<string>("accounts.google.com", "/.well-known/openid-configuration") );
+		var pJwksUri = jOpenidConfiguration.find( "jwks_uri" ); THROW_IF( pJwksUri==jOpenidConfiguration.end(), Exception("Could not find jwks_uri in '{}'", jOpenidConfiguration.dump()) );
+		var uri = pJwksUri->get<string>(); THROW_IF( !uri.starts_with("https://www.googleapis.com"), Exception("Wrong target:  '{}'", uri) );
+		var jwks = json::parse( Ssl::Get<string>( "www.googleapis.com", uri.substr(sizeof("https://www.googleapis.com")-1)) );
+		var pKid = header.find( "kid" ); THROW_IF( pKid== header.end(), Exception("Could not find kid in header {}", header.dump()) );
+		var pKeys = jwks.find( "keys" );  THROW_IF( pKeys==jwks.end(), Exception("Could not find pKeys in jwks {}", jwks.dump()) );
+		json foundKey;
+		for( var& key : *pKeys )
+		{
+			if( key["kid"].get<string>()==pKid->get<string>() )
+			{
+				foundKey = key;
+				break;
+			}
+			break;
+		}
+		THROW_IF( foundKey.is_null(), Exception("Could not find key '{}' in: '{}'", pKid->get<string>(), pKeys->dump()) );
+		var alg = foundKey["alg"].get<string>();
+		// var exponent = foundKey["e"].get<string>();
+		// var modulus = foundKey["n"].get<string>();
+		var exponent = "AQAB";
+		var modulus = "rIVm3h1WGbvKjmvzrpwPFeyAWIeP3W87z-C9k0YarePIF0Y77KgaMB83cVv5Hp85Che-Z_nb_y0kBhrOha4_q_6gFEOhyz8PUZSzdY2zkhX8Dci-vic9HulL5cFWjDGPXwekHLm_EmXkPkKu7-6nbkxmwcVQMGX2lEeawCqqNmk=";
+		//DBG( "e={} n={}"sv, exponent, modulus );
+
+		Ssl::Verify( modulus, exponent, parts[1], parts[2] );
+
+		var header = JSON.parse(headerBuf.toString());
+		var body = JSON.parse(bodyBuf.toString());*/
+
 				var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
 				THROW_IF( token.Aud!=Settings::Global().Get2<string>("GoogleAuthClientId"), Exception("Invalid client id") );
 				THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", Exception("Invalid iss") );

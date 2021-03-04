@@ -49,14 +49,14 @@ namespace TwsWebSocket
 						}
 						return dayBars;
 					};
-					auto set = [&bars, groupByDay]( const vector<::Bar>& ibBars, function<void(Proto::Results::DaySummary& summary, double close)> fnctn )
+					auto set = [&bars, groupByDay]( const vector<::Bar>& ibBars, function<void(Proto::Results::DaySummary& summary, double close)> fnctn2 )
 					{
 						var dayBars = groupByDay( ibBars );
 						for( var& [day, pBar] : bars )
 						{
 							var pIbBar = dayBars.find( day );
 							if( pIbBar!=dayBars.end() )
-								fnctn( *pBar, pIbBar->second.back().close );
+								fnctn2( *pBar, pIbBar->second.back().close );
 						}
 					};
 					var barSize = isOption ? Proto::Requests::BarSize::Hour : Proto::Requests::BarSize::Day;
@@ -171,6 +171,10 @@ namespace TwsWebSocket
 
 	void TwsWebSocket::PreviousDayValues( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ProcessArg& arg )noexcept
 	{
-		std::thread( [arg, contractIds](){ Threading::SetThreadDscrptn( format("{}-PrevDayValues", contractIds.size()==1 ? contractIds[0] : contractIds.size()) ); TwsWebSocket::fnctn( arg, contractIds );} ).detach();
+		std::thread( [arg, contractIds]()
+		{
+			Threading::SetThreadDscrptn( format("{}-PrevDayValues", contractIds.size()==1 ? contractIds[0] : contractIds.size()) );
+			TRY( TwsWebSocket::fnctn( arg, contractIds ) );
+		}).detach();
 	}
 }

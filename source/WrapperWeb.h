@@ -2,6 +2,7 @@
 #include "../../MarketLibrary/source/wrapper/WrapperSync.h"
 #include "../../MarketLibrary/source/types/TwsConnectionSettings.h"
 struct EReaderSignal;
+namespace Jde::UM{ enum class EAccess : uint8; }
 namespace Jde::Markets::TwsWebSocket
 {
 	struct WebSendGateway;
@@ -9,7 +10,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	struct WrapperWeb : public WrapperSync
 	{
-		static tuple<sp<TwsClientSync>,sp<WrapperWeb>> CreateInstance()noexcept;
+		static tuple<sp<TwsClientSync>,sp<WrapperWeb>> CreateInstance()noexcept(false);
 		static WrapperWeb& Instance()noexcept;
 		bool HaveInstance()const noexcept{ return _pInstance!=nullptr; }
 		void accountDownloadEnd( const std::string& accountName )noexcept override;
@@ -57,9 +58,16 @@ namespace Jde::Markets::TwsWebSocket
 		void historicalNewsEnd( int requestId, bool hasMore )noexcept override;
 		void SetWebSend( sp<WebSendGateway> pWebSend )noexcept{ _pWebSend = pWebSend; }
 		void AddAccountUpdateCallback( string account, function<void(const Proto::Results::AccountUpdate&)> callback )noexcept;
+
+		static bool TryTestAccess( UM::EAccess access, sv name, SessionPK sessionId, bool allowDeleted=false )noexcept;
+		static bool TryTestAccess( UM::EAccess access, UserPK userId, sv name, bool allowDeleted=false )noexcept;
+		bool tryTestAccess( UM::EAccess access, sv name, SessionPK sessionId, bool allowDeleted=false )noexcept;
+		bool tryTestAccess( UM::EAccess access, UserPK userId, sv name, bool allowDeleted=false )noexcept;
 	private:
+		void LoadAccess()noexcept;
+		void LoadMinimumAccess()noexcept;
 		WrapperWeb()noexcept;
-		sp<TwsClientSync> CreateClient( uint twsClientId )noexcept override;
+		sp<TwsClientSync> CreateClient( uint twsClientId )noexcept(false) override;
 		//sp<vector<Proto::Results::OptionParams>> securityDefinitionOptionalParameterEndSync( int reqId )noexcept override;
 		void securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept override;
 		void securityDefinitionOptionalParameterEnd( int reqId )noexcept override;
@@ -69,11 +77,12 @@ namespace Jde::Markets::TwsWebSocket
 		//vector<function<void(const Proto::Results::AccountUpdate&)> _accountCallbacks;
 		flat_map<TickerId,up<Proto::Results::HistoricalData>> _historicalData; mutex _historicalDataMutex;
 		flat_map<int,up<Proto::Results::OptionExchanges>> _optionParams;
-		const map<string,string> _accounts;
+		struct Account{ string Description; PK Id{0}; flat_map<UserPK,UM::EAccess> Access; };
+		flat_map<string,Account> _accounts; shared_mutex _accountMutex;  flat_set<string> _deletedAccounts; flat_map<UserPK,UM::EAccess> _minimumAccess;
 		UnorderedSet<TickerId> _canceledItems;
 
 		flat_map<int,unique_ptr<Proto::Results::ContractDetailsResult>> _contractDetails;
-		flat_map<TickerId,Proto::Results::HistoricalNewsCollection*> _allocatedNews;  mutex _newsMutex;
+		flat_map<TickerId,Proto::Results::HistoricalNewsCollection*> _allocatedNews; mutex _newsMutex;
 		sp<WebSendGateway> _pWebSend;
 	};
 }

@@ -66,6 +66,7 @@ namespace Jde::Markets::TwsWebSocket
 		sp<WebSendGateway> WebSend(){ return _pWebSend; }
 		void SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept;
 		UserPK UserId( SessionPK sessionId )noexcept(false);
+		UserPK TryUserId( SessionPK sessionId )noexcept{ return Try<UserPK>( [sessionId,this]{ return UserId(sessionId); }).value_or(0); };
 	private:
 		WebCoSocket( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept;
 		//void Listen( net::io_context& ioc, ssl::context& ctx, tcp::endpoint endpoint, net::yield_context yield );
