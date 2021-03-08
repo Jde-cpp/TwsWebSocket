@@ -16,41 +16,50 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		DBG0( "WebSendGateway::WebSendGateway"sv );
 	}
-	void WebSendGateway::EraseRequestSession( SessionPK id )noexcept
+	void WebSendGateway::EraseRequestSession( SessionPK sessionId )noexcept
 	{
-		DBG( "EraseRequestSession( {} )"sv, id );
-		std::function<void(const EResults&, UnorderedSet<SessionPK>& )> fnctn = [id]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
+		DBG( "EraseRequestSession( {} )"sv, sessionId );
+		std::function<void(const EResults&, UnorderedSet<SessionPK>& )> fnctn = [sessionId]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
 		{
-			sessions.erase( id );
-			//if( messageId==EResults::PositionData )//why just positionData?
-			{
-				sessions.IfEmpty( [&]()
-				{
-					_client.cancelPositions();
-					sessions.erase( ERequests::Positions );
-				});
-			}
+			sessions.erase( sessionId );
+			if( messageId==EResults::PositionData )
+				sessions.IfEmpty( [&](){ _client.cancelPositions(); });
 		};
 		_requestSessions.ForEach( fnctn );
 	}
+
+	void WebSendGateway::EraseAccountSubscription( SessionPK id, sv account, Handle handle )noexcept
+	{
+		DBG( "({})EraseAccountSubscription( '{}', '{}' )"sv, id, account, handle );
+
+		flat_set<Handle> orphans;
+		if( handle )
+			orphans.emplace( handle );
+		std::unique_lock<std::shared_mutex> l( _accountSubscriptionMutex );
+		for( auto pAccountSessionIds = _accountSubscriptions.begin(); pAccountSessionIds!=_accountSubscriptions.end();  )
+		{
+			if( account.size() && pAccountSessionIds->first!=account )
+				continue;
+			auto& sessionIds = pAccountSessionIds->second;
+			auto erase = false;
+			if( auto p = sessionIds.find(id); p!=sessionIds.end() )
+			{
+				orphans.emplace( p->second );
+				sessionIds.erase( p );
+				erase = sessionIds.size()==0;
+			}
+			pAccountSessionIds =  erase ? _accountSubscriptions.erase( pAccountSessionIds ) : std::next( pAccountSessionIds );
+			if( account.size() )
+				break;
+		}
+		for_each( orphans.begin(), orphans.end(), [account]( var& idHandle ){ _client.CancelAccountUpdates(account, idHandle); } );
+	}
+
 	void WebSendGateway::EraseSession( SessionPK id )noexcept
 	{
 		DBG( "Removing session '{}'"sv, id );
 		EraseRequestSession( id );
-		std::unique_lock<std::shared_mutex> l( _accountSubscriptionMutex );
-		for( auto pAccountSessionIds = _accountSubscriptions.begin(); pAccountSessionIds!=_accountSubscriptions.end();  )
-		{
-			var& accountNumber = pAccountSessionIds->first;
-			auto& sessionIds =   pAccountSessionIds->second;
-			if( sessionIds.erase(id) && sessionIds.size()==0 )
-			{
-				_client.reqAccountUpdates( false, accountNumber );
-				pAccountSessionIds = _accountSubscriptions.erase( pAccountSessionIds );
-			}
-			else
-				++pAccountSessionIds;
-		}
-
+		EraseAccountSubscription( id );
 		TickManager::CancelProto( (uint32)id, 0, 0 );
 	}
 
@@ -69,42 +78,56 @@ namespace Jde::Markets::TwsWebSocket
 		for( var sendMessage : webSendMessages )
 			_requestSessions.Insert( afterInsert, sendMessage, sp<UnorderedSet<SessionPK>>{new UnorderedSet<SessionPK>{}} );
 	}
-	bool WebSendGateway::AddAccountSubscription( const string& account, SessionPK sessionId )noexcept
+
+	bool WebSendGateway::UpdateAccountValue( sv key, sv value, sv currency, sv accountNumber )noexcept
+	{
+		//var haveCallback = WrapperLog::updateAccountValue2( key, value, currency, accountName );
+		Proto::Results::AccountUpdate update;
+		update.set_account( string{accountNumber} );
+		update.set_key( string{key} );
+		update.set_value( string{value} );
+		update.set_currency( string{currency} );
+
+		bool haveSubscription = false;
+		std::unique_lock<std::shared_mutex> l( _accountSubscriptionMutex );
+		if( var pAccountNumberSessions = _accountSubscriptions.find( string{accountNumber} ); pAccountNumberSessions!=_accountSubscriptions.end() )
+		{
+			map<SessionPK,Handle> orphans;
+			for( var& [sessionId,handle] : pAccountNumberSessions->second )
+			{
+				MessageType msg; msg.set_allocated_account_update( new Proto::Results::AccountUpdate{update} );
+				var s2 = sessionId;
+				if( TRY(Push(move(msg), s2)) )
+					haveSubscription = true;
+				else
+					orphans.emplace( sessionId, handle );
+			}
+			l.unlock();
+			for_each( orphans.begin(), orphans.end(), [&](auto idHandle ){ EraseAccountSubscription( idHandle.first, accountNumber, idHandle.second ); } );
+		}
+		return haveSubscription;
+	}
+
+	bool WebSendGateway::AddAccountSubscription( sv account, SessionPK sessionId )noexcept
 	{
 		DBG( "Account('{}') subscription for sessionId='{}'"sv, account, sessionId );
-		auto inserted = false;
-		if( WrapperWeb::TryTestAccess( UM::EAccess::Read, account, sessionId) )
+		var haveAccess = WrapperWeb::TryTestAccess( UM::EAccess::Read, account, sessionId);
+		if( haveAccess )
 		{
 			unique_lock l{ _accountSubscriptionMutex };
-			auto [pValue, inserted2] = _accountSubscriptions.try_emplace( account );
-			pValue->second.emplace( sessionId );
-			if( !inserted2 )
-			{
-				//Assign
-			}
-			else
-				inserted = inserted2;
+			//TODO do something with handle, have requestAccountUpdates with do something with cache.
+			auto handle = _client.RequestAccountUpdates( account, shared_from_this() );//[p=](sv a, sv b, sv c, sv d){return p->UpdateAccountValue(a,b,c,d);}
+			auto& sessionIds = _accountSubscriptions.try_emplace( string{account} ).first->second;
+			sessionIds.emplace( sessionId, handle );
 		}
 		else
 			PushError( -6, format("No access to {}.", account), {{sessionId}} );
-		return inserted;
+		return haveAccess;
 	}
-	bool WebSendGateway::CancelAccountSubscription( const string& account, SessionPK sessionId )noexcept
+	void WebSendGateway::CancelAccountSubscription( sv account, SessionPK sessionId )noexcept
 	{
 		DBG( "Account('{}') unsubscribe for sessionId='{}'"sv, account, sessionId );
-		unique_lock l{ _accountSubscriptionMutex };
-		auto pValue = _accountSubscriptions.find( account );
-		auto cancel = pValue==_accountSubscriptions.end();
-		if( !cancel )
-		{
-			pValue->second.erase( sessionId );
-			cancel = !pValue->second.size();
-			if( cancel )
-				_accountSubscriptions.erase( pValue );
-		}
-		else
-			DBG( "Could not find account('{}') subscription for sessionId='{}'"sv, account, sessionId );
-		return cancel;
+		EraseAccountSubscription( sessionId, account );
 	}
 /*	tuple<TickerId, flat_set<Proto::Requests::ETickList>> WebSendGateway::MarketDataTicks( ContractPK contractId )noexcept
 	{
@@ -443,87 +466,57 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 */
-	void WebSendGateway::AccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept
+	bool WebSendGateway::AccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept
 	{
-		std::shared_lock<std::shared_mutex> l3( _accountSubscriptionMutex );
-		var pAccountNumberSessions = _accountSubscriptions.find( accountNumber );
-		if( pAccountNumberSessions==_accountSubscriptions.end() )
-		{
-			unique_lock l2{_canceledAccountMutex};
-			bool found = false;
-			for( auto p = _canceledAccounts.begin(); p!=_canceledAccounts.end(); )
-			{
-				if( p->first==accountNumber )
-					found = true;
-				p = !found && p->second< Clock::now()-1min ? _canceledAccounts.erase( p ) : next( p );
-			}
-			if( !found )
-			{
-				_canceledAccounts.emplace( accountNumber, Clock::now() );
-				TRACE( "No current listeners for account update '{}', reqAccountUpdates"sv, accountNumber );
-				_client.reqAccountUpdates( false, accountNumber );
-			}
-		}
-		else
+		std::unique_lock<std::shared_mutex> l3( _accountSubscriptionMutex );
+		var pAccountNumberSessions = _accountSubscriptions.find(accountNumber);
+		bool haveSubscription = pAccountNumberSessions!=_accountSubscriptions.end();
+		if(  haveSubscription )
 		{
 			vector<SessionPK> orphans;
-			for( var sessionId : pAccountNumberSessions->second )
+			for( var& [sessionId,handle] : pAccountNumberSessions->second )
 			{
 				MessageType msg;
 				setMessage( msg );
-				try
-				{
-					Push(move(msg), sessionId );
-				}
-				catch( Exception& e )
-				{
-					e.Log();
+				string key = msg.has_portfolio_update() ? std::to_string( msg.portfolio_update().contract().id() ) : string{};
+				//_accountMessages[accountNumber][key]=msg;
+				if( !Try( [&, id=sessionId]{ Push(move(msg), id);} ) )
 					orphans.push_back( sessionId );
-				}
 			}
 			l3.unlock();
-			for_each( orphans.begin(), orphans.end(), [this](auto id){ EraseRequestSession( id ); } );
+			if( orphans.size() )
+			{
+				for_each( orphans.begin(), orphans.end(), [this](auto id){ EraseRequestSession( id ); } );
+				haveSubscription = _accountSubscriptions.find( accountNumber )==_accountSubscriptions.end();
+			}
 		}
+		return haveSubscription;
+		// else
+		// {
+		// 	_accountMessages.erase( accountNumber );
+		// 	unique_lock l2{_canceledAccountMutex};
+		// 	bool found = false;
+		// 	for( auto p = _canceledAccounts.begin(); p!=_canceledAccounts.end(); ) //erase old canceled, see if current has been canceled.
+		// 	{
+		// 		if( p->first==accountNumber )
+		// 			found = true;
+		// 		p = !found && p->second<Clock::now()-1min ? _canceledAccounts.erase( p ) : next( p );
+		// 	}
+		// 	if( !found )
+		// 	{
+		// 		_canceledAccounts.emplace( accountNumber, Clock::now() ); TRACE( "No current listeners for account update '{}', reqAccoun tUpdates"sv, accountNumber );
+		// 		_client.reqA ccountUpdates( false, accountNumber );
+		// 	}
+		// }
 	}
-	void WebSendGateway::Push( const Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept
+	bool WebSendGateway::PortfolioUpdate( const Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept
 	{
-		AccountRequest( porfolioUpdate.account_number(), [&porfolioUpdate](MessageType& msg){msg.set_allocated_portfolio_update( new Proto::Results::PortfolioUpdate{porfolioUpdate});} );
+		return AccountRequest( porfolioUpdate.account_number(), [&porfolioUpdate](MessageType& msg){msg.set_allocated_portfolio_update( new Proto::Results::PortfolioUpdate{porfolioUpdate});} );
 	}
-	void WebSendGateway::PushAccountDownloadEnd( const string& accountNumber )noexcept
+	bool WebSendGateway::PushAccountDownloadEnd( const string& accountNumber )noexcept
 	{
 		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::AccountDownloadEnd ); pValue->set_string_value( accountNumber );
-		AccountRequest( accountNumber, [pValue](MessageType& msg){msg.set_allocated_message(pValue);} );
-	}
-	void WebSendGateway::Push( const Proto::Results::AccountUpdate& accountUpdate, bool haveCallback )noexcept
-	{
-		var accountNumber = accountUpdate.account();
-		std::shared_lock<std::shared_mutex> l( _accountSubscriptionMutex );
-		if( var pAccountNumberSessions = _accountSubscriptions.find( accountNumber ); pAccountNumberSessions!=_accountSubscriptions.end() )
-		{
-			for( var sessionId : pAccountNumberSessions->second )
-			{
-				MessageType msg; msg.set_allocated_account_update( new Proto::Results::AccountUpdate{accountUpdate} );
-				TRY( Push(move(msg), sessionId) );
-			}
-		}
-		else if( !haveCallback )
-		{
-			l.unlock();
-			unique_lock l2{_canceledAccountMutex};
-			bool found = false;
-			for( auto p = _canceledAccounts.begin(); p!=_canceledAccounts.end(); )
-			{
-				if( p->first==accountNumber )
-					found = true;
-				p = !found && p->second< Clock::now()-1min ? _canceledAccounts.erase( p ) : next( p );
-			}
-			if( !found )
-			{
-				_canceledAccounts.emplace( accountNumber, Clock::now() );
-				TRACE( "No current listeners for account update '{}', reqAccountUpdates"sv, accountNumber );
-				_client.reqAccountUpdates( false, accountNumber );
-			}
-		}
+		return AccountRequest( accountNumber, [pValue](MessageType& msg){msg.set_allocated_message(pValue);} );
 	}
 
 	void WebSendGateway::Push( const Proto::Results::CommissionReport& report )noexcept

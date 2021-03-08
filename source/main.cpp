@@ -78,7 +78,7 @@ namespace Jde::Markets
 					std::this_thread::yield();
 			}
 		}
-		return;
+		//return;
 		try
 		{
 			var symbol = ""sv;//"AAPL"sv;
