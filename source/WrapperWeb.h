@@ -13,6 +13,10 @@ namespace Jde::Markets::TwsWebSocket
 		static tuple<sp<TwsClientSync>,sp<WrapperWeb>> CreateInstance()noexcept(false);
 		static WrapperWeb& Instance()noexcept;
 		bool HaveInstance()const noexcept{ return _pInstance!=nullptr; }
+
+	//	static bool HaveAccountUpdateCallbacks()noexcept{ auto p = _pInstance; if(!p) return false; shared_lock l{p->_accountUpdateCallbackMutex}; return p->_accountUpdateCallbacks.size(); };
+		//void CancelAccountUpdate( sv accountName )noexcept;
+
 		void accountDownloadEnd( const std::string& accountName )noexcept override;
 		void accountUpdateMulti( int reqId, const std::string& account, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept override;
 		void accountUpdateMultiEnd( int reqId )noexcept override;
@@ -46,8 +50,8 @@ namespace Jde::Markets::TwsWebSocket
 		//void tickString(TickerId tickerId, TickType tickType, const std::string& value)noexcept override;
 
 		//need to cache values between calls.
-		void updateAccountValue( const std::string& key, const std::string& val, const std::string& currency, const std::string& accountName )noexcept override;
-		void updatePortfolio( const ::Contract& contract, double position, double marketPrice, double marketValue, double /*averageCost*/, double /*unrealizedPNL*/, double /*realizedPNL*/, const std::string& /*accountName*/)noexcept  override;
+		//void updateAccountValue( const std::string& key, const std::string& val, const std::string& currency, const std::string& accountName )noexcept override;
+		//void updatePortfolio( const ::Contract& contract, double position, double marketPrice, double marketValue, double /*averageCost*/, double /*unrealizedPNL*/, double /*realizedPNL*/, const std::string& /*accountName*/)noexcept  override;
 		void updateAccountTime( const std::string& timeStamp )noexcept override;
 
 		bool AddCanceled( TickerId id )noexcept{ return _canceledItems.emplace(id); }
@@ -81,8 +85,12 @@ namespace Jde::Markets::TwsWebSocket
 		flat_map<string,Account> _accounts; shared_mutex _accountMutex;  flat_set<string> _deletedAccounts; flat_map<UserPK,UM::EAccess> _minimumAccess;
 		UnorderedSet<TickerId> _canceledItems;
 
+		//void CancelAccountUpdate( sv accountName, unique_lock<mutex>* pLock )noexcept;
+	//	flat_map<string,TimePoint> _canceledAccounts; mutable std::mutex _canceledAccountMutex;//ie ask for multiple contractDetails
+
 		flat_map<int,unique_ptr<Proto::Results::ContractDetailsResult>> _contractDetails;
 		flat_map<TickerId,Proto::Results::HistoricalNewsCollection*> _allocatedNews; mutex _newsMutex;
+		//mutable std::mutex _accountUpdateMutex;
 		sp<WebSendGateway> _pWebSend;
 	};
 }

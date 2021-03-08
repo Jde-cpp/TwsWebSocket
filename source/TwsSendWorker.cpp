@@ -261,15 +261,9 @@ namespace Jde::Markets::TwsWebSocket
 		var& account = accountUpdates.account_number();
 		var subscribe = accountUpdates.subscribe();
 		if( subscribe )
-		{
-			if( _web.AddAccountSubscription(account, session.SessionId) )
-			{
-				DBG( "Subscribe to account updates '{}'"sv, account );
-				_tws.reqAccountUpdates( true, account );
-			}
-		}
-		else if( _web.CancelAccountSubscription(account, session.SessionId) )
-			_tws.reqAccountUpdates( false, account );
+			_web.AddAccountSubscription( account, session.SessionId );
+		else
+			_web.CancelAccountSubscription( account, session.SessionId );
 	}
 
 	void TwsSendWorker::AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& r, const SessionKey& session )noexcept

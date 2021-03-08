@@ -359,17 +359,41 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend->Push( Proto::Results::EResults::TickSnapshotEnd, reqId );
 	}
 
-	void WrapperWeb::updateAccountValue( const std::string& key, const std::string& value, const std::string& currency, const std::string& accountName )noexcept
+/*	void WrapperWeb::CancelAccountUpdate( sv accountNumber, unique_lock<mutex>* pLock )noexcept
+	{
+		//unique_lock l2{ _canceledAccountMutex };
+		bool found = false;
+		for( auto p = _canceledAccounts.begin(); p!=_canceledAccounts.end(); )//see if already canceled, and remove old canceled records.
+		{
+			if( p->first==accountNumber )
+				found = true;
+			p = !found && p->second< Clock::now()-1min ? _canceledAccounts.erase( p ) : next( p );
+		}
+		if( !found )
+		{
+			_canceledAccounts.emplace( accountNumber, Clock::now() ); TRACE( "No current listeners for account update '{}', req AccountUpdates"sv, accountNumber );
+			_client.reqAccountUpdates( false, string{accountNumber} );
+			_accountUpdates.clear();
+			_accountPortfolioUpdates.clear();
+		}
+	}
+*/
+/*	void WrapperWeb::updateAccountValue( const std::string& key, const std::string& value, const std::string& currency, const std::string& accountName )noexcept
 	{
 		var haveCallback = WrapperLog::updateAccountValue2( key, value, currency, accountName );
-		Proto::Results::AccountUpdate update;
+	/ *	Proto::Results::AccountUpdate update;
 		update.set_account( accountName );
 		update.set_key( key );
 		update.set_value( value );
 		update.set_currency( currency );
-
-		_pWebSend->Push( update, haveCallback );
+* /
+		unique_lock l{ _accountUpdateMutex };
+		if( / *!_pWebSend->Push(update) &&* / !haveCallback )
+			CancelAccountUpdate( accountName, &l );
+		else
+			_accountUpdates[accountName][key]=update;
 	}
+
 	void WrapperWeb::updatePortfolio( const ::Contract& contract, double position, double marketPrice, double marketValue, double averageCost, double unrealizedPNL, double realizedPNL, const std::string& accountNumber )noexcept
 	{
 		WrapperLog::updatePortfolio( contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountNumber );
@@ -395,8 +419,14 @@ namespace Jde::Markets::TwsWebSocket
 					WARN( "'{}' returned multiple securities"sv, myContract.Symbol );
 			}
 		}
-		_pWebSend->Push( update );
+
+		unique_lock l{ _accountUpdateMutex };
+		if( !_pWebSend->Push(update) )
+			CancelAccountUpdate( accountNumber, &l );
+		else
+			_accountPortfolioUpdates[accountNumber][contract.conId]=update;
 	}
+*/
 	void WrapperWeb::updateAccountTime( const std::string& timeStamp )noexcept
 	{
 		WrapperLog::updateAccountTime( timeStamp );//not sure what to do about this, no reqId or accountName

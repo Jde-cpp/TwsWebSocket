@@ -2,24 +2,27 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/core/noncopyable.hpp>
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
+#include "../../MarketLibrary/source/wrapper/WrapperLog.h"
 
 //namespace Jde::Markets{ struct TwsClientSync;}
 namespace Jde::Markets::TwsWebSocket
 {
 	struct WebCoSocket;
-	struct WebSendGateway : enable_shared_from_this<WebSendGateway>, boost::noncopyable //TODO not a worker, WebSendGateway
+	struct WebSendGateway final: enable_shared_from_this<WebSendGateway>, boost::noncopyable, IAccountUpdateHandler //TODO not a worker, WebSendGateway
 	{
 		typedef tuple<SessionPK,MessageTypePtr> QueueType;
 		WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
 		void Shutdown()noexcept{ _pThread->Interrupt(); _pThread->Join(); }
 		void EraseRequestSession( SessionPK id )noexcept;
+		void EraseAccountSubscription( SessionPK id, sv account={}, Handle handle=0 )noexcept;
 		void EraseSession( SessionPK id )noexcept;
 		void AddExecutionRequest( SessionPK id ){ unique_lock l{_executionRequestMutex}; _executionRequests.emplace( id ); }
 		void AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept;
-		bool AddAccountSubscription( const string& account, SessionPK sessionId )noexcept;
+		bool AddAccountSubscription( sv account, SessionPK sessionId )noexcept;
+		bool UpdateAccountValue( sv key, sv value, sv currency, sv accountName )noexcept override;
 		void AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept;
 		tuple<TickerId,flat_set<Proto::Requests::ETickList>> RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock=false )noexcept;
-		bool CancelAccountSubscription( const string& account, SessionPK sessionId )noexcept;
+		void CancelAccountSubscription( sv account, SessionPK sessionId )noexcept;
 		void AddMultiRequest( const flat_set<TickerId>& ids, const ClientKey& key );
 
 		TickerId AddRequestSession( const ClientKey& key )noexcept{ const auto ib = _pClientSync->RequestId(); _requestSession.emplace(ib, key); return ib; }
@@ -48,13 +51,13 @@ namespace Jde::Markets::TwsWebSocket
 		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 		//void PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 
-		void PushAccountDownloadEnd( const string& accountNumber )noexcept;
-		void Push( const Proto::Results::PortfolioUpdate& pMessage )noexcept;
+		bool PushAccountDownloadEnd( const string& accountNumber )noexcept;
+		bool PortfolioUpdate( const Proto::Results::PortfolioUpdate& pMessage )noexcept override ;
 		//void PushAllocated( unique_ptr<Proto::Results::AccountUpdateMulti> pMessage )noexcept;
-		void Push( const Proto::Results::AccountUpdate& accountUpdate, bool haveCallback )noexcept;
+		//bool Push( const Proto::Results::AccountUpdate& accountUpdate )noexcept;
 		void ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, TickerId tickerId )noexcept;
 		void Push( const Proto::Results::CommissionReport& report )noexcept;
-		void AccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept;
+		bool AccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept;
 		void AddRequestSessions( SessionPK id, const vector<Proto::Results::EResults>& webSendMessages )noexcept;
 
 		void SetClientSync( sp<TwsClientSync> pClient )noexcept{ DBG0( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
@@ -65,10 +68,10 @@ namespace Jde::Markets::TwsWebSocket
 		void Run()noexcept;
 		void HandleRequest( SessionPK sessionId, string&& data )noexcept;
 
-		flat_map<string,boost::container::flat_set<SessionPK>> _accountSubscriptions; std::shared_mutex _accountSubscriptionMutex;
+		flat_map<string,flat_map<SessionPK,Handle>> _accountSubscriptions; std::shared_mutex _accountSubscriptionMutex;
 		flat_map<ClientPK,flat_set<TickerId>> _multiRequests; mutable std::mutex _multiRequestMutex;//ie ask for multiple contractDetails
 		flat_set<SessionPK> _executionRequests; mutable std::shared_mutex _executionRequestMutex;
-		flat_map<string,TimePoint> _canceledAccounts; mutable std::mutex _canceledAccountMutex;//ie ask for multiple contractDetails
+
 
 		sp<Threading::InterruptibleThread> _pThread;
 		QueueValue<QueueType> _queue;

@@ -40,7 +40,7 @@ namespace TwsWebSocket
 	private:
 		void EraseSession( SessionPK id )noexcept;
 		void AddRequest( SessionPK id, long reqId )noexcept;
-		void PushAccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept;
+		//void PushAccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept;
 
 		std::atomic<SessionPK> _sessionId{0};
 		Collections::UnorderedMap<SessionPK,Stream> _sessions;
