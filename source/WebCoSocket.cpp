@@ -55,6 +55,12 @@ namespace Jde::Markets::TwsWebSocket
 		_sessions.emplace( sessionId, SessionInfo{stream,make_shared<std::atomic_bool>(false)} );
 		return sessionId;
 	}
+	void WebCoSocket::RemoveConnection( SessionPK sessionId )noexcept
+	{
+		unique_lock l{ _sessionMutex };
+		_sessions.erase( sessionId );
+	}
+
 
 	void WebCoSocket::AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false)
 	{
@@ -83,7 +89,9 @@ namespace Jde::Markets::TwsWebSocket
 		sp<SocketStream> pStream; sp<atomic<bool>> pMutex;
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( id ); THROW_IF( p==_sessions.end(), Exception("({})Could not find session."sv, id) );
+			var p = _sessions.find( id );
+			if( p==_sessions.end() )//THROW_IF( p==_sessions.end(),
+				throw Exception("({})Could not find session."sv, id );
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}
@@ -116,6 +124,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		Threading::SetThreadDscrptn( "WebSession" );
 		beast::error_code ec;
+		SessionPK sessionId = 0;
 		//beast::get_lowest_layer(*pStream).expires_after( 30s );
 		try
 		{
@@ -134,12 +143,13 @@ namespace Jde::Markets::TwsWebSocket
 			}) );
 			pStream->async_accept( yld[ec] ); THROW_IF( ec, BeastException("accept", move(ec)) );
 			auto pWebCoSocket = WebCoSocket::Instance(); THROW_IF( !pWebCoSocket, Exception("!pWebCoSocket") );
-			var sessionId = pWebCoSocket->AddConnection( pStream );
-			UserPK userId = 0;
+			sessionId = pWebCoSocket->AddConnection( pStream );
+			UserPK userId = 5;
+			//pWebCoSocket->SetLogin( {{sessionId,userId },0}, EAuthType::Google, "foo@gmail.com", true, "Mr foo", "", Clock::now()+24h, {} );
 			for( ;; )
 			{
 				beast::flat_buffer buffer;// This buffer will hold the incoming message
-				pStream->async_read( buffer, yld[ec] ); THROW_IF( ec, BeastException("read", move(ec)) );// Read a message
+				pStream->async_read( buffer, yld[ec] ); THROW_IF( ec, BeastException("async_read", move(ec)) );// Read a message
 				//if( ec == websocket::error::closed )// This indicates that the session was closed
 				//	break;
 				auto data = boost::beast::buffers_to_string( buffer.data() );
@@ -151,7 +161,9 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const Exception& e )
 		{
-			DBG( "Session Terminated on exception {}"sv, e.what() );
+			DBG( "({})Session Terminated on exception {}"sv, sessionId, e.what() );
+			if( auto pWebCoSocket = WebCoSocket::Instance(); pWebCoSocket && sessionId )
+				pWebCoSocket->RemoveConnection( sessionId );
 		}
 	}
 #ifdef HTTPS

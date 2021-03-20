@@ -226,11 +226,11 @@ namespace Jde::Markets::TwsWebSocket
 			m.set_allocated_string_map( new Proto::Results::StringMap{userList} );
 		});
 	}
-	void WrapperWeb::accountDownloadEnd( const std::string& accountName )noexcept
+/*	void WrapperWeb::accountDownloadEnd( const std::string& accountName )noexcept
 	{
 		WrapperLog::accountDownloadEnd( accountName );
-		_pWebSend->PushAccountDownloadEnd( accountName );
-	}
+		_pWebSend->AccountDownloadEnd( accountName );
+	}*/
 	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
@@ -543,12 +543,12 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		if( !isCache )
 			WrapperCache::newsProviders( providers );
-		auto pMap = new Proto::Results::StringMap();
-		pMap->set_result( EResults::NewsProviders );
+		Proto::Results::StringMap map;
+		map.set_result( EResults::NewsProviders );
 		for( var& provider : providers )
-			(*pMap->mutable_values())[provider.providerCode] = provider.providerName;
+			(*map.mutable_values())[provider.providerCode] = provider.providerName;
 
-		_pWebSend->Push( EResults::NewsProviders, [&pMap]( auto& type ){ type.set_allocated_string_map( pMap ); } );
+		_pWebSend->Push( EResults::NewsProviders, [&map]( auto& type ){ type.set_allocated_string_map(new Proto::Results::StringMap{map});} );
 	}
 
 	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
