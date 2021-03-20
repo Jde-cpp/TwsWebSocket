@@ -100,6 +100,7 @@ namespace Jde::Markets::TwsWebSocket
 				if( !result.is_null() )
 				{
 					p->set_value( result.dump() );
+					//DBG( "result={}"sv, p->value() );
 					DBG( p->value() );
 				}
 				msg.set_allocated_string_result( p.release() );

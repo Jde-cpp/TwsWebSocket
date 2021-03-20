@@ -17,7 +17,7 @@ namespace Jde::Markets::TwsWebSocket
 	//	static bool HaveAccountUpdateCallbacks()noexcept{ auto p = _pInstance; if(!p) return false; shared_lock l{p->_accountUpdateCallbackMutex}; return p->_accountUpdateCallbacks.size(); };
 		//void CancelAccountUpdate( sv accountName )noexcept;
 
-		void accountDownloadEnd( const std::string& accountName )noexcept override;
+		//void accountDownloadEnd( const std::string& accountName )noexcept override;
 		void accountUpdateMulti( int reqId, const std::string& account, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept override;
 		void accountUpdateMultiEnd( int reqId )noexcept override;
 		//void accountSummary( int reqId, const std::string& account, const std::string& tag, const std::string& value, const std::string& curency)noexcept override;

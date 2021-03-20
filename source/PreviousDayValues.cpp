@@ -11,7 +11,6 @@ namespace TwsWebSocket
 {
 	void fnctn( const TwsWebSocket::ProcessArg& arg, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept(false)//, TwsWebSocket::SessionId sessionId, TwsWebSocket::ClientPK requestId
 	{
-		flat_map<DayIndex,Proto::Results::DaySummary*> bars;
 		try
 		{
 			for( var contractId : contractIds )
@@ -19,8 +18,7 @@ namespace TwsWebSocket
 				sp<vector<ContractDetails>> pDetails;
 				try
 				{
-					pDetails = _sync.ReqContractDetails( contractId ).get();
-					THROW_IF( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {}.", contractId, pDetails->size()), -1) );
+					pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IF( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {}.", contractId, pDetails->size()), -1) );
 				}
 				catch( const IBException& e )
 				{
@@ -30,11 +28,12 @@ namespace TwsWebSocket
 				var current = CurrentTradingDay( contract );
 				var isOption = contract.SecType==SecurityType::Option;
 				var isPreMarket = IsPreMarket( contract.SecType );
-				var count = isOption || (IsOpen( contract.SecType ) && !isPreMarket) ? 1u : 2u;
+				flat_map<DayIndex,unique_ptr<Proto::Results::DaySummary>> bars;
+				var count = (isOption && IsOpen(SecurityType::Stock)) || (IsOpen(contract.SecType) && !isPreMarket) ? 1u : 2u;
 				for( auto day=current; bars.size()<count; day = PreviousTradingDay(day) )
 				{
-					auto pBar1 = new Proto::Results::DaySummary{}; pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
-					bars.emplace( day, pBar1 );
+					auto pBar1 = make_unique<Proto::Results::DaySummary>(); pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
+					bars.emplace( day, move(pBar1) );
 				}
 				auto load = [isPreMarket,isOption,count,current,&arg,contract,&bars]( bool useRth, DayIndex endDate )
 				{
@@ -54,15 +53,21 @@ namespace TwsWebSocket
 						var dayBars = groupByDay( ibBars );
 						for( var& [day, pBar] : bars )
 						{
+							//if( !pBar )
+							//	continue;
 							var pIbBar = dayBars.find( day );
 							if( pIbBar!=dayBars.end() )
+							{
+								//var& bar = pIbBar->second.back();
+						//		DBG( "open={}, volume={}, close={}"sv, bar.open, bar.volume, bar.close );
 								fnctn2( *pBar, pIbBar->second.back().close );
+							}
 						}
 					};
 					var barSize = isOption ? Proto::Requests::BarSize::Hour : Proto::Requests::BarSize::Day;
 					//var endDate = fillInBack ? current : PreviousTradingDay( current );
 					var previous = endDate<current;
-					var dayCount = !useRth ? 1 : useRth && previous ? std::max( 1u, count-1 ) : count;
+					var dayCount = !useRth ? 1 : useRth && previous ? std::max( (unsigned long)1u, (unsigned long)(count-1) ) : count;
 					if( !IsOpen(contract) )
 					{
 						var pAsks = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Ask, useRth, true ).get();
@@ -110,51 +115,47 @@ namespace TwsWebSocket
 						}
 					}*/
 					var pTrades = _sync.ReqHistoricalDataSync( contract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, useRth, true ).get();
+					//if( !arg.SessionId ) return;
 					var dayBars = groupByDay( *pTrades );
-					vector<DayIndex> sentDays{}; sentDays.reserve( bars.size() );
-					for( var& [day, pBar] : bars )
+					for( auto pDayBar = bars.begin(); pDayBar!=bars.end(); pDayBar = bars.erase(pDayBar) )
 					{
-						var pIbBar = dayBars.find( day );
-						if( pIbBar==dayBars.end() )
-							continue;
-						var& trades = pIbBar->second;
-						pBar->set_count( static_cast<uint32>(trades.size()) );
-						pBar->set_open( trades.front().open );
-						var& back = trades.back();
-						pBar->set_close( back.close );
-						if( !setHighLowRth )
+						var day = pDayBar->first; auto& pBar = pDayBar->second;
+						if( var pIbBar = dayBars.find( day ); pIbBar!=dayBars.end() )
 						{
-							double high=0.0, low = std::numeric_limits<double>::max();
-							for( var& bar : trades )
+							var& trades = pIbBar->second;
+							pBar->set_count( static_cast<uint32>(trades.size()) );
+							pBar->set_open( trades.front().open );
+							var& back = trades.back();
+							pBar->set_close( back.close );
+							if( !setHighLowRth )
 							{
-								pBar->set_volume( pBar->volume()+bar.volume );
-								high = std::max( bar.high, high );
-								low = std::min( bar.low, low );
+								double high=0.0, low = std::numeric_limits<double>::max();
+								for( var& bar : trades )
+								{
+									pBar->set_volume( pBar->volume()+bar.volume );
+									high = std::max( bar.high, high );
+									low = std::min( bar.low, low );
+								}
+								pBar->set_high( high );
+								pBar->set_low( low==std::numeric_limits<double>::max() ? 0 : low );
 							}
-							pBar->set_high( high );
-							pBar->set_low( low==std::numeric_limits<double>::max() ? 0 : low );
 						}
-						Proto::Results::MessageUnion msg; msg.set_allocated_day_summary( pBar );
-						sentDays.push_back( day );
+						Proto::Results::MessageUnion msg; msg.set_allocated_day_summary( pBar.release() );
 						if( arg.SessionId )
 							arg.WebSendPtr->Push( move(msg), arg.SessionId );
 					}
-					for( var day : sentDays )
-						bars.erase( day );
 				};
 				var useRth = count==1;
 				load( useRth, current );
 				if( !useRth )
 					load( !useRth, PreviousTradingDay(current) );
-				std::for_each( bars.begin(), bars.end(), [](auto& bar){delete bar.second;} );
-				bars.clear();
 			}
 			if( arg.SessionId )
 				arg.WebSendPtr->Push( EResults::MultiEnd, arg );
 		}
 		catch( const IBException& e )
 		{
-			std::for_each( bars.begin(), bars.end(), [](auto& bar){delete bar.second;} );
+			//std::for_each( bars.begin(), bars.end(), [](auto& bar){delete bar.second;} );
 			if( arg.SessionId )
 				arg.WebSendPtr->Push( e, arg );
 			else
@@ -174,7 +175,7 @@ namespace TwsWebSocket
 		std::thread( [arg, contractIds]()
 		{
 			Threading::SetThreadDscrptn( format("{}-PrevDayValues", contractIds.size()==1 ? contractIds[0] : contractIds.size()) );
-			TRY( TwsWebSocket::fnctn( arg, contractIds ) );
+			TRY( TwsWebSocket::fnctn(arg, contractIds) );
 		}).detach();
 	}
 }

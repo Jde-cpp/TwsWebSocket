@@ -61,6 +61,7 @@ namespace Jde::Markets::TwsWebSocket
 		void AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false);
 
 		SessionPK AddConnection( sp<SocketStream> stream )noexcept;
+		void RemoveConnection( SessionPK sessionId )noexcept;
 
 		void HandleIncoming( WebRequestMessage&& data )noexcept{ _requestWorker.Push(move(data)); }
 		sp<WebSendGateway> WebSend(){ return _pWebSend; }

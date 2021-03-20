@@ -51,8 +51,8 @@ namespace Jde::Markets::TwsWebSocket
 		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 		//void PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 
-		bool PushAccountDownloadEnd( const string& accountNumber )noexcept;
-		bool PortfolioUpdate( const Proto::Results::PortfolioUpdate& pMessage )noexcept override ;
+		void AccountDownloadEnd( sv accountNumber )noexcept override;
+		bool PortfolioUpdate( const Proto::Results::PortfolioUpdate& pMessage )noexcept override;
 		//void PushAllocated( unique_ptr<Proto::Results::AccountUpdateMulti> pMessage )noexcept;
 		//bool Push( const Proto::Results::AccountUpdate& accountUpdate )noexcept;
 		void ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, TickerId tickerId )noexcept;
@@ -68,7 +68,7 @@ namespace Jde::Markets::TwsWebSocket
 		void Run()noexcept;
 		void HandleRequest( SessionPK sessionId, string&& data )noexcept;
 
-		flat_map<string,flat_map<SessionPK,Handle>> _accountSubscriptions; std::shared_mutex _accountSubscriptionMutex;
+		flat_map<string,flat_map<SessionPK,Handle>> _accountSubscriptions; std::shared_mutex _accountSubscriptionMutex; unique_ptr<unique_lock<shared_mutex>> _accountSubscriptionPtr;
 		flat_map<ClientPK,flat_set<TickerId>> _multiRequests; mutable std::mutex _multiRequestMutex;//ie ask for multiple contractDetails
 		flat_set<SessionPK> _executionRequests; mutable std::shared_mutex _executionRequestMutex;
 

@@ -78,9 +78,10 @@ namespace Jde::Markets
 					std::this_thread::yield();
 			}
 		}
-		//return;
+		return;
 		try
 		{
+			//PreviousDayValues( 435628729 );
 			var symbol = ""sv;//"AAPL"sv;
 			var pPositions = TwsClientSync::Instance().RequestPositions().get();
 			for( var& position : *pPositions )

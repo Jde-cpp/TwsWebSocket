@@ -9,6 +9,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	using Proto::Results::MessageUnion;
+	using Proto::Results::MessageValue;
 	WebSendGateway::WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept:
 //		_queue{},
 		_webSocket{ webSocketParent },
@@ -38,19 +39,19 @@ namespace Jde::Markets::TwsWebSocket
 		std::unique_lock<std::shared_mutex> l( _accountSubscriptionMutex );
 		for( auto pAccountSessionIds = _accountSubscriptions.begin(); pAccountSessionIds!=_accountSubscriptions.end();  )
 		{
-			if( account.size() && pAccountSessionIds->first!=account )
-				continue;
-			auto& sessionIds = pAccountSessionIds->second;
 			auto erase = false;
-			if( auto p = sessionIds.find(id); p!=sessionIds.end() )
+			if( account.size() && pAccountSessionIds->first==account )
 			{
-				orphans.emplace( p->second );
-				sessionIds.erase( p );
-				erase = sessionIds.size()==0;
+				auto& sessionIds = pAccountSessionIds->second;
+				if( auto p = sessionIds.find(id); p!=sessionIds.end() )
+				{
+					orphans.emplace( p->second );
+					sessionIds.erase( p );
+					erase = sessionIds.size()==0;
+				}
+				break;
 			}
 			pAccountSessionIds =  erase ? _accountSubscriptions.erase( pAccountSessionIds ) : std::next( pAccountSessionIds );
-			if( account.size() )
-				break;
 		}
 		for_each( orphans.begin(), orphans.end(), [account]( var& idHandle ){ _client.CancelAccountUpdates(account, idHandle); } );
 	}
@@ -89,7 +90,7 @@ namespace Jde::Markets::TwsWebSocket
 		update.set_currency( string{currency} );
 
 		bool haveSubscription = false;
-		std::unique_lock<std::shared_mutex> l( _accountSubscriptionMutex );
+		std::shared_lock<std::shared_mutex> l( _accountSubscriptionMutex );
 		if( var pAccountNumberSessions = _accountSubscriptions.find( string{accountNumber} ); pAccountNumberSessions!=_accountSubscriptions.end() )
 		{
 			map<SessionPK,Handle> orphans;
@@ -110,18 +111,29 @@ namespace Jde::Markets::TwsWebSocket
 
 	bool WebSendGateway::AddAccountSubscription( sv account, SessionPK sessionId )noexcept
 	{
-		DBG( "Account('{}') subscription for sessionId='{}'"sv, account, sessionId );
-		var haveAccess = WrapperWeb::TryTestAccess( UM::EAccess::Read, account, sessionId);
+		DBG( "({})Account('{}') subscription for sessionId='{}'"sv, sessionId, account );
+		var haveAccess = WrapperWeb::TryTestAccess( UM::EAccess::Read, account, sessionId );
+		//DBG( "A"sv );
 		if( haveAccess )
 		{
-			unique_lock l{ _accountSubscriptionMutex };
-			//TODO do something with handle, have requestAccountUpdates with do something with cache.
+			{//RequestAccountUpdates needs it added
+				unique_lock l{ _accountSubscriptionMutex };
+				//DBG( "A.1"sv );
+				_accountSubscriptions.try_emplace( string{account} ).first->second.emplace( sessionId, 0 );
+			}
 			auto handle = _client.RequestAccountUpdates( account, shared_from_this() );//[p=](sv a, sv b, sv c, sv d){return p->UpdateAccountValue(a,b,c,d);}
-			auto& sessionIds = _accountSubscriptions.try_emplace( string{account} ).first->second;
-			sessionIds.emplace( sessionId, handle );
+			//DBG( "B"sv );
+			{//save handle
+				unique_lock l{ _accountSubscriptionMutex };
+				_accountSubscriptions.try_emplace( string{account} ).first->second[sessionId] = handle;
+			}
 		}
 		else
+		{
+			//DBG( "A.2"sv );
 			PushError( -6, format("No access to {}.", account), {{sessionId}} );
+		}
+		//DBG( "C"sv );
 		return haveAccess;
 	}
 	void WebSendGateway::CancelAccountSubscription( sv account, SessionPK sessionId )noexcept
@@ -218,7 +230,7 @@ namespace Jde::Markets::TwsWebSocket
 				{
 					Push( move(msg), sessionId );
 				}
-				catch( Exception& e )
+				catch( const Exception& e )
 				{
 					e.Log();
 					orphans.emplace_back( sessionId );
@@ -254,7 +266,7 @@ namespace Jde::Markets::TwsWebSocket
 		var clientKey = GetClientRequest( ibReqId );
 		if( clientKey.SessionId )
 		{
-			auto pMessage = new Proto::Results::MessageValue(); pMessage->set_int_value( clientKey.ClientId ); pMessage->set_type( messageId );
+			auto pMessage = new MessageValue(); pMessage->set_int_value( clientKey.ClientId ); pMessage->set_type( messageId );
 			MessageType msg; msg.set_allocated_message( pMessage );
 			Push( move(msg), clientKey.SessionId );
 		}
@@ -434,7 +446,7 @@ namespace Jde::Markets::TwsWebSocket
 				if( reqIds.size()==0 )
 				{
 					_multiRequests.erase( pMultiRequests );
-					auto pMessage = new Proto::Results::MessageValue(); pMessage->set_type( Proto::Results::EResults::MultiEnd ); pMessage->set_int_value( clientKey.ClientId );
+					auto pMessage = new MessageValue(); pMessage->set_type( Proto::Results::EResults::MultiEnd ); pMessage->set_int_value( clientKey.ClientId );
 					pComplete = MessageType{};  pComplete->set_allocated_message( pMessage );
 				}
 			}
@@ -513,10 +525,11 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		return AccountRequest( porfolioUpdate.account_number(), [&porfolioUpdate](MessageType& msg){msg.set_allocated_portfolio_update( new Proto::Results::PortfolioUpdate{porfolioUpdate});} );
 	}
-	bool WebSendGateway::PushAccountDownloadEnd( const string& accountNumber )noexcept
+
+	void WebSendGateway::AccountDownloadEnd( sv accountNumber )noexcept
 	{
-		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::AccountDownloadEnd ); pValue->set_string_value( accountNumber );
-		return AccountRequest( accountNumber, [pValue](MessageType& msg){msg.set_allocated_message(pValue);} );
+		MessageValue value; value.set_type( Proto::Results::EResults::AccountDownloadEnd ); value.set_string_value( string{accountNumber} );
+		AccountRequest( string{accountNumber}, [&value](MessageType& msg)mutable{msg.set_allocated_message( new MessageValue{value});} );
 	}
 
 	void WebSendGateway::Push( const Proto::Results::CommissionReport& report )noexcept
@@ -531,7 +544,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WebSendGateway::Push( Proto::Results::EResults messageId, const ClientKey& key )noexcept(false)
 	{
-		auto pMessage = new Proto::Results::MessageValue(); pMessage->set_int_value( key.ClientId ); pMessage->set_type( messageId );
+		auto pMessage = new MessageValue(); pMessage->set_int_value( key.ClientId ); pMessage->set_type( messageId );
 		MessageType msg; msg.set_allocated_message( pMessage );
 		Push( move(msg), key.SessionId );
 	}
