@@ -91,7 +91,7 @@ namespace Jde::Markets
 			}
 			if( !symbol.size() )
 			{
-				for( var& name : WatchListData::Names() )
+				try
 				{
 					for( var& name : WatchListData::Names() )
 					{
