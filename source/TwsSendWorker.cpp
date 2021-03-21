@@ -191,6 +191,8 @@ namespace Jde::Markets::TwsWebSocket
 
 	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, const SessionKey& session )noexcept
 	{
+		if( !_twsPtr )
+			return _web.PushError( -1, "Not connected to Tws.", {{session.SessionId}, r.id()} );
 		if( r.type()==ERequests::Positions )
 		{
 			_web.AddRequestSessions( session.SessionId, {EResults::PositionEnd, EResults::PositionData} );
