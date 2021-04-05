@@ -75,8 +75,8 @@ namespace Jde::Markets::TwsWebSocket
 			var& account = pIdAccount->second;
 			if( var pAccount = account.Access.find(userId); pAccount != account.Access.end() )
 				haveAccess = (pAccount->second & requested)!=UM::EAccess::None;
-			else if( var pAccount = account.Access.find(std::numeric_limits<UserPK>::max()); userId!=0 && pAccount != account.Access.end() )
-				haveAccess = (pAccount->second & requested)!=UM::EAccess::None;
+			else if( var pAccount2 = account.Access.find(std::numeric_limits<UserPK>::max()); userId!=0 && pAccount2 != account.Access.end() )
+				haveAccess = (pAccount2->second & requested)!=UM::EAccess::None;
 		}
 		if( var pUser = _minimumAccess.find(userId); !haveAccess && pUser!=_minimumAccess.end() )
 			haveAccess = (pUser->second & requested)!=UM::EAccess::None;
@@ -149,7 +149,8 @@ namespace Jde::Markets::TwsWebSocket
 		unique_lock l{ _accountMutex };
 		_deletedAccounts.clear();
 		_accounts.clear();
-		if( !pDataSource->TrySelect( format("select name, description, {}, id from ib_accounts", DB::DefaultSyntax()->DateTimeSelect("deleted")), [&]( const DB::IRow& row )
+		var deleted = DB::DefaultSyntax()->DateTimeSelect("deleted");
+		if( !pDataSource->TrySelect( format("select name, description, {}, id from ib_accounts", deleted), [&]( const DB::IRow& row )
 		{
 			var name = row.GetString( 0 ); var description = row.GetString( 1 ); var pDeleted = row.GetDateTimeOpt( 2 );
 			if( pDeleted )
@@ -161,7 +162,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			var accountId = row.GetUInt( 0 );
 			var pAccount = std::find_if( _accounts.begin(), _accounts.end(), [&]( var& x ){ return x.second.Id==accountId; } ); THROW_IF( pAccount==_accounts.end(), Exception(std::to_string(accountId)) );
-			pAccount->second.Access.emplace( row.GetUInt(1), (UM::EAccess)row.GetUInt16(2) );
+			pAccount->second.Access.emplace( (UserPK)row.GetUInt(1), (UM::EAccess)row.GetUInt16(2) );
 		} );
 	}
 	void WrapperWeb::LoadMinimumAccess()noexcept
@@ -171,7 +172,7 @@ namespace Jde::Markets::TwsWebSocket
 		_minimumAccess.clear();
 		if( !pDataSource->TrySelect( "SELECT user_id, right_id from um_permissions p join um_apis apis on p.api_id=apis.id and apis.name='TWS' and p.name is null join um_role_permissions rp on rp.permission_id=p.id join um_group_roles gr on gr.role_id=rp.role_id join um_user_groups ug on gr.group_id=ug.user_id", [&]( const DB::IRow& row )
 		{
-			_minimumAccess[row.GetUInt(0)] = (UM::EAccess)row.GetUInt16( 1 );
+			_minimumAccess[(UserPK)row.GetUInt(0)] = (UM::EAccess)row.GetUInt16( 1 );
 		}) ) return;
 
 	}
@@ -195,12 +196,12 @@ namespace Jde::Markets::TwsWebSocket
 					INFO( "inserted account '{}'."sv, name );
 				}
 			}
-			DB::AddMutationListener( "ib", [this](const DB::MutationQL& m, PK id)
+			DB::AddMutationListener( "ib", [this](const DB::MutationQL& m, PK /*id*/)
 			{
 				if( m.JsonName.ends_with( "AccountRoles") || m.JsonName.ends_with( "RoleAccounts") )
 					LoadAccess();
 			} );
-			DB::AddMutationListener( "um", [this]( const DB::MutationQL& m, PK id )
+			DB::AddMutationListener( "um", [this]( const DB::MutationQL& m, PK /*id*/ )
 			{
 				if( m.JsonName.ends_with( "RolePermissions") || m.JsonName.ends_with( "PermissionRoles") )
 					LoadMinimumAccess();

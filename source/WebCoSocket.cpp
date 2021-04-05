@@ -26,14 +26,14 @@ namespace Jde::Markets::TwsWebSocket
 	void BeastException::LogCode( sv what, const beast::error_code& ec )noexcept
 	{
 		if( BeastException::IsTruncated(ec) )
-			DBG( "async_accept Truncated - {}"sv, ec.message() );
+			DBG( "{}, async_accept Truncated - {}"sv, what, ec.message() );
 		else
-			WARN( "async_accept Failed - {}"sv, ec.message() );
+			WARN( "{}, async_accept Failed - {}"sv, what, ec.message() );
 	}
 
 	sp<WebCoSocket> WebCoSocket::_pInstance;
 	flat_map<SessionPK,SessionInfo> WebCoSocket::_sessions; shared_mutex WebCoSocket::_sessionMutex;
-	uint WebCoSocket::_sessionId{0};
+	SessionPK WebCoSocket::_sessionId{0};
 	sp<WebCoSocket> WebCoSocket::Create( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept
 	{
 		ASSERT( !_pInstance );
@@ -68,11 +68,11 @@ namespace Jde::Markets::TwsWebSocket
 /**/
 	}
 
-	void WebCoSocket::AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept
+	void WebCoSocket::AddOutgoing( MessageTypePtr pUnion, SessionPK /*id*/ )noexcept
 	{
 		ASSERT( false );
 	}
-	void WebCoSocket::AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept
+	void WebCoSocket::AddOutgoing( const vector<MessageTypePtr>& /*messages*/, SessionPK /*id*/ )noexcept
 	{
 		ASSERT( false );
 	}
@@ -229,7 +229,7 @@ namespace Jde::Markets::TwsWebSocket
 			ioc.run(); //TODO see about interuptable threads
 	}
 
-	void WebCoSocket::SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept
+	void WebCoSocket::SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv /*key*/ )noexcept
 	{
 		{
 			shared_lock l{ _sessionMutex };

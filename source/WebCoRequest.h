@@ -26,15 +26,6 @@ namespace TwsWebSocket
 	namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 	using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-	struct BeastException : public Exception
-	{
-		BeastException( sv what, beast::error_code&& ec )noexcept;
-		static bool IsTruncated( const beast::error_code& ec )noexcept{ return ec == net::ssl::error::stream_truncated; }
-		static void Log( sv what, const beast::error_code& )noexcept;
-
-		beast::error_code ErrorCode;
-	};
-
 	//namespace Messages{ struct Message; struct Application; struct Strings; }
 	struct WebCoRequest final : public IShutdown
 	{

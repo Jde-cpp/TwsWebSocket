@@ -9,6 +9,10 @@
 #b2 variant=release link=shared threading=multi runtime-link=shared address-model=64 --with-date_time
 #b2 variant=debug link=shared threading=multi runtime-link=shared address-model=64 --with-regex
 #b2 variant=release link=shared threading=multi runtime-link=shared address-model=64 --with-regex
+#b2 variant=debug link=shared threading=multi runtime-link=shared address-model=64 --with-coroutine
+#b2 variant=release link=shared threading=multi runtime-link=shared address-model=64 --with-coroutine
+#cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../../../../install -Dprotobuf_WITH_ZLIB=ON -Dprotobuf_BUILD_SHARED_LIBS=ON -DZLIB_INCLUDE_DIR=%REPO_DIR%\vcpkg\packages\zlib_x64-windows\include -DZLIB_LIB=%REPO_DIR%\vcpkg\packages\zlib_x64-windows\lib ../..
+#cmake -G "Visual Studio 16 2019" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebugDLL  -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../../../../install -Dprotobuf_WITH_ZLIB=ON -Dprotobuf_BUILD_SHARED_LIBS=ON -DZLIB_INCLUDE_DIR=%REPO_DIR%\vcpkg\packages\zlib_x64-windows\include -DZLIB_LIB=%REPO_DIR%\vcpkg\packages\zlib_x64-windows\lib ../..
 #Set in View\Other Windows\Property Manager\Microsoft.Cpp.x64.user
 # git clone https://github.com/johnduffynh/tws-api.git
 # cd tws-api/

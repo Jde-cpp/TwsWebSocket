@@ -51,11 +51,14 @@ namespace TwsWebSocket
 					auto set = [&bars, groupByDay]( const vector<::Bar>& ibBars, function<void(Proto::Results::DaySummary& summary, double close)> fnctn2 )
 					{
 						var dayBars = groupByDay( ibBars );
-						for( var& [day, pBar] : bars )
+						for( var& x : bars )
 						{
+							var day2 = x.first;
+							var& pBar = x.second;
+
 							//if( !pBar )
 							//	continue;
-							var pIbBar = dayBars.find( day );
+							var pIbBar = dayBars.find( day2 );
 							if( pIbBar!=dayBars.end() )
 							{
 								//var& bar = pIbBar->second.back();

@@ -1,0 +1,108 @@
+{
+	"$types":
+	{
+		"name":{ "length": 255 },
+		"$target":{ "length": 255 },
+		"description":{ "length": 2048 }
+	},
+	"$values":
+	{
+		"id": "uint32",
+		"name": "name",
+		"$surrogateKey":["id"],
+		"$naturalKey":["name"]
+	},
+	"$data":
+	{
+		"id":{ "sequence": true },
+		"name": "name",
+		"$surrogateKey":["id"],
+		"$naturalKey":["name"]
+	},
+	"$nk":
+	{
+		"$parent": "$data",
+		"attributes": "uint64?",
+		"created": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false },
+		"updated": { "type": "dateTime?", "insertable": false, "updateable": false },
+		"deleted": { "type": "dateTime?", "insertable": false, "updateable": false }
+	},
+	"$description":
+	{
+		"$parent": "$nk",
+		"target": "$target",
+		"description": "description?",
+		"$naturalKey": ["target"]
+	},
+	"ibAccounts":
+	{
+		"$parent": "$description"
+	},
+	"ibAccountRoles":
+	{
+		"roleId": "umRoles",
+		"accountId": "ibAccounts",
+		"rightId": { "type": "umRights", "default":"4" },
+		"$surrogateKey":["roleId","accountId"]
+	},
+	"umUsers":
+	{
+		"$parent": "$description",
+		"authenticatorId": "umAuthenticators"
+	},
+	"umAuthenticators":
+	{
+		"$parent": "$values",
+		"$data": ["None", "Google"]
+	},
+	"umGroups":
+	{
+		"$parent": "$description",
+		"$data": [{"id":1, "attributes":5, "name":"Everyone", "target":"everyone" }, {"id":2, "attributes":6, "name":"Users", "target":"users"}]
+	},
+	"umUserGroups":
+	{
+		"userId": "umUsers",
+		"groupId": "umGroups",
+		"$surrogateKey":["userId", "groupId"]
+	},
+	"umRoles":
+	{
+		"$parent": "$description",
+		"$data": [{"id":1, "attributes":4, "name":"User Management", "target": "user_management" }]
+	},
+	"umGroupRoles":
+	{
+		"groupId": "umGroups",
+		"roleId": "umRoles",
+		"$surrogateKey":["groupId","roleId"],
+		"$data": [{"groupId":1, "roleId":1 }]
+	},
+	"umRights":
+	{
+		"$parent": "$values",
+		"$flagsData": ["None","Administer", "Write", "Read"]
+	},
+	"umRolePermissions":
+	{
+		"roleId": "umRoles",
+		"permissionId": "umPermissions",
+		"rightId": { "type": "umRights", "default":"4" },
+		"$surrogateKey":["roleId","permissionId"],
+		"$data": [{"roleId":1, "permissionId":1, "rightId": 7}]
+	},
+	"umApis":
+	{
+		"$parent": "$values",
+		"$data": ["None","UM", "Web", "Tws", "Blockly"]
+	},
+	"umPermissions":
+	{
+		"id":{ "sequence": true },
+		"apiId": "umApis",
+		"name": "name?",
+		"$surrogateKey":["id"],
+		"$naturalKey":["apiId","name"],
+		"$data": [{"id":1, "apiId":1}, {"id":2, "apiId":3} ]
+	}
+}

@@ -48,3 +48,4 @@ setup/Debug/*
 /source/UpgradeLog*.htm
 jde/*
 source/packages/*
+*.log

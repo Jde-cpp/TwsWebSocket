@@ -301,7 +301,7 @@ namespace Jde::Markets::TwsWebSocket
 					_webSocket.AddOutgoing( messages, pSession->first );
 					++pSession;
 				}
-				catch( const Exception& e )
+				catch( const Exception& )
 				{
 					DBG( "Removing session='{}' for contract id='{}'"sv, pSession->first, contractId );
 					pSession = p->second.erase( pSession );
