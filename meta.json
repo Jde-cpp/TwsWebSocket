@@ -3,11 +3,27 @@
 	{
 		"name":{ "length": 255 },
 		"$target":{ "length": 255 },
-		"description":{ "length": 2048 }
+		"description":{ "length": 2047 },
+		"path":{ "length": 4095 },
+		"bigId": { "type": "uint64", "sequence": true },
+		"id": "uint32",
+		"smallId": "uint16",
+		"tinyId": "uint8",
+		"day": "uint16",
+		"cik": "uint32",
+		"crc": "uint32",
+		"cusip":{ "type":"char", "length":8 }
+	},
+	"$smallValues":
+	{
+		"id": "smallId",
+		"name": "name",
+		"$surrogateKey":["id"],
+		"$naturalKey":["name"]
 	},
 	"$values":
 	{
-		"id": "uint32",
+		"id": "id",
 		"name": "name",
 		"$surrogateKey":["id"],
 		"$naturalKey":["name"]
@@ -22,7 +38,7 @@
 	"$nk":
 	{
 		"$parent": "$data",
-		"attributes": "uint64?",
+		"attributes": "uint16?",
 		"created": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false },
 		"updated": { "type": "dateTime?", "insertable": false, "updateable": false },
 		"deleted": { "type": "dateTime?", "insertable": false, "updateable": false }
@@ -34,6 +50,31 @@
 		"description": "description?",
 		"$naturalKey": ["target"]
 	},
+	"dgrClasses":
+	{
+		"id": "crc",
+		"name": { "length":150 },
+		"$data": ["None", "COM", "EMF", "MF", "CALL", "PUT", "WT", "OA", "MIUS", "PFD", "IFUS"],
+		"$surrogateKey":["id"],
+		"$naturalKey":["name"]
+	},
+	"dgrFilings":
+	{
+		"id": {"type":"id", "sequence": true },
+		"cik": "mrkCompanies",
+		"formId": "dgrForms",
+		"submit_cik": "cik?",
+		"year": "uint8",
+		"sequence": "uint32",
+		"filingDay": "day",
+		"$surrogateKey":["id"],
+		"$naturalKey":["cik", "year", "sequence", "submit_cik"]
+	},
+	"dgrForms":
+	{
+		"$parent": "$smallValues",
+		"$data": ["None", "10-K", "2-E", "3", "4", "5", "6-K", "7-M", "8-K", "9-M", "10-Q", "11-K", "12b-25", "13F-HR", {"id":114, "name":"114"} ]
+	},
 	"ibAccounts":
 	{
 		"$parent": "$description"
@@ -44,6 +85,28 @@
 		"accountId": "ibAccounts",
 		"rightId": { "type": "umRights", "default":"4" },
 		"$surrogateKey":["roleId","accountId"]
+	},
+	"ibStockContracts":
+	{
+		"id": "uint32",
+		"cusip": "cusip",
+		"primary_exchange_id": "tinyId",
+		"name": { "length": 255 },
+		"symbol": { "length": 10 },
+		"$surrogateKey":["id"]
+	},
+	"mrkCusips":
+	{
+		"id": "cusip",
+		"name": "name",
+		"cik": "cik?",
+		"$surrogateKey":["id"]
+	},
+	"mrkCompanies":
+	{
+		"id": "cik",
+		"name": "name",
+		"$surrogateKey":["id"]
 	},
 	"umUsers":
 	{

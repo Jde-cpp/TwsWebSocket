@@ -17,9 +17,9 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	typedef uint32 SessionPK;
-	typedef uint32 UserPK;
-	typedef uint32 ClientPK;
+	using SessionPK=uint32;
+	using UserPK=uint32;
+	using ClientPK=uint32;
 	struct SessionKey
 	{
 		SessionPK SessionId{0};
@@ -31,16 +31,10 @@ namespace Jde::Markets::TwsWebSocket
 		bool operator==(const ClientKey& x)const noexcept{ return x.SessionId==SessionId && x.ClientId==ClientId; }
 		ClientPK ClientId{0};
 	};
-/*		ClientKey( SessionPK SessionId ){}
-		ClientKey( SessionPK sessionId, ClientPK clientId, UserPK userId )noexcept:SessionId{sessionId}, ClientId{clientId}, UserId{userId}{}
-		ClientKey ForClientId()noexcept{ return ClientKey{} }:SessionId{sessionId}, ClientId{clientId}, UserId{userId}{}
-		//size_t Handle()const noexcept{ return (size_t)SessionId << 32 | ClientId; }
-		SessionPK SessionId{0};
-		UserPK UserId{0};
-	};*/
-	typedef Proto::Results::MessageUnion MessageType; typedef sp<MessageType> MessageTypePtr;
 
-	//extern shared_ptr<Settings::Container> SettingsPtr;
+	using MessageType=Proto::Results::MessageUnion;
+	using MessageTypePtr=sp<MessageType>;
+
 
 	using Proto::Requests::ERequests;
 	using Proto::Results::EResults;

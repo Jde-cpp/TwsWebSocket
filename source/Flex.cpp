@@ -18,11 +18,11 @@ namespace Jde::Markets::TwsWebSocket
 
 	typedef map<uint16,Proto::Results::Flex> CacheType;
 	shared_mutex _cacheMutex;
-	constexpr string_view CacheName{ "Flex::SendTrades" };
+	constexpr sv CacheName{ "Flex::SendTrades" };
 	atomic<uint32> DirectoryCrc{0};
 
 	sp<CacheType> Load()noexcept(false);
-	void Flex::SendTrades( const string& /*accountNumber*/, TimePoint startTime, TimePoint endTime, const ProcessArg& web )noexcept
+	void Flex::SendTrades( str /*accountNumber*/, TimePoint startTime, TimePoint endTime, const ProcessArg& web )noexcept
 	{
 		try
 		{
@@ -58,7 +58,7 @@ namespace Jde::Markets::TwsWebSocket
 			web.Push( e );
 		}
 	}
-	time_t ToTimeT( const string& date )noexcept
+	time_t ToTimeT( str date )noexcept
 	{
 		time_t value{0};
 		if( date.size()==15 )

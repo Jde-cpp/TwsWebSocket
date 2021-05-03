@@ -23,7 +23,7 @@ int main( int argc, char** argv )
 	try
 	{
 		Jde::OSApp::Startup( argc, argv, "TwsWebSocket" );
-		Jde::IApplication::AddThread( make_shared<Jde::Threading::InterruptibleThread>("Startup", [&](){Jde::Markets::TwsWebSocket::Startup();}) );
+		Jde::IApplication::AddThread( std::make_shared<Jde::Threading::InterruptibleThread>("Startup", [&](){Jde::Markets::TwsWebSocket::Startup();}) );
 
 		Jde::IApplication::Pause();
 		Jde::IApplication::CleanUp();

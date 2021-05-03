@@ -53,7 +53,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			pAccountSessionIds =  erase ? _accountSubscriptions.erase( pAccountSessionIds ) : std::next( pAccountSessionIds );
 		}
-		for_each( orphans.begin(), orphans.end(), [account]( var& idHandle ){ _client.CancelAccountUpdates(account, idHandle); } );
+		std::for_each( orphans.begin(), orphans.end(), [account]( var& idHandle ){ _client.CancelAccountUpdates(account, idHandle); } );
 	}
 
 	void WebSendGateway::EraseSession( SessionPK id )noexcept
@@ -70,7 +70,7 @@ namespace Jde::Markets::TwsWebSocket
 			unique_lock l{_multiRequestMutex};
 			_multiRequests.emplace( key.ClientId, ids );
 		}
-		for_each( ids.begin(), ids.end(), [this, &key](auto id){ _requestSession.emplace(id, key); } );
+		std::for_each( ids.begin(), ids.end(), [this, &key](auto id){ _requestSession.emplace(id, key); } );
 	}
 
 	void WebSendGateway::AddRequestSessions( SessionPK id, const vector<EResults>& webSendMessages )noexcept//todo arg forwarding.
@@ -312,7 +312,7 @@ namespace Jde::Markets::TwsWebSocket
 			THROW( Exception("Could not find any market subscriptions.") );
 	}
 
-	void WebSendGateway::PushError( int errorCode, string_view errorString, TickerId id )noexcept
+	void WebSendGateway::PushError( int errorCode, sv errorString, TickerId id )noexcept
 	{
 		if( id>0 )
 		{
@@ -337,7 +337,7 @@ namespace Jde::Markets::TwsWebSocket
 			});
 		}
 	}
-	void WebSendGateway::PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept(false)
+	void WebSendGateway::PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false)
 	{
 		auto pError = make_unique<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code(errorCode); pError->set_message(errorString);
 		MessageUnion msg; msg.set_allocated_error( pError.release() );
@@ -372,7 +372,7 @@ namespace Jde::Markets::TwsWebSocket
 			DBG( "Could not find session for req:  '{}'."sv, reqId );
 	}
 */
-	bool WebSendGateway::Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept
+	bool WebSendGateway::Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false)
 	{
 		var clientKey = GetClientRequest( id );
 		if( clientKey.SessionId )
@@ -478,7 +478,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 */
-	bool WebSendGateway::AccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept
+	bool WebSendGateway::AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept
 	{
 		std::unique_lock<std::shared_mutex> l3( _accountSubscriptionMutex );
 		var pAccountNumberSessions = _accountSubscriptions.find(accountNumber);

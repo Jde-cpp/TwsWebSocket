@@ -12,8 +12,8 @@ namespace Jde::Markets::TwsWebSocket
 		ProcessArg( const SessionKey& key, ClientPK clientId, sp<WebSendGateway> webSendPtr ): ClientKey{ key, clientId }, WebSendPtr{ webSendPtr } {}
 		ProcessArg()=default;
 		TickerId AddRequestSession()const noexcept{ return WebSendPtr->AddRequestSession( *this ); }
-		void Push( MessageType&& msg )const noexcept{ WebSendPtr->Push( move(msg), SessionId); }
-		void Push( const Exception& e )const noexcept{ WebSendPtr->Push(e, *this); }
+		void Push( MessageType&& msg )const noexcept(false){ WebSendPtr->Push( move(msg), SessionId); }
+		void Push( const Exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
 		void Push( EResults x )const noexcept{ WebSendPtr->Push(x, *this); }
 		sp<WebSendGateway> WebSendPtr;
 	};
@@ -36,7 +36,7 @@ namespace Jde::Markets::TwsWebSocket
 		void HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& session )noexcept;
 		bool ReceiveRequests( const SessionKey& session, const Proto::Requests::GenericRequests& request )noexcept;
 		void ReceiveStdDev( ContractPK contractId, double days, DayIndex start, const ProcessArg& inputArg )noexcept;
-		void Receive( Proto::Requests::ERequests type, const string& name, const ClientKey& arg )noexcept;
+		void Receive( Proto::Requests::ERequests type, str name, const ClientKey& arg )noexcept;
 		void ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept;
 		void ReceiveOptions( const SessionKey& session, const Proto::Requests::RequestOptions& request )noexcept;
 		void RequestFundamentalData( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const ClientKey& key )noexcept;

@@ -81,7 +81,7 @@ namespace Jde::Markets::TwsWebSocket
 		CANCEL_TICK_BY_TICK_DATA      = 98
 	};
 
-	constexpr std::string_view EWebReceiveStrings[]=
+	constexpr sv EWebReceiveStrings[]=
 	{
 		"None",
 		"RequestMarketData",

@@ -8,7 +8,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	struct WebCoSocket;
-	struct WebSendGateway final: enable_shared_from_this<WebSendGateway>, boost::noncopyable, IAccountUpdateHandler //TODO not a worker, WebSendGateway
+	struct WebSendGateway final: std::enable_shared_from_this<WebSendGateway>, boost::noncopyable, IAccountUpdateHandler //TODO not a worker, WebSendGateway
 	{
 		typedef tuple<SessionPK,MessageTypePtr> QueueType;
 		WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
@@ -32,10 +32,10 @@ namespace Jde::Markets::TwsWebSocket
 
 		bool HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
 
-		void Push( const Exception& e, const ClientKey& key )noexcept{ PushError( -1, e.what(), key );}
+		void Push( const Exception& e, const ClientKey& key )noexcept(false){ PushError( -1, e.what(), key );}
 		void Push( const IBException& e, const ClientKey& key )noexcept(false){ PushError( e.ErrorCode, e.what(), key );}
-		void PushError( int errorCode, string_view errorString, TickerId id )noexcept;
-		void PushError( int errorCode, const string& errorString, const ClientKey& key )noexcept(false);
+		void PushError( int errorCode, sv errorString, TickerId id )noexcept;
+		void PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false);
 
 
 		void Push( MessageType&& pUnion, SessionPK id )noexcept(false);
@@ -48,7 +48,7 @@ namespace Jde::Markets::TwsWebSocket
 		void Push( EResults eResults, function<void(MessageType&)> set )noexcept;
 		void Push( EResults eResults, function<void(MessageType&, SessionPK)> set )noexcept;
 
-		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
+		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false);
 		//void PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 
 		void AccountDownloadEnd( sv accountNumber )noexcept override;
@@ -57,7 +57,7 @@ namespace Jde::Markets::TwsWebSocket
 		//bool Push( const Proto::Results::AccountUpdate& accountUpdate )noexcept;
 		void ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, TickerId tickerId )noexcept;
 		void Push( const Proto::Results::CommissionReport& report )noexcept;
-		bool AccountRequest( const string& accountNumber, function<void(MessageType&)> setMessage )noexcept;
+		bool AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept;
 		void AddRequestSessions( SessionPK id, const vector<Proto::Results::EResults>& webSendMessages )noexcept;
 
 		void SetClientSync( sp<TwsClientSync> pClient )noexcept{ DBG0( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }

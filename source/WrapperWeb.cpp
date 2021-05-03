@@ -274,7 +274,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		unique_lock l{ _historicalDataMutex };
 		auto& pData = _historicalData.emplace( reqId, make_unique<Proto::Results::HistoricalData>() ).first->second;
-		_pWebSend->Push( reqId, [p=pData.release()](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_historical_data(p); } );
+		TRY( _pWebSend->Push(reqId, [p=pData.release()](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_historical_data(p); }) );
 		_historicalData.erase( reqId );
 	}
 
@@ -440,9 +440,7 @@ namespace Jde::Markets::TwsWebSocket
 		else
 		{
 			WrapperLog::contractDetails( reqId, contractDetails );
-			auto pReqDetails = _contractDetails.find( reqId );
-			if( pReqDetails==_contractDetails.end() )
-				pReqDetails = _contractDetails.emplace( reqId, make_unique<Proto::Results::ContractDetailsResult>() ).first;
+			auto pReqDetails = _contractDetails.try_emplace( reqId, LazyWrap([](){return make_unique<Proto::Results::ContractDetailsResult>();}) ).first;
 			ToProto( contractDetails, *pReqDetails->second->add_details() );
 		}
 	}

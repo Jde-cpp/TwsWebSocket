@@ -38,13 +38,13 @@ namespace Jde::Markets::TwsWebSocket
 		std::thread( fnctn ).detach();
 	}
 */
-	void News::RequestArticle( const string& providerCode, const string& articleId, const ProcessArg& arg )noexcept
+	void News::RequestArticle( str providerCode, str articleId, const ProcessArg& arg )noexcept
 	{
 		_sync.reqNewsArticle( arg.AddRequestSession(), providerCode, articleId );
 	}
 	void News::RequestHistorical( ContractPK contractId, const google::protobuf::RepeatedPtrField<string>& providerCodes, uint limit, time_t start, time_t end, const ProcessArg& arg )noexcept
 	{
-		_sync.reqHistoricalNews( arg.AddRequestSession(), contractId, IO::ProtoUtilities::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
+		_sync.reqHistoricalNews( arg.AddRequestSession(), contractId, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
 	}
 
 

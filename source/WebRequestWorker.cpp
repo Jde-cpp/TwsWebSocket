@@ -5,7 +5,7 @@
 #include "./PreviousDayValues.h"
 #include "./WatchListData.h"
 #include "./WebCoSocket.h"
-//#include "../../Framework/source/um/UM.h"
+#include "./requests/EdgarRequests.h"
 #include "../../Framework/source/db/GraphQL.h"
 #include "../../MarketLibrary/source/data/HistoricalDataCache.h"
 #include "../../MarketLibrary/source/data/OptionData.h"
@@ -88,7 +88,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void WebRequestWorker::Receive( ERequests type, const string& name, const ClientKey& arg )noexcept
+	void WebRequestWorker::Receive( ERequests type, str name, const ClientKey& arg )noexcept
 	{
 		if( type==ERequests::Query )
 		{
@@ -182,6 +182,8 @@ namespace Jde::Markets::TwsWebSocket
 			WatchListData::Delete( name, {arg, _pWebSend} );
 		else if( type==ERequests::WatchList )
 			WatchListData::SendList( name, {arg, _pWebSend} );
+		//else if( type==ERequests::Investors )
+//			EdgarRequests::Investors( name, {arg, _pWebSend} );
 	}
 
 /*	void WebRequestWorker::ReceiveRest( const ClientKey& arg, Proto::Requests::ERequests type, sv url, sv item )noexcept
@@ -210,10 +212,22 @@ namespace Jde::Markets::TwsWebSocket
 			WatchListData::SendLists( true, ARG(request.id()) );
 		else if( request.type()==ERequests::WatchLists )
 			WatchListData::SendLists( false, ARG(request.id()) );
+		else if( request.type()==ERequests::Filings || request.type()==ERequests::Investors )
+		{
+			if( request.ids().size()!=1 )
+				_pWebSend->Push( Exception("ids sent: {} expected 1."sv, request.ids().size()), {{session}, request.id()} );
+			else
+			{
+				var contractId = request.ids()[0];
+				if( request.type()==ERequests::Filings )
+					EdgarRequests::Filings( request.ids()[0], ARG(request.id()) );
+				else if( request.type()==ERequests::Investors )
+					EdgarRequests::Investors( contractId, ARG(request.id()) );
+			}
+		}
 		else
 			handled = false;//WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, request.type(), sessionId );
 		return handled;
-
 	}
 	void WebRequestWorker::ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept
 	{
@@ -232,8 +246,7 @@ namespace Jde::Markets::TwsWebSocket
 			var pDetails = _sync.ReqContractDetails( contractId ).get();
 			try
 			{
-				if( pDetails->size()!=1 )
-					THROW( Exception("Contract '{}' return '{}' records"sv, contractId, pDetails->size()) );
+				THROW_IF( pDetails->size()!=1, "Contract '{}' return '{}' records"sv, contractId, pDetails->size() );
 				var pStats = HistoricalDataCache::ReqStats( {pDetails->front()}, days, start );
 				auto p = new Proto::Results::Statistics(); p->set_request_id(inputArg.ClientId); p->set_count(static_cast<uint32>(pStats->Count)); p->set_average(pStats->Average);p->set_variance(pStats->Variance);p->set_min(pStats->Min); p->set_max(pStats->Max);
 				MessageType msg; msg.set_allocated_statistics( p );
@@ -257,14 +270,12 @@ namespace Jde::Markets::TwsWebSocket
 				//TODO see if I have, if not download it, else try getting from tws. (make sure have date.)
 				if( underlyingId==0 )
 					THROW( Exception("({}.{}) did not pass a contract id.", web.SessionId, web.ClientId) );
-				var pDetails = _sync.ReqContractDetails( underlyingId ).get();
-				if( pDetails->size()!=1 )
-					THROW( Exception("({}.{}) '{}' had '{}' contracts", web.SessionId, web.ClientId, underlyingId, pDetails->size()) );
+				var pDetails = _sync.ReqContractDetails( underlyingId ).get(); THROW_IF( pDetails->size()!=1 , Exception("({}.{}) '{}' had '{}' contracts", web.SessionId, web.ClientId, underlyingId, pDetails->size()) );
 				var contract = Contract{ pDetails->front() };
 				if( contract.SecType==SecurityType::Option )
 					THROW( Exception("({}.{})Passed in option contract ({})'{}', expected underlying", web.SessionId, web.ClientId, underlyingId, contract.LocalSymbol) );
 
-				const std::array<string_view,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
+				const std::array<sv,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
 				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !params.start_expiration() )
 					THROW( Exception("({}.{})ReceiveOptions request for '{}' specified no date.", web.SessionId, web.ClientId, contract.Symbol) );
 
@@ -275,9 +286,7 @@ namespace Jde::Markets::TwsWebSocket
 					auto fetch = [&]( DayIndex expiration )noexcept(false)
 					{
 						var ibContract = TwsClientCache::ToContract( contract.Symbol, expiration, right, params.start_srike() && params.start_srike()==params.end_strike() ? params.start_srike() : 0 );
-						auto pContracts = _sync.ReqContractDetails( ibContract ).get();
-						if( pContracts->size()<1 )
-							THROW( Exception("'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size()) );
+						auto pContracts = _sync.ReqContractDetails( ibContract ).get(); THROW_IF( pContracts->size()<1, Exception("'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size()) );
 						var start = params.start_srike(); var end = params.end_strike();
 						if( !ibContract.strike && (start!=0 || end!=0) )//remove contracts outside bounds?
 						{

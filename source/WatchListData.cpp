@@ -27,7 +27,7 @@ namespace Jde::Markets::TwsWebSocket
 			var& path = dirEntry.path();
 			try
 			{
-				var pFile = IO::ProtoUtilities::Load<Proto::Watch::File>( path );
+				var pFile = IO::Proto::Load<Proto::Watch::File>( path );
 				if( !portfolio.has_value() || portfolio==pFile->is_portfolio() )
 					names.push_back( pFile->name() );
 			}
@@ -57,16 +57,16 @@ namespace Jde::Markets::TwsWebSocket
 		}).detach();
 	}
 
-	up<Proto::Watch::File> WatchListData::Content( const string& name )noexcept(false)
+	up<Proto::Watch::File> WatchListData::Content( str name )noexcept(false)
 	{
 		if( !name.size() )
 			THROW( Exception("did not specify a watch name value.") );
 		var dir = GetDir();
 		var file = dir/StringUtilities::Replace( name+".watch", ' ', '_' );
-		return IO::ProtoUtilities::Load<Proto::Watch::File>( file );
+		return IO::Proto::Load<Proto::Watch::File>( file );
 	}
 
-	void WatchListData::SendList( const string& watchName, const ProcessArg& inputArg )noexcept
+	void WatchListData::SendList( str watchName, const ProcessArg& inputArg )noexcept
 	{
 		std::thread( [arg=inputArg, name=watchName]()
 		{
@@ -85,7 +85,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}).detach();
 	}
-/*	void WatchListData::CreateList( const ClientKey& key, const string& watchName )noexcept
+/*	void WatchListData::CreateList( const ClientKey& key, str watchName )noexcept
 	{
 		std::thread( [sessionId, clientId, name=watchName]()
 		{
@@ -98,7 +98,7 @@ namespace Jde::Markets::TwsWebSocket
 
 				Proto::Watch::File file;
 				file.set_name( name );
-				IO::ProtoUtilities::Save( file, path );
+				IO::Proto::Save( file, path );
 				arg.WebSendPtr->Push( sessionId, clientId, EResults::Accept );
 			}
 			catch( const Exception& e )
@@ -107,7 +107,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}).detach();
 	}*/
-	void WatchListData::Delete( const string& watchName, const ProcessArg& inputArg )noexcept
+	void WatchListData::Delete( str watchName, const ProcessArg& inputArg )noexcept
 	{
 		std::thread( [arg=inputArg, name=watchName]()
 		{
@@ -139,7 +139,7 @@ namespace Jde::Markets::TwsWebSocket
 					THROW( Exception("need a watchlist name.") );
 
 				var path = dir/StringUtilities::Replace( name+".watch", ' ', '_' );
-				IO::ProtoUtilities::Save( file, path );
+				IO::Proto::Save( file, path );
 				arg.Push( EResults::Accept );
 			}
 			catch( const Exception& e )
