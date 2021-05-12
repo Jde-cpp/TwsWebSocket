@@ -19,8 +19,8 @@
 #include "../../Framework/source/db/GraphQL.h"
 #include "../../Framework/source/db/Syntax.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
-#include "../../MarketLibrary/source/types/Contract.h"
-#include "../../MarketLibrary/source/types/MyOrder.h"
+#include <jde/markets/types/Contract.h>
+#include <jde/markets/types/MyOrder.h>
 #include "../../MarketLibrary/source/types/OrderEnums.h"
 
 #define var const auto
@@ -181,7 +181,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		WrapperLog::managedAccounts( accountsList );
 		Proto::Results::StringMap accountList;
-		var accounts = StringUtilities::Split( accountsList );
+		var accounts = Str::Split( accountsList );
 		if( !_setAccounts )
 		{
 			LoadAccess();
@@ -440,7 +440,9 @@ namespace Jde::Markets::TwsWebSocket
 		else
 		{
 			WrapperLog::contractDetails( reqId, contractDetails );
-			auto pReqDetails = _contractDetails.try_emplace( reqId, LazyWrap([](){return make_unique<Proto::Results::ContractDetailsResult>();}) ).first;
+			auto pReqDetails = _contractDetails.find( reqId );
+			if( ; pReqDetails==_contractDetails.end() )
+				pReqDetails = _contractDetails.emplace( reqId, make_unique<Proto::Results::ContractDetailsResult>() ).first;
 			ToProto( contractDetails, *pReqDetails->second->add_details() );
 		}
 	}

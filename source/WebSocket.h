@@ -2,6 +2,7 @@
 #include <boost/asio.hpp>
 #include <boost/beast/websocket.hpp>
 #include "WebRequestWorker.h"
+#include "../../Framework/source/threading/Interrupt.h"
 
 //https://www.boost.org/doc/libs/1_71_0/libs/beast/example/websocket/server/sync/websocket_server_sync.cpp
 

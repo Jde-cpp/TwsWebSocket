@@ -49,3 +49,5 @@ setup/Debug/*
 jde/*
 source/packages/*
 *.log
+.vs/*
+source/*.i

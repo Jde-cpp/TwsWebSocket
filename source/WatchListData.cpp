@@ -1,6 +1,7 @@
 #include "WatchListData.h"
 #include "WebSocket.h"
 #include "../../Framework/source/io/ProtoUtilities.h"
+#include <jde/Str.h>
 
 #define var const auto
 //#define _socket WebSocket::Instance()
@@ -62,7 +63,7 @@ namespace Jde::Markets::TwsWebSocket
 		if( !name.size() )
 			THROW( Exception("did not specify a watch name value.") );
 		var dir = GetDir();
-		var file = dir/StringUtilities::Replace( name+".watch", ' ', '_' );
+		var file = dir/Str::Replace( name+".watch", ' ', '_' );
 		return IO::Proto::Load<Proto::Watch::File>( file );
 	}
 
@@ -92,7 +93,7 @@ namespace Jde::Markets::TwsWebSocket
 			try
 			{
 				var dir = GetDir();
-				var path = dir/StringUtilities::Replace( name, ' ', '_' );
+				var path = dir/Str::Replace( name, ' ', '_' );
 				if( fs::exists(path) )
 					THROW( IOException(path, "already exists") );
 
@@ -114,7 +115,7 @@ namespace Jde::Markets::TwsWebSocket
 			try
 			{
 				var dir = GetDir();
-				var path = dir/StringUtilities::Replace( name, ' ', '_' );
+				var path = dir/Str::Replace( name, ' ', '_' );
 				if( !fs::exists(path) )
 					THROW( IOException(path, "watch does not exist") );
 
@@ -138,7 +139,7 @@ namespace Jde::Markets::TwsWebSocket
 				if( !name.size() )
 					THROW( Exception("need a watchlist name.") );
 
-				var path = dir/StringUtilities::Replace( name+".watch", ' ', '_' );
+				var path = dir/Str::Replace( name+".watch", ' ', '_' );
 				IO::Proto::Save( file, path );
 				arg.Push( EResults::Accept );
 			}

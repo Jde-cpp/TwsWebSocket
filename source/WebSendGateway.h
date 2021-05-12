@@ -3,8 +3,9 @@
 #include <boost/core/noncopyable.hpp>
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../MarketLibrary/source/wrapper/WrapperLog.h"
+#include "../../MarketLibrary/source/types/IBException.h"
 
-//namespace Jde::Markets{ struct TwsClientSync;}
+namespace Jde::Markets{ struct IBException;}
 namespace Jde::Markets::TwsWebSocket
 {
 	struct WebCoSocket;

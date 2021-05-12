@@ -1,10 +1,10 @@
 #include "TwsSendWorker.h"
 #include "News.h"
 #include "WebRequestWorker.h"
-#include "../../MarketLibrary/source/types/MyOrder.h"
+#include <jde/markets/types/MyOrder.h>
 #include "../../MarketLibrary/source/TickManager.h"
-#include "../../Blockly/source/BlocklyLibrary.h"
-#include "../jde/blockly/IBlockly.h"
+#include <jde/Blockly/BlocklyLibrary.h>
+#include <jde/blockly/IBlockly.h>
 #include "../../Framework/source/io/ProtoUtilities.h"
 
 #define var const auto

@@ -1,5 +1,5 @@
 #pragma once
-
+#include "../../Framework/source/threading/InterruptibleThread.h"
 namespace Jde::Blockly::Proto{ class ResultUnion; }
 namespace Jde::Markets::TwsWebSocket
 {

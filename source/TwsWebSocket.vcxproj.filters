@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\requests">
+      <UniqueIdentifier>{d5201e7b-fb76-4ea2-b447-172d15f35c61}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\requests">
+      <UniqueIdentifier>{4651686e-b8cb-4418-85dc-cf6fb3600470}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WebSocket.h">
@@ -50,6 +56,9 @@
     </ClInclude>
     <ClInclude Include="Flex.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="requests\EdgarRequests.h">
+      <Filter>Header Files\requests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -91,6 +100,9 @@
     </ClCompile>
     <ClCompile Include="WebCoSocket.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="requests\EdgarRequests.cpp">
+      <Filter>Source Files\requests</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

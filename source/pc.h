@@ -37,8 +37,10 @@
 #include <Execution.h>
 #include <Order.h>
 
+#include <jde/TypeDefs.h>
+/*
 #include "../../Framework/source/log/Logging.h"
-#include "../../Framework/source/TypeDefs.h"
+
 #include "../../Framework/source/JdeAssert.h"
 #include "../../Framework/source/application/Application.h"
 #include "../../Framework/source/DateTime.h"
@@ -53,13 +55,12 @@
 /*
 #include "../../MarketLibrary/source/types/MyOrder.h"
 #include "../../MarketLibrary/source/types/Exchanges.h"
-*/
+
 #include "../../MarketLibrary/source/TwsProcessor.h"
-#include "../../Framework/source/threading/InterruptibleThread.h"
-#include "../../Framework/source/collections/Queue.h"
-#include "../../MarketLibrary/source/TypeDefs.h"
-#include "../../MarketLibrary/source/types/IBException.h"
 //#include "markets/types/messages/IBEnums.h"
+*/
+#include "../../Framework/source/collections/Queue.h"
+#include <jde/markets/TypeDefs.h>
 /*
 #pragma warning(disable:4100)
 #pragma warning(disable:4127)

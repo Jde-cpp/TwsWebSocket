@@ -4,6 +4,7 @@
 #include <EClient.h>
 #include "WrapperWeb.h"
 #include "EWebReceive.h"
+#include "../../MarketLibrary/source/TwsProcessor.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 
 

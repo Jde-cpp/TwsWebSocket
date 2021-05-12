@@ -1,4 +1,5 @@
 #pragma once
+#include "../../Framework/source/threading/InterruptibleThread.h"
 
 namespace Jde::Markets{ struct TwsClientSync; }
 namespace Jde::Markets::TwsWebSocket

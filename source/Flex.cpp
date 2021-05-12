@@ -4,9 +4,10 @@
 #include <boost/property_tree/xml_parser.hpp>
 
 #include "WebSocket.h"
-#include "../../MarketLibrary/source/types/Contract.h"
+#include <jde/markets/types/Contract.h>
 #include "../../Framework/source/Settings.h"
 #include "../../Framework/source/Cache.h"
+#include <jde/io/File.h>
 
 #define var const auto
 #define _socket WebSocket::Instance()

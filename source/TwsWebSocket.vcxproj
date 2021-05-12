@@ -64,11 +64,11 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>PROTOBUF_USE_DLLS;BOOST_ALL_DYN_LINK;_WIN32_WINDOWS=0x0A00;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;PROTOBUF_USE_EXCEPTIONS=0;NOMINMAX;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BOOST_ALL_DYN_LINK;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;NOMINMAX;ONE_CORE;PROTOBUF_USE_DLLS;PROTOBUF_USE_EXCEPTIONS=0;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>4068;4251;4275;4297;5105;5104</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>../framework/source;../MarketLibrary/source/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../framework/source;../MarketLibrary/source/;../../Public/</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/Zc:preprocessor /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
@@ -78,8 +78,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>TwsSocketClient.lib;libprotobufd.lib;boost_coroutine-vc140-mt-gd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\;../../Public/stage/$(ConfigurationName)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>TwsSocketClient64.lib;libprotobufd.lib;boost_coroutine-vc140-mt-gd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
@@ -91,11 +91,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>PROTOBUF_USE_DLLS;BOOST_ALL_DYN_LINK;_WIN32_WINDOWS=0x0A00;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;PROTOBUF_USE_EXCEPTIONS=0;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BOOST_ALL_DYN_LINK;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;NOMINMAX;ONE_CORE;PROTOBUF_USE_DLLS;PROTOBUF_USE_EXCEPTIONS=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>4068;4251;4275;4297;5105;5104</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>../framework/source;../MarketLibrary/source/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../framework/source;../MarketLibrary/source/;../../Public/</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/Zc:preprocessor /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
@@ -106,8 +106,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>TwsSocketClient.lib;libprotobuf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\;../../Public/stage/$(ConfigurationName)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>TwsSocketClient64.lib;libprotobuf.lib;boost_coroutine-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
@@ -128,6 +128,7 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="PreviousDayValues.cpp" />
+    <ClCompile Include="requests\EdgarRequests.cpp" />
     <ClCompile Include="TwsSendWorker.cpp" />
     <ClCompile Include="WatchListData.cpp" />
     <ClCompile Include="WebCoSocket.cpp">
@@ -142,6 +143,7 @@
     <ClInclude Include="Flex.h" />
     <ClInclude Include="News.h" />
     <ClInclude Include="PreviousDayValues.h" />
+    <ClInclude Include="requests\EdgarRequests.h" />
     <ClInclude Include="TwsSendWorker.h" />
     <ClInclude Include="TypeDefs.h" />
     <ClInclude Include="WatchListData.h" />
