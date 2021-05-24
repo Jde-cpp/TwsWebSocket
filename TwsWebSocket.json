@@ -2,7 +2,7 @@
 	"barPath": "",
 	"GoogleAuthClientId": "926418369328-dm78ui3p1tar2oen6qgkv3rkb33t5pik.apps.googleusercontent.com",
 	"dbDriver": "Jde.DB.Odbc.dll",
-	"connectionString": "DSN=Jde_UM_Connection2",
+	"connectionString": "DSN=Jde_TWS_Connection",
 	"metaDataPath": "../meta.json",
 	"logging":
 	{

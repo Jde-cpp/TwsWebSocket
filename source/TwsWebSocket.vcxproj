@@ -79,7 +79,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\;../../Public/stage/$(ConfigurationName)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>TwsSocketClient64.lib;libprotobufd.lib;boost_coroutine-vc140-mt-gd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TwsSocketClient.lib;libprotobufd.lib;boost_coroutine-vc140-mt-gd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
@@ -107,7 +107,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir).bin\$(Configuration)\;../../Public/stage/$(ConfigurationName)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>TwsSocketClient64.lib;libprotobuf.lib;boost_coroutine-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TwsSocketClient.lib;libprotobuf.lib;boost_coroutine-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
