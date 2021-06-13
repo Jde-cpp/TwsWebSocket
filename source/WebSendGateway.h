@@ -33,6 +33,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		bool HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
 
+		void TryPush( const Exception& e, const ClientKey& key )noexcept{ TRY(PushError(-1, e.what(), key)); }
 		void Push( const Exception& e, const ClientKey& key )noexcept(false){ PushError( -1, e.what(), key );}
 		void Push( const IBException& e, const ClientKey& key )noexcept(false){ PushError( e.ErrorCode, e.what(), key );}
 		void PushError( int errorCode, sv errorString, TickerId id )noexcept;
@@ -50,6 +51,7 @@ namespace Jde::Markets::TwsWebSocket
 		void Push( EResults eResults, function<void(MessageType&, SessionPK)> set )noexcept;
 
 		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false);
+		optional<bool> TryPush( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept{ return Try<bool>( [&]()->bool{return this->Push(id,set);} ); }
 		//void PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 
 		void AccountDownloadEnd( sv accountNumber )noexcept override;
@@ -61,10 +63,10 @@ namespace Jde::Markets::TwsWebSocket
 		bool AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept;
 		void AddRequestSessions( SessionPK id, const vector<Proto::Results::EResults>& webSendMessages )noexcept;
 
-		void SetClientSync( sp<TwsClientSync> pClient )noexcept{ DBG0( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
+		void SetClientSync( sp<TwsClientSync> pClient )noexcept{ DBG( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
 	private:
 		void Push( string&& data, SessionPK sessionId )noexcept;
-		ClientKey GetClientRequest( TickerId ibReqId )noexcept{return _requestSession.Find( ibReqId, {} ); }
+		ClientKey GetClientRequest( TickerId ibReqId )noexcept{return _requestSession.Find( ibReqId ).value_or( ClientKey{} ); }
 
 		void Run()noexcept;
 		void HandleRequest( SessionPK sessionId, string&& data )noexcept;

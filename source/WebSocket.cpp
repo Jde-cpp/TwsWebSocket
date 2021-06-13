@@ -42,14 +42,14 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WebSocket::Shutdown()noexcept
 	{
-		DBG0( "WebSocket::Shutdown"sv );
+		DBG( "WebSocket::Shutdown"sv );
 		if( _pAcceptObject )
 			_pAcceptObject->close();
 		_pAcceptObject = nullptr;
 		_requestWorker.Shutdown();
 		_pWebSend->Shutdown();
 		_pWebSend = nullptr;
-		DBG0( "WebSocket::Shutdown - Leaving"sv );
+		DBG( "WebSocket::Shutdown - Leaving"sv );
 	}
 
 	std::once_flag SingleClient;
@@ -74,7 +74,7 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				tcp::socket socket{ioc};// This will receive the new connection
 				_pAcceptObject->accept(socket);// Block until we get a connection
-				DBG0( "Accepted Connection."sv );
+				DBG( "Accepted Connection."sv );
 				auto pSession = make_shared<websocket::stream<tcp::socket>>( std::move(socket) );
 				pSession->binary( true );
 				IApplication::AddThread( make_shared<Threading::InterruptibleThread>("WebSession", [&,pSession](){DoSession(pSession);}) );
@@ -85,7 +85,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}
 		TwsProcessor::Stop();
-		DBG0( "Leaving WebSocket::Accept()"sv );
+		DBG( "Leaving WebSocket::Accept()"sv );
 	}
 
 	void WebSocket::DoSession( shared_ptr<Stream> pSession )noexcept
@@ -151,7 +151,7 @@ namespace Jde::Markets::TwsWebSocket
 				break;
 			}
 		}
-		DBG0( "Leaving WebSocket::DoSession"sv );
+		DBG( "Leaving WebSocket::DoSession"sv );
 	}
 
 	void WebSocket::AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept
@@ -196,7 +196,7 @@ namespace Jde::Markets::TwsWebSocket
 		};
 		_outgoing.ForEach( createBuffers );
 		if( !buffers.size() )
-			DBG0( "!buffers.size()"sv );
+			DBG( "!buffers.size()"sv );
 		_outgoing.eraseIf( [](const Queue<MessageType>& queue){ return queue.size()==0; } );
 		set<SessionPK> brokenIds;
 		for( var& [id, buffer] : buffers )
@@ -213,12 +213,12 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( boost::exception& e )
 			{
-				brokenIds.emplace( id ); ERRN( "removing because Error writing to Session:  {}", boost::diagnostic_information(&e) );
+				brokenIds.emplace( id ); ERR( "removing because Error writing to Session:  {}"sv, boost::diagnostic_information(&e) );
 				try
 				{
 					pSession->close( websocket::close_code::none );
 				}
-				catch( const boost::exception& e2 )	{ERRN( "Error closing:  ", boost::diagnostic_information(&e2) );}
+				catch( const boost::exception& e2 )	{ERR( "Error closing: {} "sv, boost::diagnostic_information(&e2) );}
 			}
 		};
 		for( var id : brokenIds )

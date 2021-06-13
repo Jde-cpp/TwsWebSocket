@@ -1,5 +1,5 @@
 #include "BlocklyWorker.h"
-#include <jde/Blockly/BlocklyLibrary.h>
+#include <jde/blockly/BlocklyLibrary.h>
 #include "WebSendGateway.h"
 
 #define var const auto

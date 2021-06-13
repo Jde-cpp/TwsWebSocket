@@ -41,7 +41,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WatchListData::SendLists( bool portfolio, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [arg=inputArg, portfolio]()
+		std::thread( [arg=inputArg, portfolio]
 		{
 			try
 			{
@@ -69,7 +69,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WatchListData::SendList( str watchName, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [arg=inputArg, name=watchName]()
+		std::thread( [arg=inputArg, name=watchName]
 		{
 			try
 			{
@@ -110,7 +110,7 @@ namespace Jde::Markets::TwsWebSocket
 	}*/
 	void WatchListData::Delete( str watchName, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [arg=inputArg, name=watchName]()
+		std::thread( [arg=inputArg, name=watchName]
 		{
 			try
 			{
@@ -130,7 +130,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WatchListData::Edit( const Proto::Watch::File& inputFile, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [arg=inputArg, file=inputFile]()
+		std::thread( [arg=inputArg, file=inputFile]
 		{
 			try
 			{

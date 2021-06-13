@@ -8,13 +8,20 @@
 #include "WrapperWeb.h"
 #include "../../Ssl/source/Ssl.h"
 
-
+#include "requests/News.h"
 #define var const auto
 
 namespace Jde::Markets::TwsWebSocket
 {
 	shared_ptr<Settings::Container> SettingsPtr;
 	void Startup( bool initialCall=true )noexcept;
+	auto Test()->Task2
+	{
+		auto pProviders = ( co_await TwsClientCo::NewsProviders() ).Get<map<string,string>>();
+		INFO( "[{}]={}"sv, pProviders->begin()->first, pProviders->begin()->second );
+		auto pProviders2 = ( co_await TwsClientCo::NewsProviders() ).Get<map<string,string>>();
+		INFO( "[{}]={}"sv, pProviders->rbegin()->first, pProviders->rbegin()->second );
+	}
 }
 
 int main( int argc, char** argv )
@@ -22,16 +29,19 @@ int main( int argc, char** argv )
 	int result = 0;//EXIT_SUCCESS;
 	try
 	{
-		Jde::OSApp::Startup( argc, argv, "TwsWebSocket" );
-		Jde::IApplication::AddThread( std::make_shared<Jde::Threading::InterruptibleThread>("Startup", [&](){Jde::Markets::TwsWebSocket::Startup();}) );
+		using namespace Jde;
+		OSApp::Startup( argc, argv, "TwsWebSocket" );
+		IApplication::AddThread( std::make_shared<Threading::InterruptibleThread>("Startup", [&](){Markets::TwsWebSocket::Startup();}) );
+		//Markets::TwsWebSocket::News::Google( "AAPL" );
+		//Markets::TwsWebSocket::News::RequestHistorical( Contracts::Spy.Id, const google::protobuf::RepeatedPtrField<string>& providerCodes, uint limit, time_t start, time_t end, const ProcessArg& arg )noexcept->THistoricalResult;
 
-		Jde::IApplication::Pause();
-		Jde::IApplication::CleanUp();
+		IApplication::Pause();
+		IApplication::CleanUp();
 	}
 	catch( const Jde::EnvironmentException& e )
 	{
 		std::cerr << e.what() << std::endl;
-		CRITICAL0( string(e.what()) );
+		CRITICAL( std::string(e.what()) );
 		result = 1;//EXIT_FAILURE
 	}
 	return result;
@@ -78,6 +88,7 @@ namespace Jde::Markets
 					std::this_thread::yield();
 			}
 		}
+		Test();
 		return;
 		try
 		{
@@ -115,7 +126,7 @@ namespace Jde::Markets
 		{
 //			DBG0( "Call again to test cache."sv );
 	//		Startup( false );
-			DBG0( "Startup Loading Complete."sv );
+			DBG( "Startup Loading Complete."sv );
 		}
 	}
 }

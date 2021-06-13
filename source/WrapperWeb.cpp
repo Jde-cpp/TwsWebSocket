@@ -259,7 +259,7 @@ namespace Jde::Markets::TwsWebSocket
 	void WrapperWeb::historicalData( TickerId reqId, const ::Bar& bar )noexcept
 	{
 		if( Cache::TryGet<uint>("breakpoint.BGGSQ") && *Cache::TryGet<uint>("breakpoint.BGGSQ")==reqId )
-			TRACE0( "Break here."sv );
+			TRACE( "Break here."sv );
 		if( WrapperSync::historicalDataSync(reqId, bar) )
 			return;
 		unique_lock l{ _historicalDataMutex };
@@ -435,7 +435,9 @@ namespace Jde::Markets::TwsWebSocket
 
 	void WrapperWeb::contractDetails( int reqId, const ::ContractDetails& contractDetails )noexcept
 	{
-		if( _detailsData.Contains(reqId) )
+		if( WrapperCo::_contractSingleHandles.Has(reqId) )
+			WrapperCo::contractDetails( reqId, contractDetails );
+		else if( _detailsData.Contains(reqId) )
 			WrapperSync::contractDetails( reqId, contractDetails );
 		else
 		{
@@ -448,7 +450,9 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::contractDetailsEnd( int reqId )noexcept
 	{
-		if( _detailsData.Contains(reqId) )
+		if( WrapperCo::_contractSingleHandles.Has(reqId) )
+			WrapperCo::contractDetailsEnd( reqId );
+		else if( _detailsData.Contains(reqId) )
 			WrapperSync::contractDetailsEnd( reqId );
 		else
 		{
@@ -498,14 +502,14 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend->Push( EResults::ExecutionDataEnd, reqId );
 	}
 
-	void WrapperWeb::newsArticle( int requestId, int articleType, const std::string& articleText )noexcept
-	{
-		auto pUpdate = new Proto::Results::NewsArticle();
-		pUpdate->set_is_text( articleType==0 );
-		pUpdate->set_value( articleText );
-		_pWebSend->Push( requestId, [p=pUpdate](MessageType& msg, ClientPK id){p->set_id( id ); msg.set_allocated_news_article(p);} );
-	}
-	void WrapperWeb::historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept
+	// void WrapperWeb::newsArticle( int requestId, int articleType, const std::string& articleText )noexcept
+	// {
+	// 	auto p = make_unique<Proto::Results::NewsArticle>();
+	// 	p->set_is_text( articleType==0 );
+	// 	p->set_value( articleText );
+	// 	_pWebSend->TryPush( requestId, [&p2=p](MessageType& msg, ClientPK id){p2->set_request_id( id ); msg.set_allocated_news_article(p2.release());} );
+	// }
+/*	void WrapperWeb::historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept
 	{
 		WrapperLog::historicalNews( requestId, time, providerCode, articleId, headline );
 		unique_lock l{_newsMutex};
@@ -539,8 +543,8 @@ namespace Jde::Markets::TwsWebSocket
 		pCollection->set_has_more( hasMore );
 		_pWebSend->Push( requestId, [p=pCollection](MessageType& msg, ClientPK id){p->set_request_id( id ); msg.set_allocated_historical_news(p);} );
 	}
-
-	void WrapperWeb::newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept
+*/
+/*	void WrapperWeb::newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept
 	{
 		if( !isCache )
 			WrapperCache::newsProviders( providers );
@@ -551,7 +555,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		_pWebSend->Push( EResults::NewsProviders, [&map]( auto& type ){ type.set_allocated_string_map(new Proto::Results::StringMap{map});} );
 	}
-
+*/
 	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
 	{
 		var handled = WrapperSync::securityDefinitionOptionalParameterSync( reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );

@@ -15,7 +15,7 @@ namespace Jde::Markets::TwsWebSocket
 		_webSocket{ webSocketParent },
 		_pClientSync{ pClientSync }
 	{
-		DBG0( "WebSendGateway::WebSendGateway"sv );
+		DBG( "WebSendGateway::WebSendGateway"sv );
 	}
 	void WebSendGateway::EraseRequestSession( SessionPK sessionId )noexcept
 	{
@@ -324,7 +324,8 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		else if( errorCode==504 )
 		{
-			_requestSession.ForEach( [errorCode, &errorString, pThis=shared_from_this()](auto /*key*/, const auto& key)
+			vector<TickerId> lostIds;
+			_requestSession.ForEach( [errorCode, &errorString, pThis=shared_from_this(),&lostIds](auto tickerId, const auto& key)
 			{
 				try
 				{
@@ -332,9 +333,11 @@ namespace Jde::Markets::TwsWebSocket
 				}
 				catch( const Exception& e )
 				{
+					lostIds.push_back( tickerId );
 					e.Log();
 				}
 			});
+			for_each( lostIds.begin(), lostIds.end(), [&](auto id){_requestSession.erase(id);} );
 		}
 	}
 	void WebSendGateway::PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false)
@@ -352,26 +355,6 @@ namespace Jde::Markets::TwsWebSocket
 		sessions.emplace( sessionId );
 	}
 
-
-/*	void WebSendGateway::PushError( SessionPK sessionId, ClientPK clientId, int errorCode, const std::string& errorString )noexcept
-	{
-		auto pMessage = make_shared<Proto::Results::MessageUnion>(); pMessage->set_allocated_error( pError );
-		Push( sessionId, pMessage );
-	}*/
-
-/*	void WebSendGateway::PushAllocated( Proto::Results::ContractDetails* pDetails, TickerId reqId )noexcept
-	{
-		var [sessionId, clientReqId] = _requestSession.Find( reqId, ClientKey{} );
-		if( sessionId )
-		{
-			pDetails->set_request_id( clientReqId );
-			auto pMessageUnion = make_shared<MessageType>();  pMessageUnion->set_allocated_contract_details( pDetails );
-			Push( sessionId, pMessageUnion );
-		}
-		else
-			DBG( "Could not find session for req:  '{}'."sv, reqId );
-	}
-*/
 	bool WebSendGateway::Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false)
 	{
 		var clientKey = GetClientRequest( id );
@@ -391,43 +374,9 @@ namespace Jde::Markets::TwsWebSocket
 		contractSubscriptions[sessionId] = ticks;
 	}
 
-/*	void WebSendGateway::PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept
-	{
-		bool cancel = false; ContractPK contractId = 0;
-		{
-			unique_lock l{ _marketSubscriptionsMutex };
-			if( var pContract = _marketTicketContractMap.find(id); pContract!=_marketTicketContractMap.end() )
-			{
-				contractId = pContract->second;
-				if( var pSessions = _marketSessionSubscriptions.find(contractId); pSessions!=_marketSessionSubscriptions.end() )
-				{
-					for( var& sessionTicks : pSessions->second )
-					{
-						auto pUnion = make_shared<MessageType>();
-						set( *pUnion, contractId );
-						Push( pUnion, sessionTicks.first );
-					}
-				}
-				else
-				{
-					ERR( "({})Canceling no sessions found for contract '{}' found."sv, id, contractId );
-					_marketTicketContractMap.erase( pContract );
-					cancel = true;
-				}
-			}
-			else
-			{
-				ERR( "({})Canceling for {}, no contracts found."sv, id, contractId );//TODO:  keep track of recently canceled tickers.
-				cancel = true;
-			}
-		}
-		if( cancel )
-			_pClientSync->cancelMktData( id );
-	}
-*/
 	void WebSendGateway::ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, ReqId reqId )noexcept
 	{
-		var clientKey = _requestSession.Find( reqId, ClientKey{} );
+		var clientKey = _requestSession.Find( reqId ).value_or( ClientKey{} );
 		if( !clientKey.SessionId )
 		{
 			DBG( "Could not find session for ContractDetailsEnd req:  '{}'."sv, reqId );
@@ -461,23 +410,6 @@ namespace Jde::Markets::TwsWebSocket
 			_requestSession.erase( reqId );
 	}
 
-/*	void WebSendGateway::PushAllocated( unique_ptr<Proto::Results::AccountUpdateMulti> pMessage )noexcept
-	{
-		var requestId = pMessage->request_id();
-		var [sessionId, clientReqId] = _requestSession.Find( requestId, {} );
-		if( sessionId )
-		{
-			pMessage->set_request_id( clientReqId );
-			auto pUnion = make_shared<MessageType>(); pUnion->set_allocated_account_update_multi( pMessage.release() );
-			Push( sessionId, pUnion );
-		}
-		else
-		{
-			DBG( "({})AccountUpdateMulti not found"sv, requestId );
-			_client.cancelPositionsMulti( requestId );
-		}
-	}
-*/
 	bool WebSendGateway::AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept
 	{
 		std::unique_lock<std::shared_mutex> l3( _accountSubscriptionMutex );

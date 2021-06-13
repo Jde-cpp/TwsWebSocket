@@ -14,6 +14,7 @@ namespace Jde::Markets::TwsWebSocket
 		TickerId AddRequestSession()const noexcept{ return WebSendPtr->AddRequestSession( *this ); }
 		void Push( MessageType&& msg )const noexcept(false){ WebSendPtr->Push( move(msg), SessionId); }
 		void Push( const Exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
+		void Push( const std::exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
 		void Push( EResults x )const noexcept{ WebSendPtr->Push(x, *this); }
 		sp<WebSendGateway> WebSendPtr;
 	};

@@ -1,7 +1,7 @@
 #include "WebRequestWorker.h"
 #include "./BlocklyWorker.h"
 #include "./Flex.h"
-#include "./News.h"
+#include "requests/News.h"
 #include "./PreviousDayValues.h"
 #include "./WatchListData.h"
 #include "./WebCoSocket.h"
@@ -14,6 +14,8 @@
 
 #define _sync TwsClientSync::Instance()
 #define var const auto
+#define USE(p)	auto t = p; if( t ) t->
+
 namespace Jde::Markets::TwsWebSocket
 {
 	WebRequestWorker::WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept:
@@ -109,13 +111,13 @@ namespace Jde::Markets::TwsWebSocket
 			catch( const json::exception& e )
 			{
 				DBG( string{e.what()} );
-				_pWebSend->Push( Exception("could not parse query"), arg );
+				_pWebSend->TryPush( Exception("could not parse query"), arg );
 			}
 			catch( const Exception& e )
 			{
 				DBG( name );
 				e.Log();
-				_pWebSend->Push( e, arg );
+				_pWebSend->TryPush( e, arg );
 			}
 		}
 		else if( type==ERequests::GoogleLogin )//https://ncona.com/2015/02/consuming-a-google-id-token-from-a-server/
@@ -167,12 +169,13 @@ namespace Jde::Markets::TwsWebSocket
 				THROW_IF( token.Aud!=Settings::Global().Get2<string>("GoogleAuthClientId"), Exception("Invalid client id") );
 				THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", Exception("Invalid iss") );
 				var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), Exception("token expired") );
-				auto p = WebCoSocket::Instance(); THROW_IF( !p, Exception("no websockets") );
-				p->SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
+				USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
+				// var expiration = Clock::now()+std::chrono::hours(100 * 24);
+				// USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, "foo@gmail.com", true, "foo", "", expiration, "key" );
 			}
 			catch( const std::exception& e )
 			{
-				WARN0( string{e.what()} );
+				WARN( string{e.what()} );
 				_pWebSend->Push( e, arg );
 			}
 		}

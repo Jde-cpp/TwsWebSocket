@@ -33,8 +33,8 @@ namespace Jde::Markets::TwsWebSocket
 		void historicalDataEnd( int reqId, const std::string& startDateStr, const std::string& endDateStr )noexcept override;
 		void error(int id, int errorCode, const std::string& errorString)noexcept override;
 		void managedAccounts( const std::string& accountsList)noexcept override;
-		void newsProviders( const std::vector<NewsProvider>& providers )noexcept override{ newsProviders( providers, false ); }
-		void newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept;
+		//void newsProviders( const std::vector<NewsProvider>& providers )noexcept override{ newsProviders( providers, false ); }
+		//void newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept;
 		void nextValidId( ::OrderId orderId )noexcept override;
 		void orderStatus( ::OrderId orderId, const std::string& status, double filled, double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice )noexcept override;
 		void openOrder( ::OrderId orderId, const ::Contract&, const ::Order&, const ::OrderState&)noexcept override;
@@ -57,9 +57,9 @@ namespace Jde::Markets::TwsWebSocket
 		bool AddCanceled( TickerId id )noexcept{ return _canceledItems.emplace(id); }
 
 		//void tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept override;
-		void newsArticle( int requestId, int articleType, const std::string& articleText )noexcept override;
-		void historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept override;
-		void historicalNewsEnd( int requestId, bool hasMore )noexcept override;
+		//void newsArticle( int requestId, int articleType, const std::string& articleText )noexcept override;
+		//void historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept override;
+		//void historicalNewsEnd( int requestId, bool hasMore )noexcept override;
 		void SetWebSend( sp<WebSendGateway> pWebSend )noexcept{ _pWebSend = pWebSend; }
 		void AddAccountUpdateCallback( string account, function<void(const Proto::Results::AccountUpdate&)> callback )noexcept;
 
@@ -89,7 +89,7 @@ namespace Jde::Markets::TwsWebSocket
 	//	flat_map<string,TimePoint> _canceledAccounts; mutable std::mutex _canceledAccountMutex;//ie ask for multiple contractDetails
 
 		flat_map<int,unique_ptr<Proto::Results::ContractDetailsResult>> _contractDetails;
-		flat_map<TickerId,Proto::Results::HistoricalNewsCollection*> _allocatedNews; mutex _newsMutex;
+		//flat_map<TickerId,Proto::Results::HistoricalNewsCollection*> _allocatedNews; mutex _newsMutex;
 		//mutable std::mutex _accountUpdateMutex;
 		sp<WebSendGateway> _pWebSend;
 	};

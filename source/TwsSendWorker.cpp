@@ -1,9 +1,9 @@
 #include "TwsSendWorker.h"
-#include "News.h"
+#include "requests/News.h"
 #include "WebRequestWorker.h"
 #include <jde/markets/types/MyOrder.h>
 #include "../../MarketLibrary/source/TickManager.h"
-#include <jde/Blockly/BlocklyLibrary.h>
+#include <jde/blockly/BlocklyLibrary.h>
 #include <jde/blockly/IBlockly.h>
 #include "../../Framework/source/io/ProtoUtilities.h"
 
@@ -250,10 +250,7 @@ namespace Jde::Markets::TwsWebSocket
 		else if( r.type()==ERequests::RequestOptionParams )
 			RequestOptionParams( r.ids(), {session.SessionId, r.id()} );
 		else if( r.type()==ERequests::ReqNewsProviders )
-		{
-			_web.AddRequestSessions( session.SessionId, {EResults::NewsProviders} );
-			_cache.RequestNewsProviders();
-		}
+			News::RequestProviders( ProcessArg{session, r.id(), _webSendPtr} );
 		else
 			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, r.type(), session.SessionId );
 	}

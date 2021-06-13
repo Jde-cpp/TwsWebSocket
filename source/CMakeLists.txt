@@ -6,13 +6,13 @@ include(SetUpConfigurations)
 link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 #Custom######################################################
 include_directories( "$ENV{REPO_DIR}/tws-api/source/cppclient/client" )
-include_directories( "${PROJECT_SOURCE_DIR}/../../Framework/source" )
+include_directories( "${PROJECT_SOURCE_DIR}/../../Public" )
 #add_definitions( -DJDE_EDGAR )
 #######################################################
-add_executable( Jde.TwsWebSocket main.cpp BlocklyWorker.cpp Flex.cpp News.cpp PreviousDayValues.cpp TwsSendWorker.cpp WebRequestWorker.cpp WebSendGateway.cpp WebSocket.cpp WebCoSocket.cpp WrapperWeb.cpp WatchListData.cpp
-	requests/EdgarRequests.cpp)
+add_executable( Jde.TwsWebSocket main.cpp BlocklyWorker.cpp Flex.cpp PreviousDayValues.cpp TwsSendWorker.cpp WebRequestWorker.cpp WebSendGateway.cpp WebSocket.cpp WebCoSocket.cpp WrapperWeb.cpp WatchListData.cpp
+	requests/EdgarRequests.cpp requests/News.cpp )
 #######################################################
-target_link_libraries(Jde.TwsWebSocket Threads::Threads)
+#target_link_libraries(Jde.TwsWebSocket Threads::Threads)
 target_link_libraries(Jde.TwsWebSocket Jde)
 #target_link_libraries(Jde.TwsWebSocket Jde.UM)
 target_link_libraries(Jde.TwsWebSocket Jde.Blockly)
@@ -37,45 +37,17 @@ target_precompile_headers(Jde.TwsWebSocket
 		<cassert>
 		<list>
 		<shared_mutex>
-		<spdlog/spdlog.h>
-		<spdlog/sinks/basic_file_sink.h>
-		<spdlog/fmt/ostr.h>
 		<boost/crc.hpp>
-		<boost/asio.hpp>
-		<boost/exception/diagnostic_information.hpp>
-		<boost/beast/core.hpp>
-		<boost/beast/websocket.hpp>
-		<boost/core/noncopyable.hpp>
 		<boost/container/flat_set.hpp>
-		<boost/property_tree/ptree.hpp>
-		<boost/property_tree/xml_parser.hpp>
-		<nlohmann/json.hpp>
-		<Execution.h>
-		<EWrapper.h>
+		<boost/core/noncopyable.hpp>
+		<boost/exception/diagnostic_information.hpp>
 		<EClientSocket.h>
+		<EWrapper.h>
+		<Execution.h>
 		<Order.h>
-		"../../Framework/source/log/Logging.h"
-		"../../Framework/source/TypeDefs.h"
-		"../../Framework/source/JdeAssert.h"
-		"../../Framework/source/application/Application.h"
-		"../../Framework/source/DateTime.h"
-		"../../Framework/source/threading/Thread.h"
-		"../../Framework/source/io/File.h"
-		"../../Framework/source/Settings.h"
-		"../../Framework/source/threading/Interrupt.h"
-		"../../Framework/source/threading/InterruptibleThread.h"
+
+		<jde/TypeDefs.h>
 		"../../Framework/source/collections/Queue.h"
-		"../../Framework/source/collections/UnorderedMap.h"
-		"../../Framework/source/collections/UnorderedMapValue.h"
-		"../../Framework/source/StringUtilities.h"
-		"../../Framework/source/collections/UnorderedSet.h"
-		"../../MarketLibrary/source/TypeDefs.h"
-		"../../MarketLibrary/source/TwsProcessor.h"
-		"../../MarketLibrary/source/types/proto/ib.pb.h"
-		"../../MarketLibrary/source/types/proto/requests.pb.h"
-		"../../MarketLibrary/source/types/proto/results.pb.h"
-		"../../MarketLibrary/source/types/Exchanges.h"
-		"../../MarketLibrary/source/client/TwsClientSync.h"
-		"../../MarketLibrary/source/types/IBException.h"
+		 <jde/markets/TypeDefs.h>
 		"./TypeDefs.h"
 )
