@@ -14,7 +14,7 @@ namespace Jde::Markets::TwsWebSocket
 {
 	using namespace tinyxml2;
 
-	α News::RequestArticle( str providerCode, str articleId, const ProcessArg& arg )noexcept->Task2
+	α News::RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task2
 	{
 		//_sync.reqNewsArticle( arg.AddRequestSession(), providerCode, articleId );
 		auto p = ( co_await TwsClientCo::NewsArticle(providerCode, articleId) ).Get<Proto::Results::NewsArticle>();
@@ -44,12 +44,11 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	News::THistoricalResult News::RequestHistorical( ContractPK contractId, const google::protobuf::RepeatedPtrField<string>& providerCodes, uint limit, time_t start, time_t end, const ProcessArg& arg )noexcept
+	News::THistoricalResult News::RequestHistorical( ContractPK contractId, google::protobuf::RepeatedPtrField<string> providerCodes, uint limit, time_t start, time_t end, ProcessArg arg )noexcept
 	{
 		try
 		{
 			var pContract = (co_await TwsClientCo::ContractDetails( contractId )).Get<Contract>();// if( variant.index()==1 ) std::rethrow_exception( get<1>(variant) ); var pContract = move( get<0>(variant) );
-			var pContract2 = (co_await TwsClientCo::ContractDetails( contractId )).Get<Contract>();
 
 			//auto pHistorical = (co_await TwsClientCo::HistoricalNews(pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end)) ).Get<Proto::Results::HistoricalNewsCollection>();
 			auto pWait = TwsClientCo::HistoricalNews( pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
@@ -74,11 +73,16 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α News::Google( sv symbol )noexcept->TGoogleCoResult{ return TGoogleCoResult{ [=](auto&& h)->TGoogleAsync
+	α News::Google( const CIString& symbol )noexcept->TGoogleCoResult{ return TGoogleCoResult{ [=](auto h)->TGoogleAsync
 	{
 		try
 		{
-			TaskResult xml = co_await Ssl::CoGet( "news.google.com", format("/rss/search?q=${}+when:1d&hl=en-US&gl=US&ceid=US:en", symbol) );
+			auto query = format( "search/${}+when:1d&hl=en-US&gl=US&ceid=US:en", symbol );
+			if( symbol=="SPY" )
+				query = "topics/CAAqJAgKIh5DQkFTRUFvS0wyMHZNSE4zYm5OMGNCSUNaVzRvQUFQAQ?hl=en-US&gl=US&ceid=US:en";
+			else if( symbol=="TSLA" )
+				query = "topics/CAAqIggKIhxDQkFTRHdvSkwyMHZNR1J5T1RCa0VnSmxiaWdBUAE?hl=en-US&gl=US&ceid=US%3Aen";
+			TaskResult xml = co_await Ssl::CoGet( "news.google.com", format("/rss/{}", query) );
 			sp<string> pXml = xml.Get<string>();
 			//var pXml = (co_await Ssl::CoGet( "news.google.com", format("/rss/search?q=${}+when:1d&hl=en-US&gl=US&ceid=US:en", symbol)) ).Get<string>();
 

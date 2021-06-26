@@ -12,7 +12,9 @@
 		"day": "uint16",
 		"cik": "uint32",
 		"crc": "uint32",
-		"cusip":{ "type":"char", "length":8 }
+		"cusip":{ "type":"char", "length":8 },
+		"created": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false },
+		"updated": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false }
 	},
 	"$smallValues":
 	{
@@ -39,7 +41,7 @@
 	{
 		"$parent": "$data",
 		"attributes": "uint16?",
-		"created": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false },
+		"created": "created",
 		"updated": { "type": "dateTime?", "insertable": false, "updateable": false },
 		"deleted": { "type": "dateTime?", "insertable": false, "updateable": false }
 	},
@@ -50,6 +52,7 @@
 		"description": "description?",
 		"$naturalKey": ["target"]
 	},
+	"$scripts": ["sql/twt_user_block.sql", "sql/twt_tag_ignore.sql", "sql/twt_user_insert.sql"],
 	"dgrClasses":
 	{
 		"id": "crc",
@@ -107,6 +110,36 @@
 		"id": "cik",
 		"name": "name",
 		"$surrogateKey":["id"]
+	},
+	"twtBlocks":
+	{
+		"user_id": "uint64",
+		"created": "created",
+		"$surrogateKey":["user_id"]
+	},
+	"twtTags":
+	{
+		"id":{ "sequence": true },
+		"tag": { "length": 255 },
+		"ignored_count": "uint32",
+		"$surrogateKey":["id"],
+		"$naturalKey":["tag"]
+	},
+	"twtQueries":
+	{
+		"tag": { "length": 255 },
+		"query": { "length": 512 },
+		"$surrogateKey":["tag"]
+	},
+	"twtUsers":
+	{
+		"id": "uint64",
+		"screen_name":  { "length": 20 },
+		"blocked": "bool",
+		"profile_image": { "type":"varchar?", "length": 512 },
+		"updated": "updated",
+		"$surrogateKey":["id"],
+		"$naturalKey":["screen_name"]
 	},
 	"umUsers":
 	{

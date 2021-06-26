@@ -1,5 +1,4 @@
 #pragma once
-//#include "./TypeDefs.h"
 #include "./TwsSendWorker.h"
 #include "./WebSendGateway.h"
 
@@ -12,7 +11,7 @@ namespace Jde::Markets::TwsWebSocket
 		ProcessArg( const SessionKey& key, ClientPK clientId, sp<WebSendGateway> webSendPtr ): ClientKey{ key, clientId }, WebSendPtr{ webSendPtr } {}
 		ProcessArg()=default;
 		TickerId AddRequestSession()const noexcept{ return WebSendPtr->AddRequestSession( *this ); }
-		void Push( MessageType&& msg )const noexcept(false){ WebSendPtr->Push( move(msg), SessionId); }
+		void Push( MessageType&& m )const noexcept(false){ WebSendPtr->Push( move(m), SessionId); }
 		void Push( const Exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
 		void Push( const std::exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
 		void Push( EResults x )const noexcept{ WebSendPtr->Push(x, *this); }

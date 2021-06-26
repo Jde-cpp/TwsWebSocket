@@ -25,7 +25,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	void BeastException::LogCode( sv what, const beast::error_code& ec )noexcept
 	{
-		if( BeastException::IsTruncated(ec) )
+		if( BeastException::IsTruncated(ec) || what=="~DoSession" )
 			DBG( "{}, async_accept Truncated - {}"sv, what, ec.message() );
 		else
 			WARN( "{}, async_accept Failed - {}"sv, what, ec.message() );
@@ -149,15 +149,16 @@ namespace Jde::Markets::TwsWebSocket
 			for( ;; )
 			{
 				beast::flat_buffer buffer;// This buffer will hold the incoming message
-				pStream->async_read( buffer, yld[ec] ); THROW_IF( ec, BeastException("async_read", move(ec)) );// Read a message
-				//if( ec == websocket::error::closed )// This indicates that the session was closed
-				//	break;
+				pStream->async_read( buffer, yld[ec] ); //THROW_IF( ec, BeastException("async_read", move(ec)) );// Read a message
+				if( ec )// This indicates that the session was closed
+					break;
 				auto data = boost::beast::buffers_to_string( buffer.data() );
 				if( !userId )
 					userId = pWebCoSocket->UserId( sessionId );
 
 				pWebCoSocket->HandleIncoming( {{sessionId,userId}, std::move(data)} );
 			}
+			BeastException::LogCode( "~DoSession", ec );
 		}
 		catch( const Exception& e )
 		{

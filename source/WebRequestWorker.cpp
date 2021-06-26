@@ -2,6 +2,7 @@
 #include "./BlocklyWorker.h"
 #include "./Flex.h"
 #include "requests/News.h"
+#include "requests/Twitter.h"
 #include "./PreviousDayValues.h"
 #include "./WatchListData.h"
 #include "./WebCoSocket.h"
@@ -164,14 +165,19 @@ namespace Jde::Markets::TwsWebSocket
 
 		var header = JSON.parse(headerBuf.toString());
 		var body = JSON.parse(bodyBuf.toString());*/
-
-				var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
-				THROW_IF( token.Aud!=Settings::Global().Get2<string>("GoogleAuthClientId"), Exception("Invalid client id") );
-				THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", Exception("Invalid iss") );
-				var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), Exception("token expired") );
-				USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
+				if( auto pUserSettings = Jde::Settings::Global().SubContainer("um"); pUserSettings && pUserSettings->Get2<string>("user.email") )
+				{
+					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, *pUserSettings->Get2<string>("user.email"), true, *pUserSettings->Get2<string>("user.name"), "", Clock::now()+std::chrono::hours(100 * 24), "key" );
+				}
+				else
+				{
+					var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
+					THROW_IF( token.Aud!=Settings::Global().Get2<string>("GoogleAuthClientId"), Exception("Invalid client id") );
+					THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", Exception("Invalid iss") );
+					var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), Exception("token expired") );
+					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
+				}
 				// var expiration = Clock::now()+std::chrono::hours(100 * 24);
-				// USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, "foo@gmail.com", true, "foo", "", expiration, "key" );
 			}
 			catch( const std::exception& e )
 			{
@@ -185,6 +191,8 @@ namespace Jde::Markets::TwsWebSocket
 			WatchListData::Delete( name, {arg, _pWebSend} );
 		else if( type==ERequests::WatchList )
 			WatchListData::SendList( name, {arg, _pWebSend} );
+		else if( type==ERequests::Tweets )
+			Twitter::Search( name, {arg, _pWebSend} );
 		//else if( type==ERequests::Investors )
 //			EdgarRequests::Investors( name, {arg, _pWebSend} );
 	}

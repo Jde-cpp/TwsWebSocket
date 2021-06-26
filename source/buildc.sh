@@ -9,6 +9,7 @@ if [ $all -eq 1 ]; then
 	../../Framework/cmake/buildc.sh ../../Blockly/source $type $clean || exit 1;
 	../../Framework/cmake/buildc.sh ../../Ssl/source $type $clean || exit 1;
 	../../Framework/cmake/buildc.sh ../../Private/source/markets/edgar $type $clean || exit 1;
+	../../Framework/cmake/buildc.sh ../../MySql/source $type $clean || exit 1;
 fi
 
 if [ ! -d .obj ]; then mkdir .obj; fi;

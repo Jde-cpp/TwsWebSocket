@@ -8,20 +8,12 @@
 #include "WrapperWeb.h"
 #include "../../Ssl/source/Ssl.h"
 
-#include "requests/News.h"
 #define var const auto
 
 namespace Jde::Markets::TwsWebSocket
 {
 	shared_ptr<Settings::Container> SettingsPtr;
 	void Startup( bool initialCall=true )noexcept;
-	auto Test()->Task2
-	{
-		auto pProviders = ( co_await TwsClientCo::NewsProviders() ).Get<map<string,string>>();
-		INFO( "[{}]={}"sv, pProviders->begin()->first, pProviders->begin()->second );
-		auto pProviders2 = ( co_await TwsClientCo::NewsProviders() ).Get<map<string,string>>();
-		INFO( "[{}]={}"sv, pProviders->rbegin()->first, pProviders->rbegin()->second );
-	}
 }
 
 int main( int argc, char** argv )
@@ -32,8 +24,6 @@ int main( int argc, char** argv )
 		using namespace Jde;
 		OSApp::Startup( argc, argv, "TwsWebSocket" );
 		IApplication::AddThread( std::make_shared<Threading::InterruptibleThread>("Startup", [&](){Markets::TwsWebSocket::Startup();}) );
-		//Markets::TwsWebSocket::News::Google( "AAPL" );
-		//Markets::TwsWebSocket::News::RequestHistorical( Contracts::Spy.Id, const google::protobuf::RepeatedPtrField<string>& providerCodes, uint limit, time_t start, time_t end, const ProcessArg& arg )noexcept->THistoricalResult;
 
 		IApplication::Pause();
 		IApplication::CleanUp();
@@ -52,7 +42,8 @@ namespace Jde::Markets
 	void TwsWebSocket::Startup( bool initialCall )noexcept
 	{
 		auto pSettings = TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
-		auto pUserSettings = Jde::Settings::Global().SubContainer( "um" );
+		auto pUserSettings = Settings::Global().SubContainer( "um" );
+
 		if( pUserSettings && pUserSettings->Get2<bool>("use").value_or(false) )
 		{
 			try
@@ -88,11 +79,9 @@ namespace Jde::Markets
 					std::this_thread::yield();
 			}
 		}
-		Test();
-		return;
+		return;//TODO make initial call in settings.
 		try
 		{
-			//PreviousDayValues( 435628729 );
 			var symbol = ""sv;//"AAPL"sv;
 			var pPositions = TwsClientSync::Instance().RequestPositions().get();
 			for( var& position : *pPositions )
@@ -124,8 +113,6 @@ namespace Jde::Markets
 
 		if( initialCall )
 		{
-//			DBG0( "Call again to test cache."sv );
-	//		Startup( false );
 			DBG( "Startup Loading Complete."sv );
 		}
 	}

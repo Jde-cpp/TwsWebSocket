@@ -10,7 +10,7 @@ include_directories( "${PROJECT_SOURCE_DIR}/../../Public" )
 #add_definitions( -DJDE_EDGAR )
 #######################################################
 add_executable( Jde.TwsWebSocket main.cpp BlocklyWorker.cpp Flex.cpp PreviousDayValues.cpp TwsSendWorker.cpp WebRequestWorker.cpp WebSendGateway.cpp WebSocket.cpp WebCoSocket.cpp WrapperWeb.cpp WatchListData.cpp
-	requests/EdgarRequests.cpp requests/News.cpp )
+	requests/EdgarRequests.cpp requests/News.cpp requests/Twitter.cpp )
 #######################################################
 #target_link_libraries(Jde.TwsWebSocket Threads::Threads)
 target_link_libraries(Jde.TwsWebSocket Jde)

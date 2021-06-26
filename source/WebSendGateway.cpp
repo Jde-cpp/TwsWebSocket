@@ -11,7 +11,6 @@ namespace Jde::Markets::TwsWebSocket
 	using Proto::Results::MessageUnion;
 	using Proto::Results::MessageValue;
 	WebSendGateway::WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept:
-//		_queue{},
 		_webSocket{ webSocketParent },
 		_pClientSync{ pClientSync }
 	{
@@ -82,7 +81,6 @@ namespace Jde::Markets::TwsWebSocket
 
 	bool WebSendGateway::UpdateAccountValue( sv key, sv value, sv currency, sv accountNumber )noexcept
 	{
-		//var haveCallback = WrapperLog::updateAccountValue2( key, value, currency, accountName );
 		Proto::Results::AccountUpdate update;
 		update.set_account( string{accountNumber} );
 		update.set_key( string{key} );
@@ -118,11 +116,9 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			{//RequestAccountUpdates needs it added
 				unique_lock l{ _accountSubscriptionMutex };
-				//DBG( "A.1"sv );
 				_accountSubscriptions.try_emplace( string{account} ).first->second.emplace( sessionId, 0 );
 			}
 			auto handle = _client.RequestAccountUpdates( account, shared_from_this() );//[p=](sv a, sv b, sv c, sv d){return p->UpdateAccountValue(a,b,c,d);}
-			//DBG( "B"sv );
 			{//save handle
 				unique_lock l{ _accountSubscriptionMutex };
 				_accountSubscriptions.try_emplace( string{account} ).first->second[sessionId] = handle;
@@ -130,10 +126,8 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		else
 		{
-			//DBG( "A.2"sv );
 			PushError( -6, format("No access to {}.", account), {{sessionId}} );
 		}
-		//DBG( "C"sv );
 		return haveAccess;
 	}
 	void WebSendGateway::CancelAccountSubscription( sv account, SessionPK sessionId )noexcept
@@ -274,9 +268,9 @@ namespace Jde::Markets::TwsWebSocket
 			DBG( "Could not find session for messageId:  '{}' req:  '{}'."sv, messageId, ibReqId );
 	}
 
-	void WebSendGateway::Push( MessageType&& msg, SessionPK id )noexcept(false)
+	void WebSendGateway::Push( MessageType&& m, SessionPK id )noexcept(false)
 	{
-		_webSocket.AddOutgoing( move(msg), id );
+		_webSocket.AddOutgoing( move(m), id );
 	}
 	void WebSendGateway::Push( vector<MessageType>&& messages, SessionPK id )noexcept
 	{
@@ -423,7 +417,6 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg;
 				setMessage( msg );
 				string key = msg.has_portfolio_update() ? std::to_string( msg.portfolio_update().contract().id() ) : string{};
-				//_accountMessages[accountNumber][key]=msg;
 				if( !Try( [&, id=sessionId]{ Push(move(msg), id);} ) )
 					orphans.push_back( sessionId );
 			}
@@ -435,23 +428,6 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}
 		return haveSubscription;
-		// else
-		// {
-		// 	_accountMessages.erase( accountNumber );
-		// 	unique_lock l2{_canceledAccountMutex};
-		// 	bool found = false;
-		// 	for( auto p = _canceledAccounts.begin(); p!=_canceledAccounts.end(); ) //erase old canceled, see if current has been canceled.
-		// 	{
-		// 		if( p->first==accountNumber )
-		// 			found = true;
-		// 		p = !found && p->second<Clock::now()-1min ? _canceledAccounts.erase( p ) : next( p );
-		// 	}
-		// 	if( !found )
-		// 	{
-		// 		_canceledAccounts.emplace( accountNumber, Clock::now() ); TRACE( "No current listeners for account update '{}', reqAccoun tUpdates"sv, accountNumber );
-		// 		_client.reqA ccountUpdates( false, accountNumber );
-		// 	}
-		// }
 	}
 	bool WebSendGateway::PortfolioUpdate( const Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept
 	{
