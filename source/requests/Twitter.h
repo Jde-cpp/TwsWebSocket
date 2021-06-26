@@ -3,7 +3,6 @@
 
 namespace Jde::Twitter
 {
-	struct TwitterSettings;
 	α Search( string symbol, Markets::TwsWebSocket::ProcessArg arg )noexcept->Coroutine::Task2;
 	α Block( uint userId, Markets::TwsWebSocket::ProcessArg arg )noexcept->Coroutine::Task2;
 }

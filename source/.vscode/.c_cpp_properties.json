@@ -4,6 +4,7 @@
             "name": "Linux",
             "includePath": [
 					 "${workspaceFolder}/**",
+					 "${workspaceFolder}/../../Public/**",
 					 "${env:REPO_DIR}/llvm-project/libcxx/include",
 					 "${env:REPO_DIR}/boostorg/beast/include",
 					 "${env:REPO_DIR}/boostorg/asio/include",

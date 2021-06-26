@@ -5,14 +5,14 @@
 namespace Jde::Markets::TwsWebSocket
 {
 //	struct WebSendGateway;
-	struct ProcessArg : ClientKey
+	struct ProcessArg /*final*/: ClientKey
 	{
 		ProcessArg( const ClientKey& key, sp<WebSendGateway> webSendPtr ): ClientKey{ key }, WebSendPtr{ webSendPtr } {}
 		ProcessArg( const SessionKey& key, ClientPK clientId, sp<WebSendGateway> webSendPtr ): ClientKey{ key, clientId }, WebSendPtr{ webSendPtr } {}
 		ProcessArg()=default;
 		TickerId AddRequestSession()const noexcept{ return WebSendPtr->AddRequestSession( *this ); }
-		void Push( MessageType&& m )const noexcept(false){ WebSendPtr->Push( move(m), SessionId); }
-		void Push( const Exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
+		virtual void Push( MessageType&& m )const noexcept(false){ WebSendPtr->Push( move(m), SessionId); }
+		virtual void Push( const Exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
 		void Push( const std::exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
 		void Push( EResults x )const noexcept{ WebSendPtr->Push(x, *this); }
 		sp<WebSendGateway> WebSendPtr;

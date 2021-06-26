@@ -3,6 +3,7 @@
 #include "./Flex.h"
 #include "requests/News.h"
 #include "requests/Twitter.h"
+#include "requests/Reddit.h"
 #include "./PreviousDayValues.h"
 #include "./WatchListData.h"
 #include "./WebCoSocket.h"
@@ -60,7 +61,7 @@ namespace Jde::Markets::TwsWebSocket
 		while( transmission.messages().size() )
 		{
 			auto pMessage = sp<Proto::Requests::RequestUnion>( transmission.mutable_messages()->ReleaseLast() );
-			var& message = *pMessage;
+			auto& message = *pMessage;
 			if( message.has_string_request() )
 				Receive( message.string_request().type(), message.string_request().name(), {session, message.string_request().id()} );
 			else if( message.has_options() )
@@ -69,17 +70,12 @@ namespace Jde::Markets::TwsWebSocket
 				ReceiveFlex( session, message.flex_executions() );
 			else if( message.has_edit_watch_list() )
 				WatchListData::Edit( message.edit_watch_list().file(), ARG(message.edit_watch_list().id()) );
-			else if( pMessage->has_blockly() )
-			{
-				auto p=pMessage->mutable_blockly();
-				//string_view msg = p->message();
-				//if( has && msg.size() )
-					_pBlocklyWorker->Push( { {session, p->id()}, up<string>{p->release_message()} } );
-				//else
-				//	_pWebSend->PushError( -5, "No Blockly msg", {sessionKey, p->id()} );
-			}
+			else if( auto p=message.has_blockly() ? message.mutable_blockly() : nullptr; p )
+				_pBlocklyWorker->Push( { {session, p->id()}, up<string>{p->release_message()} } );
 			else if( message.has_std_dev() )
 				ReceiveStdDev( message.std_dev().contract_id(), message.std_dev().days(), message.std_dev().start(), ARG(message.std_dev().id()) );
+			else if( auto p = message.has_reddit() ? message.mutable_reddit() : nullptr; p )
+				Reddit::Search( move(*p->mutable_symbol()), move(*p->mutable_sort()), make_unique<ProcessArg>(move(session), p->id(), _pWebSend) );
 			else
 			{
 				bool handled = false;
