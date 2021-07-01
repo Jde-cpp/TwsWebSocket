@@ -1,5 +1,4 @@
 #include "Twitter.h"
-//#include <boost/container/map.hpp>
 #include <jde/io/Crc.h>
 #include <jde/markets/types/proto/results.pb.h>
 #include "../../../Framework/source/Settings.h"
@@ -13,7 +12,6 @@ namespace Jde
 {
 #pragma region Defines
 	using namespace Markets::TwsWebSocket;
-	//using Markets::TwsWebSocket::ProcessArg;
 	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task2;
 	using Markets::Proto::Results::Tweets; using ProtoTweet=Markets::Proto::Results::Tweet;
 	using Markets::Proto::Results::TweetAuthors; using Markets::Proto::Results::TweetAuthor;
@@ -77,15 +75,9 @@ namespace Jde
 	{
 		static void from_json( const nlohmann::json& j, Meta& o )noexcept
 		{
-			//FROM_JSON64( "newest_id", NewestId );
-			//FROM_JSON64( "oldest_id", OldestId );
-			//FROM_JSON( "result_count", Count );
 			FROM_JSON( "next_token", NextToken );
 		}
 
-		//string NewestId;
-		//string OldestId;
-		//uint Count{0};
 		string NextToken;
 	};
 	struct PublicMetrics
@@ -178,7 +170,8 @@ namespace Jde
 				<< "oauth_version=\"1.0\","
 				<< "oauth_signature=\"" << Ssl::Encode( Ssl::RsaSign(os.str(), format("{}&{}", settings.ApiSecretKey, settings.AccessTokenSecret)) ) << "\"";//https://datatracker.ietf.org/doc/html/rfc5849#section-3.4
 
-		h.promise().get_return_object().Result = co_await Ssl::CoSendEmpty( "api.twitter.com", format(string(url.substr(23))+string("?user_id={}&skip_status=1"), userId), osAuth.str() );
+		auto result = co_await Ssl::CoSendEmpty( "api.twitter.com", format(string(url.substr(23))+string("?user_id={}&skip_status=1"), userId), osAuth.str() );
+		h.promise().get_return_object().SetResult( move(result) );
 		h.resume();
 	}};}
 	α Twitter::Block( uint userId, ProcessArg arg )noexcept->Coroutine::Task2

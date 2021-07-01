@@ -1,6 +1,7 @@
 #include "Reddit.h"
 #include "../WebRequestWorker.h"
 #include "../../../Framework/source/io/tinyxml2.h"
+#include "../../../Ssl/source/SslCo.h"
 namespace Jde
 {
 #pragma region Defines
@@ -12,11 +13,9 @@ namespace Jde
 #pragma endregion
 	α Jde::Reddit::Search( string&& symbol, string&& sort, up<Markets::TwsWebSocket::ProcessArg> arg )noexcept->Coroutine::Task2
 	{
-		var target = format( "/r/wallstreetbets/search.xml?q=${}&restrict_sr=on&limit=100&sort={}", symbol, sort.size() ? sort : "hot" );
-		DBG( target );
 		try
 		{
-			sp<string> pXml = ( co_await Ssl::CoGet("www.reddit.com", target) ).Get<string>();//TODOExample: User-Agent: android:com.example.myredditapp:v1.2.3 (by /u/kemitche)
+			sp<string> pXml = ( co_await Ssl::SslCo::Get("www.reddit.com", format("/r/wallstreetbets/search.xml?q=${}&restrict_sr=on&limit=100&sort={}", symbol, sort.size() ? sort : "hot")) ).Get<string>();
 			auto pResults = make_unique<RedditEntries>(); pResults->set_request_id( arg->ClientId );
 
 			XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "feed" ); CHECK( pRoot );
@@ -40,5 +39,4 @@ namespace Jde
 			arg->Push( e );
 		}
 	}
-//	α Block( uint userId, Markets::TwsWebSocket::ProcessArg arg )noexcept->Coroutine::Task2;
 }

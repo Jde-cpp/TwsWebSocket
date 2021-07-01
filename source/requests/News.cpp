@@ -16,13 +16,10 @@ namespace Jde::Markets::TwsWebSocket
 
 	α News::RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task2
 	{
-		//_sync.reqNewsArticle( arg.AddRequestSession(), providerCode, articleId );
 		auto p = ( co_await TwsClientCo::NewsArticle(providerCode, articleId) ).Get<Proto::Results::NewsArticle>();
 		p->set_request_id( arg.ClientId );
 		MessageType m; m.set_allocated_news_article( new Proto::Results::NewsArticle(*p) );
 		arg.Push( move(m) );
-
-//	 	_pWebSend->TryPush( requestId, [&p2=p](MessageType& msg, ClientPK id){p2->set_request_id( id ); msg.set_allocated_news_article(p2.release());} );
 	}
 
 	α News::RequestProviders( const ProcessArg& arg )noexcept->Task2
@@ -50,7 +47,6 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			var pContract = (co_await TwsClientCo::ContractDetails( contractId )).Get<Contract>();// if( variant.index()==1 ) std::rethrow_exception( get<1>(variant) ); var pContract = move( get<0>(variant) );
 
-			//auto pHistorical = (co_await TwsClientCo::HistoricalNews(pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end)) ).Get<Proto::Results::HistoricalNewsCollection>();
 			auto pWait = TwsClientCo::HistoricalNews( pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
 			auto pGoogle = (co_await Google( pContract->Symbol) ).Get<vector<sp<Proto::Results::GoogleNews>>>();
 			auto pHistorical = (co_await pWait).Get<Proto::Results::NewsCollection>();
@@ -119,12 +115,12 @@ namespace Jde::Markets::TwsWebSocket
 				}
 				results->push_back( move(p) );
 			}
-			h.promise().get_return_object().Result = TaskResult{ results };
+			h.promise().get_return_object().SetResult( results );
 		}
 		catch( const std::exception& e )
 		{
 			ERR( string{e.what()} );
-			h.promise().get_return_object().Result = std::make_exception_ptr( e );
+			h.promise().get_return_object().SetResult( move(e) );
 		}
 		h.resume();
 	}};}
