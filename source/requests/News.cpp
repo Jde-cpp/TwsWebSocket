@@ -80,7 +80,6 @@ namespace Jde::Markets::TwsWebSocket
 				query = "topics/CAAqIggKIhxDQkFTRHdvSkwyMHZNR1J5T1RCa0VnSmxiaWdBUAE?hl=en-US&gl=US&ceid=US%3Aen";
 			TaskResult xml = co_await Ssl::SslCo::Get( "news.google.com", format("/rss/{}", query) );
 			sp<string> pXml = xml.Get<string>();
-			//var pXml = (co_await Ssl::CoGet( "news.google.com", format("/rss/search?q=${}+when:1d&hl=en-US&gl=US&ceid=US:en", symbol)) ).Get<string>();
 
 			TGoogleResult results = make_shared<vector<sp<Proto::Results::GoogleNews>>>();
 			tinyxml2::XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "rss" ); CHECK( pRoot ); var pChannel = pRoot->FirstChildElement( "channel" ); CHECK( pChannel );
@@ -120,7 +119,7 @@ namespace Jde::Markets::TwsWebSocket
 		catch( const std::exception& e )
 		{
 			ERR( string{e.what()} );
-			h.promise().get_return_object().SetResult( e );
+			h.promise().get_return_object().SetResult( move(e) );
 		}
 		h.resume();
 	}};}
