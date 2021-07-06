@@ -77,9 +77,6 @@
     <ClCompile Include="pc.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="News.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="WatchListData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -102,6 +99,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="requests\EdgarRequests.cpp">
+      <Filter>Source Files\requests</Filter>
+    </ClCompile>
+    <ClCompile Include="requests\News.cpp">
+      <Filter>Source Files\requests</Filter>
+    </ClCompile>
+    <ClCompile Include="requests\Reddit.cpp">
+      <Filter>Source Files\requests</Filter>
+    </ClCompile>
+    <ClCompile Include="requests\Twitter.cpp">
       <Filter>Source Files\requests</Filter>
     </ClCompile>
   </ItemGroup>

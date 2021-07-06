@@ -1,4 +1,4 @@
-#include <jde/coroutine/Task.h>
+﻿#include <jde/coroutine/Task.h>
 #include "../WebRequestWorker.h"
 
 namespace Jde::Twitter

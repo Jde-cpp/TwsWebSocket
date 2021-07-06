@@ -6,11 +6,14 @@
 #ifdef _MSC_VER
 	#define TWSAPIDLLEXP __declspec( dllimport )
 	#include <SDKDDKVer.h>
+	#pragma push_macro("assert")
+	#undef assert
+	#include <platformspecific.h>
+	#pragma pop_macro("assert")
 #else
 	#define TWSAPIDLLEXP
 	#define IB_POSIX
 #endif
-//#include <memory>
 #include <cassert>
 #include <list>
 #include <shared_mutex>
@@ -21,54 +24,16 @@
 #pragma warning( default : 4245)
 #pragma warning( default : 4701)
 
-//#include <boost/beast/core.hpp>
-
 #include <boost/container/flat_set.hpp>
 #include <boost/core/noncopyable.hpp>
 #include <boost/exception/diagnostic_information.hpp>
-/*
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/fmt/ostr.h>
-*/
-//#include <nlohmann/json.hpp>
 #include <EClientSocket.h>
 #include <EWrapper.h>
 #include <Execution.h>
 #include <Order.h>
 
 #include <jde/TypeDefs.h>
-/*
-#include "../../Framework/source/log/Logging.h"
-
-#include "../../Framework/source/JdeAssert.h"
-#include "../../Framework/source/application/Application.h"
-#include "../../Framework/source/DateTime.h"
-#include "../../Framework/source/threading/Thread.h"
-
-#include "../../Framework/source/collections/UnorderedMapValue.h"
-#include "../../Framework/source/collections/UnorderedMap.h"
-#include "../../Framework/source/collections/UnorderedSet.h"
-#include "../../Framework/source/threading/Interrupt.h"
-#include "../../Framework/source/io/File.h"
-#include "../../Framework/source/StringUtilities.h"
-/*
-#include "../../MarketLibrary/source/types/MyOrder.h"
-#include "../../MarketLibrary/source/types/Exchanges.h"
-
-#include "../../MarketLibrary/source/TwsProcessor.h"
-//#include "markets/types/messages/IBEnums.h"
-*/
 #include "../../Framework/source/collections/Queue.h"
 #include <jde/markets/TypeDefs.h>
-/*
-#pragma warning(disable:4100)
-#pragma warning(disable:4127)
-#pragma warning(disable:4244)
-#include "../../MarketLibrary/source/types/proto/ib.pb.h"
-#include "../../MarketLibrary/source/types/proto/requests.pb.h"
-#include "../../MarketLibrary/source/types/proto/results.pb.h"
-#pragma warning(default:4100)
-#pragma warning(default:4127)
-#pragma warning(default:4244)*/
-#include "TypeDefs.h"
+#include "./TypeDefs.h"
+#include "WebRequestWorker.h"

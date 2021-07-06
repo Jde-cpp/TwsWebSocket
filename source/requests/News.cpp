@@ -1,10 +1,10 @@
-#include "News.h"
+﻿#include "News.h"
 #include "../../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../../MarketLibrary/source/client/TwsClientCo.h"
 #include "../WebRequestWorker.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../Framework/source/io/tinyxml2.h"
-#include "../../../Ssl/source/Ssl.h"
+#include "../../../Ssl/source/SslCo.h"
 
 #define _sync TwsClientSync::Instance()
 
@@ -16,13 +16,10 @@ namespace Jde::Markets::TwsWebSocket
 
 	α News::RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task2
 	{
-		//_sync.reqNewsArticle( arg.AddRequestSession(), providerCode, articleId );
 		auto p = ( co_await TwsClientCo::NewsArticle(providerCode, articleId) ).Get<Proto::Results::NewsArticle>();
 		p->set_request_id( arg.ClientId );
 		MessageType m; m.set_allocated_news_article( new Proto::Results::NewsArticle(*p) );
 		arg.Push( move(m) );
-
-//	 	_pWebSend->TryPush( requestId, [&p2=p](MessageType& msg, ClientPK id){p2->set_request_id( id ); msg.set_allocated_news_article(p2.release());} );
 	}
 
 	α News::RequestProviders( const ProcessArg& arg )noexcept->Task2
@@ -50,7 +47,6 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			var pContract = (co_await TwsClientCo::ContractDetails( contractId )).Get<Contract>();// if( variant.index()==1 ) std::rethrow_exception( get<1>(variant) ); var pContract = move( get<0>(variant) );
 
-			//auto pHistorical = (co_await TwsClientCo::HistoricalNews(pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end)) ).Get<Proto::Results::HistoricalNewsCollection>();
 			auto pWait = TwsClientCo::HistoricalNews( pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
 			auto pGoogle = (co_await Google( pContract->Symbol) ).Get<vector<sp<Proto::Results::GoogleNews>>>();
 			auto pHistorical = (co_await pWait).Get<Proto::Results::NewsCollection>();
@@ -82,12 +78,12 @@ namespace Jde::Markets::TwsWebSocket
 				query = "topics/CAAqJAgKIh5DQkFTRUFvS0wyMHZNSE4zYm5OMGNCSUNaVzRvQUFQAQ?hl=en-US&gl=US&ceid=US:en";
 			else if( symbol=="TSLA" )
 				query = "topics/CAAqIggKIhxDQkFTRHdvSkwyMHZNR1J5T1RCa0VnSmxiaWdBUAE?hl=en-US&gl=US&ceid=US%3Aen";
-			TaskResult xml = co_await Ssl::CoGet( "news.google.com", format("/rss/{}", query) );
+			TaskResult xml = co_await Ssl::SslCo::Get( "news.google.com", format("/rss/{}", query) );
 			sp<string> pXml = xml.Get<string>();
 			//var pXml = (co_await Ssl::CoGet( "news.google.com", format("/rss/search?q=${}+when:1d&hl=en-US&gl=US&ceid=US:en", symbol)) ).Get<string>();
 
 			TGoogleResult results = make_shared<vector<sp<Proto::Results::GoogleNews>>>();
-			XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "rss" ); CHECK( pRoot ); var pChannel = pRoot->FirstChildElement( "channel" ); CHECK( pChannel );
+			tinyxml2::XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "rss" ); CHECK( pRoot ); var pChannel = pRoot->FirstChildElement( "channel" ); CHECK( pChannel );
 			for( auto pItem=pChannel->FirstChildElement("item"); pItem; pItem = pItem->NextSiblingElement("item") )
 			{
 				auto p = make_shared<Proto::Results::GoogleNews>();
@@ -103,7 +99,7 @@ namespace Jde::Markets::TwsWebSocket
 					var hour = Str::To<uint8>( pubDateString.substr(17,2) );
 					var minute = Str::To<uint8>( pubDateString.substr(20,2) );
 					var second = Str::To<uint8>( pubDateString.substr(23,2) );
-					p->set_publication_date( DateTime{year, month, day, hour, minute, second}.TimeT() );
+					p->set_publication_date( (uint32)DateTime{year, month, day, hour, minute, second}.TimeT() );
 				}
 				catch( const Exception& e )
 				{
@@ -119,12 +115,12 @@ namespace Jde::Markets::TwsWebSocket
 				}
 				results->push_back( move(p) );
 			}
-			h.promise().get_return_object().Result = TaskResult{ results };
+			h.promise().get_return_object().SetResult( results );
 		}
 		catch( const std::exception& e )
 		{
 			ERR( string{e.what()} );
-			h.promise().get_return_object().Result = std::make_exception_ptr( e );
+			h.promise().get_return_object().SetResult( e );
 		}
 		h.resume();
 	}};}

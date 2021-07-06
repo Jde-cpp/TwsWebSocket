@@ -31,13 +31,14 @@ if ! windows; then set disable-completion on; fi;
 
 myFetch MarketLibrary market-build.sh
 cd jde/MarketLibrary;
-./market-build.sh $clean $shouldFetch; if [ $? -ne 0 ]; then echo market-build.sh failed - $?; exit 1; fi;
+./market-build.sh $clean $shouldFetch 1; if [ $? -ne 0 ]; then echo market-build.sh failed - $?; exit 1; fi;
+echo market-build complete
 echo scriptDir=$scriptDirA;
 includeDir=$scriptDirA/jde/Public/jde;
 cd $includeDir/blockly/types/proto;
 blocklyProtoDir=`pwd`;
 if [ $clean -eq 1 ]; then
-    rm *.pb.h
+    rm *.pb.h > /dev/null;
 fi;
 if [ ! -f blockly.pb.h ]; then
 	findProtoc; protoc --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto;
@@ -65,22 +66,3 @@ fetchDefault TwsWebSocket;
 build TwsWebSocket 0 TwsWebSocket.exe;
 
 if [ ! windows ]; then set disable-completion off; fi;
-
-
-#git clone https://gitlab.com/libeigen/eigen.git
-#git clone https://github.com/gabime/spdlog.git
-
-#export INCLUDE=$INCLUDE\;C:\\Users\\duffyj\\source\\repos\\eigen
-#set $PATH=$PATH:C:\Users\duffyj\source\repos\boost_1_72_0
-#cd C:\Users\duffyj\source\repos\boost_1_72_0
-#bootstrap
-#b2 variant=debug link=shared threading=multi runtime-link=shared address-model=64 --with-date_time
-#b2 variant=release link=shared threading=multi runtime-link=shared address-model=64 --with-date_time
-#b2 variant=debug link=shared threading=multi runtime-link=shared address-model=64 --with-regex
-#b2 variant=release link=shared threading=multi runtime-link=shared address-model=64 --with-regex
-#b2 variant=debug link=shared threading=multi runtime-link=shared address-model=64 --with-coroutine
-#b2 variant=release link=shared threading=multi runtime-link=shared address-model=64 --with-coroutine
-# git clone https://github.com/johnduffynh/tws-api.git
-# git remote add upstream https://github.com/InteractiveBrokers/tws-api.git
-# git fetch upstream
-# git checkout master

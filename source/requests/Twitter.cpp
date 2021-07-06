@@ -1,5 +1,5 @@
-#include "Twitter.h"
-//#include <boost/container/map.hpp>
+﻿#include "Twitter.h"
+#include <jde/coroutine/Task.h>
 #include <jde/io/Crc.h>
 #include <jde/markets/types/proto/results.pb.h>
 #include "../../../Framework/source/Settings.h"
@@ -7,13 +7,14 @@
 #include "../../../Framework/source/db/Syntax.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../Ssl/source/Ssl.h"
+#include "../../../Ssl/source/SslCo.h"
 #include "../../../Framework/source/db/Database.h"
 
 namespace Jde
 {
 #pragma region Defines
 	using namespace Markets::TwsWebSocket;
-	//using Markets::TwsWebSocket::ProcessArg;
+	using namespace Coroutine;
 	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task2;
 	using Markets::Proto::Results::Tweets; using ProtoTweet=Markets::Proto::Results::Tweet;
 	using Markets::Proto::Results::TweetAuthors; using Markets::Proto::Results::TweetAuthor;
@@ -77,15 +78,9 @@ namespace Jde
 	{
 		static void from_json( const nlohmann::json& j, Meta& o )noexcept
 		{
-			//FROM_JSON64( "newest_id", NewestId );
-			//FROM_JSON64( "oldest_id", OldestId );
-			//FROM_JSON( "result_count", Count );
 			FROM_JSON( "next_token", NextToken );
 		}
 
-		//string NewestId;
-		//string OldestId;
-		//uint Count{0};
 		string NextToken;
 	};
 	struct PublicMetrics
@@ -153,7 +148,7 @@ namespace Jde
 		Meta MetaData;
 	};
 #pragma endregion
-	α Block2( uint userId, const Twitter::TwitterSettings& settings )noexcept->ErrorAwaitableAsync{ return Coroutine::ErrorAwaitableAsync{ [=](auto h)->Task2
+	α Block2( uint userId, const Twitter::TwitterSettings& settings )noexcept{ return Coroutine::FunctionAwaitable{ [=](auto h)->Task2
 	{
 		var once = std::to_string( userId );
 		var url = "https://api.twitter.com/1.1/blocks/create.json"sv;
@@ -178,7 +173,7 @@ namespace Jde
 				<< "oauth_version=\"1.0\","
 				<< "oauth_signature=\"" << Ssl::Encode( Ssl::RsaSign(os.str(), format("{}&{}", settings.ApiSecretKey, settings.AccessTokenSecret)) ) << "\"";//https://datatracker.ietf.org/doc/html/rfc5849#section-3.4
 
-		h.promise().get_return_object().Result = co_await Ssl::CoSendEmpty( "api.twitter.com", format(string(url.substr(23))+string("?user_id={}&skip_status=1"), userId), osAuth.str() );
+		h.promise().get_return_object().SetResult( co_await Ssl::SslCo::SendEmpty("api.twitter.com", format(string(url.substr(23))+string("?user_id={}&skip_status=1"), userId), osAuth.str()) );
 		h.resume();
 	}};}
 	α Twitter::Block( uint userId, ProcessArg arg )noexcept->Coroutine::Task2
@@ -264,7 +259,7 @@ namespace Jde
 
 		DBG( "{} - {}"sv, query, ignoredSorted.size() );
 		var pBlockedUsers = DB::SelectSet<uint>( "select id from twt_users where blocked=1", "twt_blocks", {} ); set<uint> newBlockedUsers;
-		//push
+
 		var now = Clock::now();
 		var epoch = now-24h;
 		auto lastChecked = Clock::from_time_t(pExisting->update_time())>epoch ? Clock::from_time_t(pExisting->update_time()) : epoch;
@@ -279,9 +274,7 @@ namespace Jde
 		{
 			do
 			{
-				var target = format( "/2/tweets/search/recent?query={}&tweet.fields=public_metrics,author_id,created_at{}{}", query, startTimeUrl, nextToken );
-				DBG( target );
-				Coroutine::TaskResult result2 = co_await Ssl::CoGet( "api.twitter.com", target, format("Bearer {}", settings.BearerToken) );
+				Coroutine::TaskResult result2 = co_await Ssl::SslCo::Get( "api.twitter.com", format("/2/tweets/search/recent?query={}&tweet.fields=public_metrics,author_id,created_at{}{}", query, startTimeUrl, nextToken), format("Bearer {}", settings.BearerToken) );
 				var pResult = result2.Get<string>();
 				var j = nlohmann::json::parse( *pResult );
 				Recent recent;
@@ -395,7 +388,7 @@ namespace Jde
 			for( var id : authors )
 			{
 				DBG( format("https://api.twitter.com/1.1/users/show.json?user_id={}", id) );
-				var pResult = ( co_await Ssl::CoGet("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
+				var pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
 				var j = nlohmann::json::parse( *pResult );
 				User user;
 				User::from_json( j, user );
