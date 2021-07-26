@@ -234,7 +234,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( client.SessionId ); RETURN_IF( p==_sessions.end(), "({})Could not find session for Login."sv, client.SessionId );
+			var p = _sessions.find( client.SessionId ); RETURN_IF( p==_sessions.end(), "({})Could not find session for Login.", client.SessionId );
 			auto& settings = p->second;
 			settings.AuthType = type;
 			settings.Email = email;

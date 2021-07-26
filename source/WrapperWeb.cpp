@@ -1,9 +1,3 @@
-//x1 - User access.
-//x2 - Global access.
-//x3 - change user access.
-//x4 - change global access.
-//5 - fix mysql provider.
-
 #include "WrapperWeb.h"
 #include <thread>
 #include <TickAttrib.h>
@@ -145,7 +139,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::LoadAccess()noexcept
 	{
-		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource"sv );
+		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
 		unique_lock l{ _accountMutex };
 		_deletedAccounts.clear();
 		_accounts.clear();
@@ -167,7 +161,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::LoadMinimumAccess()noexcept
 	{
-		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource"sv );
+		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
 		unique_lock l{ _accountMutex };
 		_minimumAccess.clear();
 		if( !pDataSource->TrySelect( "SELECT user_id, right_id from um_permissions p join um_apis apis on p.api_id=apis.id and apis.name='TWS' and p.name is null join um_role_permissions rp on rp.permission_id=p.id join um_group_roles gr on gr.role_id=rp.role_id join um_user_groups ug on gr.group_id=ug.user_id", [&]( const DB::IRow& row )
@@ -187,7 +181,7 @@ namespace Jde::Markets::TwsWebSocket
 			LoadAccess();
 			LoadMinimumAccess();
 			shared_lock l{ _accountMutex };
-			auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource"sv );
+			auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
 			for( var& name : accounts )
 			{
 				if( !_deletedAccounts.contains(name) && !_accounts.contains(name) && pDataSource->TryExecuteProc("ib_account_insert( ?, 0, ?, ? )", {name,nullptr,name}) )
@@ -211,7 +205,6 @@ namespace Jde::Markets::TwsWebSocket
 		shared_lock l{ _accountMutex };
 		for( var& account : accounts )
 		{
-			//if( !_deletedAccounts.contains(account) )
 			(*accountList.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second.Description : account;
 		}
 		_webSend.Push( EResults::ManagedAccounts, [&accountList, this]( auto& m, SessionPK sessionId )
@@ -227,11 +220,6 @@ namespace Jde::Markets::TwsWebSocket
 			m.set_allocated_string_map( new Proto::Results::StringMap{userList} );
 		});
 	}
-/*	void WrapperWeb::accountDownloadEnd( const std::string& accountName )noexcept
-	{
-		WrapperLog::accountDownloadEnd( accountName );
-		_pWebSend->AccountDownloadEnd( accountName );
-	}*/
 	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
@@ -253,7 +241,6 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		WrapperLog::accountUpdateMultiEnd( reqId );
 		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::PositionMultiEnd );// pValue->set_int_value( reqId );
-		//_pWebSend->PushAllocated( pValue, reqId );
 		_pWebSend->Push( reqId, [pValue](MessageType& msg, ClientPK id){ pValue->set_int_value(id); msg.set_allocated_message(pValue); } );
 	}
 	void WrapperWeb::historicalData( TickerId reqId, const ::Bar& bar )noexcept
@@ -502,60 +489,6 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend->Push( EResults::ExecutionDataEnd, reqId );
 	}
 
-	// void WrapperWeb::newsArticle( int requestId, int articleType, const std::string& articleText )noexcept
-	// {
-	// 	auto p = make_unique<Proto::Results::NewsArticle>();
-	// 	p->set_is_text( articleType==0 );
-	// 	p->set_value( articleText );
-	// 	_pWebSend->TryPush( requestId, [&p2=p](MessageType& msg, ClientPK id){p2->set_request_id( id ); msg.set_allocated_news_article(p2.release());} );
-	// }
-/*	void WrapperWeb::historicalNews( int requestId, const std::string& time, const std::string& providerCode, const std::string& articleId, const std::string& headline )noexcept
-	{
-		WrapperLog::historicalNews( requestId, time, providerCode, articleId, headline );
-		unique_lock l{_newsMutex};
-		auto pExisting = _allocatedNews.find( requestId );
-		if( pExisting ==_allocatedNews.end() )
-			pExisting = _allocatedNews.emplace( requestId, new Proto::Results::HistoricalNewsCollection() ).first;
-		auto pNew = pExisting->second->add_values();
-		if( time.size()==21 )
-			pNew->set_time( (uint32)DateTime((uint16)stoi(time.substr(0,4)), (uint8)stoi(time.substr(5,2)), (uint8)stoi(time.substr(8,2)), (uint8)stoi(time.substr(11,2)), (uint8)stoi(time.substr(14,2)), (uint8)stoi(time.substr(17,2)) ).TimeT() );//missing tenth seconds.
-
-		pNew->set_provider_code( providerCode );
-		pNew->set_article_id( articleId );
-		pNew->set_headline( headline );
-	}
-
-	void WrapperWeb::historicalNewsEnd( int requestId, bool hasMore )noexcept
-	{
-		WrapperLog::historicalNewsEnd( requestId, hasMore );
-		Proto::Results::HistoricalNewsCollection* pCollection;
-		{
-			unique_lock l{_newsMutex};
-			auto pExisting = _allocatedNews.find( requestId );
-			if( pExisting==_allocatedNews.end() )
-				pCollection = new Proto::Results::HistoricalNewsCollection();
-			else
-			{
-				pCollection = pExisting->second;
-				_allocatedNews.erase( pExisting );
-			}
-		}
-		pCollection->set_has_more( hasMore );
-		_pWebSend->Push( requestId, [p=pCollection](MessageType& msg, ClientPK id){p->set_request_id( id ); msg.set_allocated_historical_news(p);} );
-	}
-*/
-/*	void WrapperWeb::newsProviders( const std::vector<NewsProvider>& providers, bool isCache )noexcept
-	{
-		if( !isCache )
-			WrapperCache::newsProviders( providers );
-		Proto::Results::StringMap map;
-		map.set_result( EResults::NewsProviders );
-		for( var& provider : providers )
-			(*map.mutable_values())[provider.providerCode] = provider.providerName;
-
-		_pWebSend->Push( EResults::NewsProviders, [&map]( auto& type ){ type.set_allocated_string_map(new Proto::Results::StringMap{map});} );
-	}
-*/
 	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
 	{
 		var handled = WrapperSync::securityDefinitionOptionalParameterSync( reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );

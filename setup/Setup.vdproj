@@ -2005,7 +2005,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_20732508BA3345A184A77B324DC61695"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\index.html"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\index.html"
             "TargetName" = "8:index.html"
             "Tag" = "8:"
             "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
@@ -2203,26 +2203,6 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_27CAF43C73B04EC783CE3EB9C05E1CBD"
-            {
-            "SourcePath" = "8:..\\install\\ProgramData\\jde-cpp\\TwsWebSocket\\blockly\\build\\include\\spdlog\\cfg\\log_levels.h"
-            "TargetName" = "8:log_levels.h"
-            "Tag" = "8:"
-            "Folder" = "8:_BCC905F6BDAA4606A2311856B9FE19F8"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_27E6493A3B754C2B9776E64FFA9AE027"
             {
             "SourcePath" = "8:..\\..\\Public\\jde\\blockly\\types\\BTick.h"
@@ -2383,26 +2363,6 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_2E7B68BF5DBA4C52BD8E52F7050ED0AF"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\assets\\img\\theme-demo-icon.svg"
-            "TargetName" = "8:theme-demo-icon.svg"
-            "Tag" = "8:"
-            "Folder" = "8:_9B8AED0956EF4054BD6D9A5CFF7F426D"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_3364ADBAFB704686A1E7301A964D40EC"
             {
             "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.Markets.dll"
@@ -2485,8 +2445,8 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_3BA8EA7966834A9BB02636AE177622C3"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\polyfills.00fd995f24a6502b8948.js"
-            "TargetName" = "8:polyfills.00fd995f24a6502b8948.js"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\polyfills.35a5ca1855eb057f016a.js"
+            "TargetName" = "8:polyfills.35a5ca1855eb057f016a.js"
             "Tag" = "8:"
             "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
@@ -2903,26 +2863,6 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_61E3775576E44C788ECA21BE81722EB9"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\assets\\pink-bluegrey.css"
-            "TargetName" = "8:pink-bluegrey.css"
-            "Tag" = "8:"
-            "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_621BB238250B40F5965EE62D8120A958"
             {
             "SourcePath" = "8:..\\install\\ProgramData\\jde-cpp\\TwsWebSocket\\blockly\\build\\include\\spdlog\\sinks\\syslog_sink.h"
@@ -3065,30 +3005,10 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_68983456E50447D2B50CD6F9DE1489A7"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\styles.090337af582d11ffb9c5.css"
-            "TargetName" = "8:styles.090337af582d11ffb9c5.css"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\styles.fd6b61cc6c2b84baa94a.css"
+            "TargetName" = "8:styles.fd6b61cc6c2b84baa94a.css"
             "Tag" = "8:"
             "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_6D34857FB24749958F3DD977A470E6CF"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\assets\\purple-green.css"
-            "TargetName" = "8:purple-green.css"
-            "Tag" = "8:"
-            "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -3169,26 +3089,6 @@
             "TargetName" = "8:Template.cpp"
             "Tag" = "8:"
             "Folder" = "8:_A1E2A2439C954120B6D0870133B23069"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7B7396CADA5D40B5BA6F04F465EA8680"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\assets\\deeppurple-amber.css"
-            "TargetName" = "8:deeppurple-amber.css"
-            "Tag" = "8:"
-            "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -3625,7 +3525,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9408FA595DA941AAA096E1E77EBD79BD"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\3rdpartylicenses.txt"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\3rdpartylicenses.txt"
             "TargetName" = "8:3rdpartylicenses.txt"
             "Tag" = "8:"
             "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
@@ -3685,7 +3585,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9A5101684A2340A98E6E160B23B644BC"
             {
-            "SourcePath" = "8:..\\..\\Public\\jde\\DateTime.h"
+            "SourcePath" = "8:..\\..\\Framework\\source\\DateTime.h"
             "TargetName" = "8:DateTime.h"
             "Tag" = "8:"
             "Folder" = "8:_DE06840E51414C35B051BF67547278C2"
@@ -3705,7 +3605,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9A754FC58B5C499A96627ADB1B0FFF25"
             {
-            "SourcePath" = "8:..\\..\\Public\\jde\\blockly\\Blockly.h"
+            "SourcePath" = "8:..\\..\\Blockly\\source\\Blockly.h"
             "TargetName" = "8:Blockly.h"
             "Tag" = "8:"
             "Folder" = "8:_B7235D7B368246E2BA79A91099AA7F90"
@@ -3765,8 +3665,8 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9ED4A8EE0427452A9BE933914823BE3D"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\runtime.0e49e2b53282f40c8925.js"
-            "TargetName" = "8:runtime.0e49e2b53282f40c8925.js"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\runtime.acf0dec4155e77772545.js"
+            "TargetName" = "8:runtime.acf0dec4155e77772545.js"
             "Tag" = "8:"
             "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
@@ -3945,7 +3845,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_AEABC914CFC94B248EE0D9DEDE09BA84"
             {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\liblzma.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\liblzma.dll"
             "TargetName" = "8:liblzma.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
@@ -4205,7 +4105,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_C5ADE778EC3349B7BC231AADAF37FF53"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\favicon.ico"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\favicon.ico"
             "TargetName" = "8:favicon.ico"
             "Tag" = "8:"
             "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
@@ -4305,8 +4205,8 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_CAEFA5092D524300B806CDDC44F22E74"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\source\\ClientApp\\dist\\TwsWebsite\\main.e08e0186f977bad5d3ee.js"
-            "TargetName" = "8:main.e08e0186f977bad5d3ee.js"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\main.8635fa69b3d81a07cd3a.js"
+            "TargetName" = "8:main.8635fa69b3d81a07cd3a.js"
             "Tag" = "8:"
             "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
@@ -4545,7 +4445,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_D64315CFBC874306A50C581C773FAE06"
             {
-            "SourcePath" = "8:..\\..\\Public\\jde\\coroutine\\Coroutine.h"
+            "SourcePath" = "8:..\\..\\Framework\\source\\coroutine\\Coroutine.h"
             "TargetName" = "8:Coroutine.h"
             "Tag" = "8:"
             "Folder" = "8:_B338209D1C50418EA77EC9593DABB558"
@@ -4589,26 +4489,6 @@
             "TargetName" = "8:message_lite.h"
             "Tag" = "8:"
             "Folder" = "8:_C3A2EA6EDE984C0DB017938C03848D38"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_D89F1EF3B7854BF598566CB0741CAF39"
-            {
-            "SourcePath" = "8:..\\install\\ProgramData\\jde-cpp\\TwsWebSocket\\blockly\\build\\include\\fmt\\posix.h"
-            "TargetName" = "8:posix.h"
-            "Tag" = "8:"
-            "Folder" = "8:_F9E12B3B8CA0474BAC01F907996DF7C3"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -4825,7 +4705,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_EDC507F6DA1946129CDB1AC03531C6EA"
             {
-            "SourcePath" = "8:..\\..\\..\\vcpkg\\packages\\protobuf_x64-windows\\bin\\libprotobuf.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\libprotobuf.dll"
             "TargetName" = "8:libprotobuf.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
