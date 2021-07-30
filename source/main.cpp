@@ -18,21 +18,31 @@ namespace Jde::Markets::TwsWebSocket
 
 int main( int argc, char** argv )
 {
-	int result = 0;//EXIT_SUCCESS;
+	using namespace Jde;
+	int result = 1;//EXIT_SUCCESS;
 	try
 	{
-		using namespace Jde;
-		OSApp::Startup( argc, argv, "TwsWebSocket" );
+		OSApp::Startup( argc, argv, "TwsWebSocket", "Web socket service for Tws Gateway" );
 		IApplication::AddThread( std::make_shared<Threading::InterruptibleThread>("Startup", [&](){Markets::TwsWebSocket::Startup();}) );
 
 		IApplication::Pause();
 		IApplication::CleanUp();
+		result = 0;
 	}
-	catch( const Jde::EnvironmentException& e )
+	catch( const EnvironmentException& e )
 	{
 		std::cerr << e.what() << std::endl;
 		CRITICAL( std::string(e.what()) );
-		result = 1;//EXIT_FAILURE
+	}
+	catch( const Exception& e )
+	{
+		if( e.GetLevel()!=ELogLevel::Trace )
+		{
+			std::cerr << e.what() << std::endl;
+			CRITICAL( std::string(e.what()) );
+		}
+		else
+			std::cout << e.what() << std::endl;
 	}
 	return result;
 }

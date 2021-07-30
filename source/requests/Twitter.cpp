@@ -28,7 +28,7 @@ namespace Jde
 		{
 			TwitterSettings()noexcept
 			{
-				auto pSettings = Settings::Global().SubContainer( "twitter" );
+				auto pSettings = Settings::Global().TrySubContainer( "twitter" );
 				if( pSettings )
 					from_json( pSettings->Json(), *this );
 			}

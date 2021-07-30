@@ -14,7 +14,7 @@ namespace Jde::Markets::TwsWebSocket
 		var dir = SettingsPtr->Get<fs::path>( "watchDir", IApplication::Instance().ApplicationDataFolder()/"watches" );
 		if( dir.empty() )
 			THROW( EnvironmentException("WatchDir not set") );
-		IOException::TestExists( dir );
+		CHECK_FILE_EXISTS( dir );
 		return dir;
 	}
 	vector<string> WatchListData::Names( optional<bool> portfolio )noexcept(false)//IOException - watch list dir may not exist.
