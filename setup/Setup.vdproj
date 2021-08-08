@@ -189,6 +189,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_163CC9D640844A0D8F1E838DA627CEB2"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_184C8096E5D74DE48C4C3E3399B495DE"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -256,6 +262,12 @@
         "Entry"
         {
         "MsmKey" = "8:_214F7ADE60104542BD1CC2FDEDC7F90F"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_23720BC2B8A44586A970B81601DF97A5"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -538,6 +550,12 @@
         "Entry"
         {
         "MsmKey" = "8:_621BB238250B40F5965EE62D8120A958"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_62E96F12B0F14E6399335619C2373140"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -940,6 +958,12 @@
         "Entry"
         {
         "MsmKey" = "8:_BB63BBB4829940E898C00C3B36D9BB1A"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_BD06BAEA9E0E472F93FE411FE7D5D6F9"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -1971,6 +1995,26 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_163CC9D640844A0D8F1E838DA627CEB2"
+            {
+            "SourcePath" = "8:..\\sql\\twt_user_block.ms.sql"
+            "TargetName" = "8:twt_user_block.ms.sql"
+            "Tag" = "8:"
+            "Folder" = "8:_459F2507FEB4410D95E3BB1E87F07A31"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_184C8096E5D74DE48C4C3E3399B495DE"
             {
             "SourcePath" = "8:..\\install\\ProgramData\\jde-cpp\\TwsWebSocket\\blockly\\build\\include\\spdlog\\sinks\\basic_file_sink.h"
@@ -2197,6 +2241,26 @@
             "TargetName" = "8:message.h"
             "Tag" = "8:"
             "Folder" = "8:_C3A2EA6EDE984C0DB017938C03848D38"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_23720BC2B8A44586A970B81601DF97A5"
+            {
+            "SourcePath" = "8:..\\sql\\twt_tag_ignore.ms.sql"
+            "TargetName" = "8:twt_tag_ignore.ms.sql"
+            "Tag" = "8:"
+            "Folder" = "8:_459F2507FEB4410D95E3BB1E87F07A31"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -3077,6 +3141,26 @@
             "TargetName" = "8:syslog_sink.h"
             "Tag" = "8:"
             "Folder" = "8:_C6EC787210604983B60E7462DFE18643"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_62E96F12B0F14E6399335619C2373140"
+            {
+            "SourcePath" = "8:..\\sql\\twt_user_insert.ms.sql"
+            "TargetName" = "8:twt_user_insert.ms.sql"
+            "Tag" = "8:"
+            "Folder" = "8:_459F2507FEB4410D95E3BB1E87F07A31"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -4317,6 +4401,26 @@
             "TargetName" = "8:file_helper.h"
             "Tag" = "8:"
             "Folder" = "8:_08CD2F9DADC24D8393F486DD86FC0FB3"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_BD06BAEA9E0E472F93FE411FE7D5D6F9"
+            {
+            "SourcePath" = "8:..\\meta.json"
+            "TargetName" = "8:meta.json"
+            "Tag" = "8:"
+            "Folder" = "8:_F6F3920D2C154E7CA9CDE7F7B45932B5"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -5607,6 +5711,17 @@
                             "Condition" = "8:"
                             "Transitive" = "11:FALSE"
                             "Property" = "8:_EE2201A28AE64926ACE4DE6E338A0875"
+                                "Folders"
+                                {
+                                }
+                            }
+                            "{9EF0B969-E518-4E46-987F-47570745A589}:_459F2507FEB4410D95E3BB1E87F07A31"
+                            {
+                            "Name" = "8:sql"
+                            "AlwaysCreate" = "11:FALSE"
+                            "Condition" = "8:"
+                            "Transitive" = "11:FALSE"
+                            "Property" = "8:_CD82C655D52C40359848DB8C3ABA49C9"
                                 "Folders"
                                 {
                                 }
