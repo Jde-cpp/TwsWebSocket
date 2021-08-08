@@ -54,3 +54,5 @@ source/*.i
 install/ProgramData/*
 setup/.vs/*
 *.msi
+.gitignore
+setup/Release/*

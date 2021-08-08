@@ -1,11 +1,13 @@
 #!/bin/bash
 clean=${1:-0};
 shouldFetch=${2:-1};
-buildPrivate=${3:-0};
-baseDir=`pwd`; jdeRoot=jde;
+buildPrivate=${3:-1};
+buildWeb=${4:-1};
+
+#baseDir=`pwd`; jdeRoot=jde;
 
 t=$(readlink -f "${BASH_SOURCE[0]}"); scriptName=$(basename "$t"); unset t;
-scriptDirA="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 echo $scriptName clean=$clean shouldFetch=$shouldFetch buildPrivate=$buildPrivate
 function myFetch
 {
@@ -33,8 +35,8 @@ myFetch MarketLibrary market-build.sh
 cd jde/MarketLibrary;
 ./market-build.sh $clean $shouldFetch 1; if [ $? -ne 0 ]; then echo market-build.sh failed - $?; exit 1; fi;
 echo market-build complete
-echo scriptDir=$scriptDirA;
-includeDir=$scriptDirA/jde/Public/jde;
+echo scriptDir=$scriptDir;
+includeDir=$scriptDir/jde/Public/jde;
 cd $includeDir/blockly/types/proto;
 blocklyProtoDir=`pwd`;
 if [ $clean -eq 1 ]; then
@@ -66,3 +68,16 @@ fetchDefault TwsWebSocket;
 build TwsWebSocket 0 TwsWebSocket.exe;
 
 if [ ! windows ]; then set disable-completion off; fi;
+if [ $buildWeb -eq 0 ]; then exit 0; fi;
+#----------------------------------------------------------------------------------------------------------
+cd $scriptDir/jde;
+moveToDir web;
+fetch TwsWebsite;
+cd ..;
+./setup.sh $clean $shouldFetch $buildPrivate;
+if ! $(findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/BuildTools/Common7/IDE' 0 ); then findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/Enterprise/Common7/IDE'; fi;
+cd $scriptDir
+devenv jde/TwsWebSocket/setup/Setup.vdproj;
+
+
+

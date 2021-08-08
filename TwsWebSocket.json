@@ -3,12 +3,12 @@
 	"GoogleAuthClientId": "926418369328-dm78ui3p1tar2oen6qgkv3rkb33t5pik.apps.googleusercontent.com",
 	"dbDriver": "Jde.DB.Odbc.dll",
 	"connectionString": "DSN=Jde_TWS_Connection",
-	"metaDataPath": "../meta.json",
+	"metaDataPath": "meta.json",
 	"logging":
 	{
 		"level": 1,
 		"path": "..",
-		"serverPort":  4321
+		"serverPortx":  4321
 	},
 	"twsWebSocket":
 	{

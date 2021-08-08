@@ -927,12 +927,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_B612B6CBBDCE4A99A4276CE8118BE1D1"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_B7E59F4488E7418DA32D0EE759887B75"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -1162,12 +1156,6 @@
         "Entry"
         {
         "MsmKey" = "8:_E404CAB0A7DE41D8942B55C4C56F131E"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_E5679CB891B44561BD65FCC66922CA19"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -2545,7 +2533,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_3364ADBAFB704686A1E7301A964D40EC"
             {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.Markets.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\Jde.Markets.dll"
             "TargetName" = "8:Jde.Markets.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
@@ -2565,7 +2553,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_3447BC8C3FE74F3599529E200E5E8770"
             {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\TwsWebSocket.exe"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\TwsWebSocket.exe"
             "TargetName" = "8:TwsWebSocket.exe"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
@@ -3223,26 +3211,6 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_68983456E50447D2B50CD6F9DE1489A7"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\styles.js"
-            "TargetName" = "8:styles.js"
-            "Tag" = "8:"
-            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7039792AC19748EDB53E27CC10607752"
             {
             "SourcePath" = "8:..\\install\\ProgramData\\jde-cpp\\TwsWebSocket\\blockly\\build\\include\\spdlog\\sinks\\daily_file_sink.h"
@@ -3365,7 +3333,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7CAA509FFBAC490FAAB611D4CD7A3D60"
             {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.XZ.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\Jde.XZ.dll"
             "TargetName" = "8:Jde.XZ.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
@@ -3985,7 +3953,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9DDB56E9C04649E78D4FC104A0D8B342"
             {
-            "SourcePath" = "8:..\\source\\.bin\\Release\\Jde.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\Jde.dll"
             "TargetName" = "8:Jde.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
@@ -4109,26 +4077,6 @@
             "TargetName" = "8:extension_set.h"
             "Tag" = "8:"
             "Folder" = "8:_C3A2EA6EDE984C0DB017938C03848D38"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_A5233A7CD04A49ADAADF5AD18D29562E"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\styles.js.map"
-            "TargetName" = "8:styles.js.map"
-            "Tag" = "8:"
-            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -4309,26 +4257,6 @@
             "TargetName" = "8:callback.h"
             "Tag" = "8:"
             "Folder" = "8:_61C1CD2985AD4C9896F04CFBA4F96197"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_B612B6CBBDCE4A99A4276CE8118BE1D1"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\vendor.js.map"
-            "TargetName" = "8:vendor.js.map"
-            "Tag" = "8:"
-            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -5089,26 +5017,6 @@
             "TargetName" = "8:android_sink.h"
             "Tag" = "8:"
             "Folder" = "8:_C6EC787210604983B60E7462DFE18643"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_E5679CB891B44561BD65FCC66922CA19"
-            {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\vendor.js"
-            "TargetName" = "8:vendor.js"
-            "Tag" = "8:"
-            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"

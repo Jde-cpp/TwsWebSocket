@@ -1,6 +1,7 @@
 #!/bin/bash
+#should be run from scriptDir?
 source ../Framework/common.sh;
-cd $REPO_BASH/jde/TwsWebSocket;
+cd $REPO_BASH/jde/TwsWebSocket;#pwd?
 blocklyDir=$REPO_BASH/jde/Blockly;
 publicDir=$REPO_BASH/jde/Public;
 blocklyInstallDir=`pwd`/install/ProgramData/jde-cpp/TwsWebSocket/blockly;
@@ -15,8 +16,8 @@ function linkDir
 	moveToDir $destination;
 	for file in "${_files[@]}"; do
 		if [[ $file != *.* ]]; then file=$file.h; fi;
-		echo `pwd`;
-		echo mklink $file $source;
+		#echo `pwd`;
+		#echo mklink $file $source;
 		if [ ! -f $file ]; then mklink $file $source; fi;
 	done
 }
@@ -34,7 +35,7 @@ function linkRecursive
 			#_source=$source; #only 1 level...
 			linkRecursive $base $source;
 			#source=_source;
-			echo pwd=`pwd`;
+			#echo pwd=`pwd`;
 		else
 			#echo mklink $base $source;
 			mklink $base $source;
@@ -61,10 +62,14 @@ cd ..;linkDir stubs $REPO_BASH/protobuf/src/google/protobuf files
 cd ../../..;linkRecursive spdlog $REPO_BASH/spdlog/include;
 
 cd $blocklyInstallDir/build;
-mklink Dll.Template.vcxproj $blocklyDir/jit;
+mklink Dll.Template.vcxproj $publicDir/src/blockly/jit;
 mklink Template.cpp $blocklyDir/jit;
 mklink c_api.h $publicDir/jde/blockly;
 cd ..;
 mklink TradeOption.proto $blocklyDir/examples;
+cd $publicDir/stage/release
+mklink libssl-1_1-x64.dll /c/Program Files/OpenSSL-Win64/bin
+mklink libcrypto-1_1-x64.dll /c/Program Files/OpenSSL-Win64/bin
+
 
 
