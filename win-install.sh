@@ -68,8 +68,8 @@ mklink c_api.h $publicDir/jde/blockly;
 cd ..;
 mklink TradeOption.proto $blocklyDir/examples;
 cd $publicDir/stage/release
-mklink libssl-1_1-x64.dll /c/Program Files/OpenSSL-Win64/bin
-mklink libcrypto-1_1-x64.dll /c/Program Files/OpenSSL-Win64/bin
+mklink libssl-1_1-x64.dll /c/"Program Files"/OpenSSL-Win64/bin
+mklink libcrypto-1_1-x64.dll /c/"Program Files"/OpenSSL-Win64/bin
 
 
 

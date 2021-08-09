@@ -75,6 +75,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_080312EC5CAE403EA3E829B416BB865D"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_09302C1269774332BAA48AE7A7CE9301"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -525,6 +531,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_527BDC2FEDD34C77A8F1FEC62C284FE2"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_575269A943364D8EAC672B777D8CDD27"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -621,7 +633,19 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_74DF5C6758C145308581BF7CAA6DBB6D"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_7568C2B8F5894985A96FBCA3118CB40B"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_76DBB59FD0C644F6949D2EE09B303F42"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -1333,6 +1357,12 @@
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
+        "Entry"
+        {
+        "MsmKey" = "8:_FF0CA50C52F74C5D8304F269877C956E"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
     }
     "Configurations"
     {
@@ -1601,6 +1631,26 @@
             "TargetName" = "8:dist_sink.h"
             "Tag" = "8:"
             "Folder" = "8:_C6EC787210604983B60E7462DFE18643"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_080312EC5CAE403EA3E829B416BB865D"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\assets\\pink-bluegrey.css"
+            "TargetName" = "8:pink-bluegrey.css"
+            "Tag" = "8:"
+            "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -3075,6 +3125,26 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_527BDC2FEDD34C77A8F1FEC62C284FE2"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\styles.css"
+            "TargetName" = "8:styles.css"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_575269A943364D8EAC672B777D8CDD27"
             {
             "SourcePath" = "8:..\\..\\Public\\jde\\markets\\types\\proto\\watch.pb.h"
@@ -3335,12 +3405,52 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_74DF5C6758C145308581BF7CAA6DBB6D"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\styles.css.map"
+            "TargetName" = "8:styles.css.map"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7568C2B8F5894985A96FBCA3118CB40B"
             {
             "SourcePath" = "8:..\\install\\ProgramData\\jde-cpp\\TwsWebSocket\\blockly\\build\\include\\spdlog\\details\\log_msg_buffer.h"
             "TargetName" = "8:log_msg_buffer.h"
             "Tag" = "8:"
             "Folder" = "8:_08CD2F9DADC24D8393F486DD86FC0FB3"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_76DBB59FD0C644F6949D2EE09B303F42"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\3rdpartylicenses.txt"
+            "TargetName" = "8:3rdpartylicenses.txt"
+            "Tag" = "8:"
+            "Folder" = "8:_7CE40941E4A7424DB95BCFD974985737"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -5635,6 +5745,26 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_FF0CA50C52F74C5D8304F269877C956E"
+            {
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\assets\\purple-green.css"
+            "TargetName" = "8:purple-green.css"
+            "Tag" = "8:"
+            "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
         }
         "FileType"
         {
@@ -6089,7 +6219,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:TwsWebSocket"
         "ProductCode" = "8:{01C6482C-D9E8-444A-93D6-CF2D0FE847DE}"
-        "PackageCode" = "8:{7DB98958-BF66-413B-9ABE-A314DF3418CA}"
+        "PackageCode" = "8:{77DE71CB-457A-4113-AF72-844D085BE57B}"
         "UpgradeCode" = "8:{A054DB4A-7814-4C88-8860-9AE334B5A818}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"

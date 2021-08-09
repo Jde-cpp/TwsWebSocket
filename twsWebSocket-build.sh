@@ -44,6 +44,11 @@ if [ $clean -eq 1 ]; then
 fi;
 if [ ! -f blockly.pb.h ]; then
 	findProtoc; protoc --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto;
+	if windows; then
+		sed -i 's/PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT CopyDefaultTypeInternal _Copy_default_instance_;/PROTOBUF_ATTRIBUTE_NO_DESTROY CopyDefaultTypeInternal _Copy_default_instance_;/' blockly.pb.cc;
+		sed -i 's/PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT IdRequestDefaultTypeInternal _IdRequest_default_instance_;/PROTOBUF_ATTRIBUTE_NO_DESTROY IdRequestDefaultTypeInternal _IdRequest_default_instance_;/' blockly.pb.cc;
+		sed -i 's/PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT FunctionDefaultTypeInternal _Function_default_instance_;/PROTOBUF_ATTRIBUTE_NO_DESTROY FunctionDefaultTypeInternal _Function_default_instance_;/' blockly.pb.cc;
+	fi;
 fi;
 
 fetchBuild Ssl;
@@ -74,10 +79,14 @@ cd $scriptDir/jde;
 moveToDir web;
 fetch TwsWebsite;
 cd ..;
+echo --------------------------------------------------------------Start Setup--------------------------------------------------------------;
 ./setup.sh $clean $shouldFetch $buildPrivate;
+cd $scriptDir/jde/TwsWebSocket;
+./win-install.sh
+cd $scriptDir;
+echo ---------------------------------------------------------------End Setup---------------------------------------------------------------;
 if ! $(findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/BuildTools/Common7/IDE' 0 ); then findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/Enterprise/Common7/IDE'; fi;
-cd $scriptDir
-devenv jde/TwsWebSocket/setup/Setup.vdproj;
-
-
-
+echo -------------------------------------------------------------Start Install-------------------------------------------------------------;
+devenv jde/TwsWebSocket/setup/Setup.vdproj //build release;
+echo --------------------------------------------------------------End Install--------------------------------------------------------------;
+if [ ! -f jde/TwsWebSocket/setup/Release/Setup.msi ]; then echo Setup Failed; else echo success; fi;
