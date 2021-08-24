@@ -9,7 +9,12 @@
 #include "../../Ssl/source/Ssl.h"
 
 #define var const auto
-
+#ifndef _MSC_VER
+namespace Jde
+{
+	string IApplication::CompanyName()noexcept{ return "Jde-Cpp"; }
+}
+#endif
 namespace Jde::Markets::TwsWebSocket
 {
 	shared_ptr<Settings::Container> SettingsPtr;
@@ -72,7 +77,7 @@ namespace Jde::Markets
 		try
 		{
 			auto p = TwsWebSocket::WrapperWeb::CreateInstance();
-			pClient = get<0>(p); pWrapper = get<1>(p);
+			pClient = get<0>( p ); pWrapper = get<1>( p );
 		}
 		catch( const Exception& e )
 		{

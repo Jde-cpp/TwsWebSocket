@@ -245,8 +245,10 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::historicalData( TickerId reqId, const ::Bar& bar )noexcept
 	{
-		if( Cache::TryGet<uint>("breakpoint.BGGSQ") && *Cache::TryGet<uint>("breakpoint.BGGSQ")==reqId )
-			TRACE( "Break here."sv );
+		if( WrapperCo::HistoricalData(reqId, bar) )
+			return;
+		// if( Cache::TryGet<uint>("breakpoint.BGGSQ") && *Cache::TryGet<uint>("breakpoint.BGGSQ")==reqId )
+		// 	TRACE( "Break here."sv );
 		if( WrapperSync::historicalDataSync(reqId, bar) )
 			return;
 		unique_lock l{ _historicalDataMutex };
@@ -256,6 +258,8 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WrapperWeb::historicalDataEnd( int reqId, const std::string& startDateStr, const std::string& endDateStr )noexcept
 	{
+		if( WrapperCo::HistoricalDataEnd(reqId, startDateStr, endDateStr) )
+			return;
 		if( WrapperSync::historicalDataEndSync(reqId, startDateStr, endDateStr) )
 			return;
 

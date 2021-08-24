@@ -22,7 +22,7 @@ namespace Jde::Markets::TwsWebSocket
 		arg.Push( move(m) );
 	}
 
-	α News::RequestProviders( const ProcessArg& arg )noexcept->Task2
+	α News::RequestProviders( ProcessArg arg )noexcept->Task2
 	{
 		try
 		{

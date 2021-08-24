@@ -10,7 +10,7 @@ namespace Jde::Markets::TwsWebSocket::News
 	using namespace Jde::Coroutine;
 	α RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task2;
 
-	α RequestProviders( const ProcessArg& arg )noexcept->Task2;
+	α RequestProviders( ProcessArg arg )noexcept->Task2;
 
 	using THistoricalResult=Task2;
 	α  RequestHistorical( ContractPK contractId, google::protobuf::RepeatedPtrField<string> providerCodes, uint limit, time_t start, time_t end, ProcessArg arg )noexcept->THistoricalResult;
