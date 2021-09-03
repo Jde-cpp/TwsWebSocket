@@ -100,19 +100,18 @@ namespace Jde::Markets::TwsWebSocket
 				{
 					p->set_value( result.dump() );
 					//DBG( "result={}"sv, p->value() );
-					DBG( p->value() );
+					//DBG( p->value() );
 				}
 				msg.set_allocated_string_result( p.release() );
 				_pWebSend->Push( move(msg), arg.SessionId );
 			}
 			catch( const json::exception& e )
 			{
-				DBG( string{e.what()} );
+				LOGS( ELogLevel::Debug, e.what() );
 				_pWebSend->TryPush( Exception("could not parse query"), arg );
 			}
 			catch( const Exception& e )
 			{
-				DBG( name );
 				e.Log();
 				_pWebSend->TryPush( e, arg );
 			}
@@ -161,14 +160,14 @@ namespace Jde::Markets::TwsWebSocket
 
 		var header = JSON.parse(headerBuf.toString());
 		var body = JSON.parse(bodyBuf.toString());*/
-				if( auto pUserSettings = Jde::Settings::Global().SubContainer("um"); pUserSettings && pUserSettings->Get2<string>("user.email") )
+				if( auto pEmail = Settings::TryGet<string>("um/user.email"); pEmail )
 				{
-					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, *pUserSettings->Get2<string>("user.email"), true, *pUserSettings->Get2<string>("user.name"), "", Clock::now()+std::chrono::hours(100 * 24), "key" );
+					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, *pEmail, true, Settings::TryGet<string>("um/user.name").value_or(""), "", Clock::now()+std::chrono::hours(100 * 24), "key" );
 				}
 				else
 				{
 					var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
-					THROW_IF( token.Aud!=Settings::Global().Get2<string>("GoogleAuthClientId"), Exception("Invalid client id") );
+					THROW_IF( token.Aud!=Settings::TryGet<string>("GoogleAuthClientId"), Exception("Invalid client id") );
 					THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", Exception("Invalid iss") );
 					var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), Exception("token expired") );
 					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
@@ -177,7 +176,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( const std::exception& e )
 			{
-				WARN( string{e.what()} );
+				LOGS( ELogLevel::Warning, e.what() );
 				_pWebSend->Push( e, arg );
 			}
 		}

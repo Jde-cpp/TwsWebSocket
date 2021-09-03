@@ -118,7 +118,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const std::exception& e )
 		{
-			ERR( string{e.what()} );
+			LOGS( ELogLevel::Error, e.what() );
 			h.promise().get_return_object().SetResult( move(e) );
 		}
 		h.resume();

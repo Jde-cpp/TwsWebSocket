@@ -14,21 +14,24 @@ add_executable( Jde.TwsWebSocket main.cpp BlocklyWorker.cpp Flex.cpp PreviousDay
 #######################################################
 #target_link_libraries(Jde.TwsWebSocket Threads::Threads)
 target_link_libraries(Jde.TwsWebSocket Jde)
-#target_link_libraries(Jde.TwsWebSocket Jde.UM)
 target_link_libraries(Jde.TwsWebSocket Jde.Blockly)
 target_link_libraries(Jde.TwsWebSocket Jde.Markets)
 target_link_libraries(Jde.TwsWebSocket Jde.XZ)
 target_link_libraries(Jde.TwsWebSocket Jde.Ssl)
 target_link_libraries(Jde.TwsWebSocket Jde.Markets.Edgar)
-target_link_libraries(Jde.TwsWebSocket lzma)
 target_link_libraries(Jde.TwsWebSocket Ib)
+target_link_libraries(Jde.TwsWebSocket lzma)
 target_link_libraries(Jde.TwsWebSocket protobuf)
-target_link_libraries(Jde.TwsWebSocket boost_coroutine)
 target_link_libraries(Jde.TwsWebSocket crypto)
 target_link_libraries(Jde.TwsWebSocket ssl)
+target_link_libraries(Jde.TwsWebSocket boost_context )
+target_link_libraries(Jde.TwsWebSocket boost_thread )
+target_link_libraries(Jde.TwsWebSocket boost_chrono )
+target_link_libraries(Jde.TwsWebSocket boost_coroutine)
 target_link_libraries(Jde.TwsWebSocket boost_iostreams)
 target_link_libraries(Jde.TwsWebSocket stdc++)
 #target_link_libraries(Jde.TwsWebSocket stdc++fs)
+
 
 target_link_libraries(Jde.TwsWebSocket dl)
 #######################################################

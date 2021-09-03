@@ -40,8 +40,8 @@ namespace Jde::Markets::TwsWebSocket
 		return _pInstance = sp<WebCoSocket>( new WebCoSocket(settings, pClient) );
 	}
 	WebCoSocket::WebCoSocket( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept:
-		_threadCount{ settings.Get2<uint8>("threadCount").value_or(1) },
-		_port{ settings.Get2<uint16_t>("port").value_or((uint16)6812) },
+		_threadCount{ settings.TryGet<uint8>("threadCount").value_or(1) },
+		_port{ settings.TryGet<uint16_t>("port").value_or((uint16)6812) },
 		_pWebSend{ make_shared<WebSendGateway>(*this, pClient) },
 		_requestWorker{ /**this,*/ _pWebSend, pClient }
 	{

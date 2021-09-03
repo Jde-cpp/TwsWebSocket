@@ -10,10 +10,7 @@
 
 #define var const auto
 #ifndef _MSC_VER
-namespace Jde
-{
-	string IApplication::CompanyName()noexcept{ return "Jde-Cpp"; }
-}
+namespace Jde{  string IApplication::CompanyName()noexcept{ return "Jde-Cpp"; } }
 #endif
 namespace Jde::Markets::TwsWebSocket
 {
@@ -37,14 +34,14 @@ int main( int argc, char** argv )
 	catch( const EnvironmentException& e )
 	{
 		std::cerr << e.what() << std::endl;
-		CRITICAL( std::string(e.what()) );
+		LOGS( ELogLevel::Critical, e.what() );
 	}
 	catch( const Exception& e )
 	{
 		if( e.GetLevel()!=ELogLevel::Trace )
 		{
 			std::cerr << e.what() << std::endl;
-			CRITICAL( std::string(e.what()) );
+			LOGS( ELogLevel::Critical, e.what() );
 		}
 		else
 			std::cout << e.what() << std::endl;
@@ -57,9 +54,7 @@ namespace Jde::Markets
 	void TwsWebSocket::Startup( bool initialCall )noexcept
 	{
 		auto pSettings = TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
-		auto pUserSettings = Settings::Global().SubContainer( "um" );
-
-		if( pUserSettings && pUserSettings->Get2<bool>("use").value_or(false) )
+		if( Settings::TryGet<bool>("um/use").value_or(false) )
 		{
 			try
 			{

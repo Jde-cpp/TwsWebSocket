@@ -47,7 +47,7 @@ namespace Jde
 				}
 				catch( const nlohmann::json::exception& e )
 				{
-					WARN( string{e.what()} );
+					LOGS( ELogLevel::Warning, e.what() );
 				}
 			}
 			bool CanBlock()const noexcept{ return ApiSecretKey.size() && ApiKey.size() && AccessToken.size() && AccessTokenSecret.size(); }
@@ -173,7 +173,7 @@ namespace Jde
 				<< "oauth_version=\"1.0\","
 				<< "oauth_signature=\"" << Ssl::Encode( Ssl::RsaSign(os.str(), format("{}&{}", settings.ApiSecretKey, settings.AccessTokenSecret)) ) << "\"";//https://datatracker.ietf.org/doc/html/rfc5849#section-3.4
 
-		h.promise().get_return_object().SetResult( co_await Ssl::SslCo::SendEmpty("api.twitter.com", format(string(url.substr(23))+string("?user_id={}&skip_status=1"), userId), osAuth.str()) );
+		h.promise().get_return_object().SetResult( co_await Ssl::SslCo::SendEmpty("api.twitter.com", fmt::vformat(string(url.substr(23))+string("?user_id={}&skip_status=1"), fmt::make_format_args(userId)), osAuth.str()) );
 		h.resume();
 	}};}
 	α Twitter::Block( uint userId, ProcessArg arg )noexcept->Coroutine::Task2
@@ -387,7 +387,7 @@ namespace Jde
 			DB::SelectIds( "select id, screen_name, profile_image from twt_users where id in ", authors, add );
 			for( var id : authors )
 			{
-				DBG( format("https://api.twitter.com/1.1/users/show.json?user_id={}", id) );
+				//DBG( format("https://api.twitter.com/1.1/users/show.json?user_id={}", id) );
 				var pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
 				var j = nlohmann::json::parse( *pResult );
 				User user;
