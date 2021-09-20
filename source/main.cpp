@@ -69,15 +69,8 @@ namespace Jde::Markets
 		}
 		sp<TwsClientSync> pClient;
 		sp<WrapperWeb> pWrapper;
-		try
-		{
-			auto p = TwsWebSocket::WrapperWeb::CreateInstance();
-			pClient = get<0>( p ); pWrapper = get<1>( p );
-		}
-		catch( const Exception& e )
-		{
-			e.Log();
-		}
+		TRY( auto p = TwsWebSocket::WrapperWeb::CreateInstance(); pClient = get<0>( p ); pWrapper = get<1>( p );  );
+
 		auto pSocket = TwsWebSocket::WebCoSocket::Create( *pSettings, pClient );
 		if( pWrapper )
 		{
@@ -89,41 +82,43 @@ namespace Jde::Markets
 					std::this_thread::yield();
 			}
 		}
-		return;//TODO make initial call in settings.
-		try
+		if( pSettings->TryGet<bool>("loadOnStartup").value_or(false) )
 		{
-			var symbol = ""sv;//"AAPL"sv;
-			var pPositions = TwsClientSync::Instance().RequestPositions().get();
-			for( var& position : *pPositions )
+			try
 			{
-				if( !symbol.size() || position.contract().symbol()==symbol )
-					Try( [&](){PreviousDayValues( position.contract().id() );} );
-			}
-			if( !symbol.size() )
-			{
-				try
+				var symbol = ""sv;//"AAPL"sv;
+				var pPositions = TwsClientSync::Instance().RequestPositions().get();
+				for( var& position : *pPositions )
 				{
-					for( var& name : WatchListData::Names() )
+					if( !symbol.size() || position.contract().symbol()==symbol )
+						Try( [&](){PreviousDayValues( position.contract().id() );} );
+				}
+				if( !symbol.size() )
+				{
+					try
 					{
-						var pContent = WatchListData::Content( name );
-						for( auto i=0; i<pContent->securities_size(); ++i )
-							if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+						for( var& name : WatchListData::Names() )
+						{
+							var pContent = WatchListData::Content( name );
+							for( auto i=0; i<pContent->securities_size(); ++i )
+								if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+						}
+					}
+					catch( const IOException& e )
+					{
+						e.Log( "Could not load watch lists" );
 					}
 				}
-				catch( const IOException& e )
-				{
-					e.Log( "Could not load watch lists" );
-				}
+			}
+			catch( const IBException& e )
+			{
+				e.Log( "Startup Position load ending" );
 			}
 		}
-		catch( const IBException& e )
-		{
-			e.Log( "Startup Position load ending" );
-		}
-
 		if( initialCall )
 		{
 			DBG( "Startup Loading Complete."sv );
+			IApplication::RemoveThread( "Startup" )->Detach();
 		}
 	}
 }

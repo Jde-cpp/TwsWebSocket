@@ -35,7 +35,6 @@ namespace Jde
 		}
 		catch( const Exception& e )
 		{
-			e.Log();
 			arg->Push( e );
 		}
 	}

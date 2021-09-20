@@ -18,17 +18,21 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 namespace Jde::Markets::TwsWebSocket
 {
-	BeastException::BeastException( sv what, beast::error_code&& ec )noexcept:
-		Exception{ "{} returned {}", what, ec.message() },
+	ELogLevel _level{ Logging::TagLevel("web", [](auto l){ WrapperLog::SetLevel(l);}) };
+	α WebCoSocket::SetLevel( ELogLevel l )noexcept->void{ _level=l; }
+	α LogLevel()noexcept{ return _level; }
+
+	BeastException::BeastException( sv what, beast::error_code&& ec, ELogLevel level )noexcept:
+		Exception{ level, format("{} returned ({}){}", what, ec.value(), ec.message()) },
 		ErrorCode{ move(ec) }
 	{}
 
-	void BeastException::LogCode( sv what, const beast::error_code& ec )noexcept
+	α BeastException::LogCode( const beast::error_code& ec, ELogLevel level, sv what )noexcept->void
 	{
-		if( BeastException::IsTruncated(ec) || what=="~DoSession" )
-			DBG( "{}, async_accept Truncated - {}"sv, what, ec.message() );
+		if( BeastException::IsTruncated(ec) || ec.value()==125 || what=="~DoSession" )
+			LOG( level, "{} - ({}){}"sv, what, ec.value(), ec.message() );
 		else
-			WARN( "{}, async_accept Failed - {}"sv, what, ec.message() );
+			WARN( "{} - ({}){}"sv, what, ec.value(), ec.message() );
 	}
 
 	sp<WebCoSocket> WebCoSocket::_pInstance;
@@ -90,26 +94,24 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			shared_lock l{ _sessionMutex };
 			var p = _sessions.find( id );
-			if( p==_sessions.end() )//THROW_IF( p==_sessions.end(),
-				throw Exception("({})Could not find session."sv, id );
+			THROW_IF( p==_sessions.end(), "({})Could not find session."sv, id );
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}
-		auto handler = [size, id, pMutex, pBuffer]( const boost::system::error_code& ec, size_t bytesTransferred )noexcept
+		while( pMutex->exchange(true) )//TODO This function shouldn't lock.  async_write only wants one write at a time.  also, locked up program once
+			std::this_thread::yield();
+		pStream->async_write( boost::asio::buffer(pBuffer->data(), pBuffer->size()), [size, id, pMutex, pBuffer]( const boost::system::error_code& ec, size_t bytesTransferred )noexcept
 		{
 			*pMutex = false;
-			if( size!=bytesTransferred )
-				DBG( "({})size({})!=bytesTransferred({})"sv, id, size, bytesTransferred );
 			if( ec )
 			{
-				BeastException::LogCode( format("({})async_write - killing session"sv, id), ec );
+				BeastException::LogCode( ec, LogLevel(), format("({})async_write - killing session", id) );
 				unique_lock l{ _sessionMutex };
 				_sessions.erase( id );
 			}
-		};
-		while( pMutex->exchange(true) )//TODO This function shouldn't lock.  async_write only wants one write at a time.  also, locked up program once
-			std::this_thread::yield();
-		pStream->async_write( boost::asio::buffer(pBuffer->data(), pBuffer->size()), handler );
+			else if( size!=bytesTransferred )
+				DBG( "({})size({})!=bytesTransferred({})"sv, id, size, bytesTransferred );
+		} );
 	}
 
 	UserPK WebCoSocket::UserId( SessionPK sessionId )noexcept(false)
@@ -125,16 +127,11 @@ namespace Jde::Markets::TwsWebSocket
 		Threading::SetThreadDscrptn( "WebSession" );
 		beast::error_code ec;
 		SessionPK sessionId = 0;
-		//beast::get_lowest_layer(*pStream).expires_after( 30s );
 		try
 		{
-			// Set SNI Hostname (many hosts need this to handshake successfully)
-			//THROW_IF( !SSL_set_tlsext_host_name(pStream->next_layer().native_handle(), _host.c_str()), boost::system::system_error(boost::system::error_code((int)ERR_get_error(), boost::asio::error::get_ssl_category())) );
-			//pStream->next_layer().async_handshake( ssl::stream_base::server, yld[ec] );
 #ifdef HTTPS
 			pStream->next_layer().handshake( ssl::stream_base::server, ec );
 #endif
-			//THROW_IF( ec, BeastException("handshake", move(ec)) );
 			beast::get_lowest_layer(*pStream).expires_never();		// Turn off the timeout on the tcp_stream, because the websocket stream has its own timeout system.
 			pStream->set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );// Set suggested timeout settings for the websocket
 			pStream->set_option( websocket::stream_base::decorator( [](websocket::response_type& res)  // Set a decorator to change the Server of the handshake
@@ -158,7 +155,7 @@ namespace Jde::Markets::TwsWebSocket
 
 				pWebCoSocket->HandleIncoming( {{sessionId,userId}, std::move(data)} );
 			}
-			BeastException::LogCode( "~DoSession", ec );
+			BeastException::LogCode( ec, LogLevel(), "~DoSession" );
 		}
 		catch( const Exception& e )
 		{
@@ -178,16 +175,16 @@ namespace Jde::Markets::TwsWebSocket
 		try
 		{
 			beast::error_code ec;
-			acceptor.open( endpoint.protocol(), ec ); THROW_IF( ec, BeastException("open", move(ec)) );
-			acceptor.set_option(net::socket_base::reuse_address(true), ec); THROW_IF( ec, BeastException( "set_option", move(ec)) );
-			acceptor.bind( endpoint, ec ); THROW_IF( ec, BeastException( "bind", move(ec)) );
-			acceptor.listen(net::socket_base::max_listen_connections, ec); THROW_IF( ec, BeastException( "listen", move(ec)) );
+			acceptor.open( endpoint.protocol(), ec ); THROW_IFX( ec, BeastException("open", move(ec), ELogLevel::Critical) );
+			acceptor.set_option(net::socket_base::reuse_address(true), ec); THROW_IFX( ec, BeastException("set_option", move(ec), ELogLevel::Critical) );
+			acceptor.bind( endpoint, ec ); THROW_IFX( ec, BeastException("bind", move(ec), ELogLevel::Critical) );
+			acceptor.listen( net::socket_base::max_listen_connections, ec); THROW_IFX( ec, BeastException("listen", move(ec), ELogLevel::Critical) );
 			for(;;)
 			{
 				tcp::socket socket(ioc);
 				acceptor.async_accept( socket, yld[ec] );
 				if(ec)
-					BeastException::LogCode( "accept", ec  );
+					BeastException::LogCode( ec, LogLevel(), "accept" );
 				else
 				{
 #ifdef HTTPS
@@ -197,14 +194,11 @@ namespace Jde::Markets::TwsWebSocket
 #endif
 					pStream->binary( true );
 					boost::asio::spawn( acceptor.get_executor(), std::bind( &DoSession, pStream, std::placeholders::_1) );
-						//boost::asio::spawn( acceptor.get_executor(), std::bind(&DoSession, make_shared<Stream>(move(socket), pContext)), std::placeholders::_1) );
 				}
 			}
 		}
-		catch( const Exception& e )
-		{
-			DBG( "Listener Terminated on exception {}"sv, e.what() );
-		}
+		catch( const Exception& )
+		{}
 	}
 
 	void WebCoSocket::Run()noexcept

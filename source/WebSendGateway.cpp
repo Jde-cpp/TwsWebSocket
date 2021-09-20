@@ -8,14 +8,16 @@
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
+	α SetLevel( ELogLevel l )noexcept->void;
+	ELogLevel _logLevel{ Logging::TagLevel("tick", [](auto l){ SetLevel(l); }) };
+	α SetLevel( ELogLevel l )noexcept->void{ _logLevel=l;}
+
 	using Proto::Results::MessageUnion;
 	using Proto::Results::MessageValue;
 	WebSendGateway::WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept:
 		_webSocket{ webSocketParent },
 		_pClientSync{ pClientSync }
-	{
-		DBG( "WebSendGateway::WebSendGateway"sv );
-	}
+	{}
 	void WebSendGateway::EraseRequestSession( SessionPK sessionId )noexcept
 	{
 		DBG( "EraseRequestSession( {} )"sv, sessionId );
@@ -111,7 +113,6 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		DBG( "({})Account('{}') subscription for sessionId='{}'"sv, sessionId, account );
 		var haveAccess = WrapperWeb::TryTestAccess( UM::EAccess::Read, account, sessionId );
-		//DBG( "A"sv );
 		if( haveAccess )
 		{
 			{//RequestAccountUpdates needs it added
@@ -135,76 +136,6 @@ namespace Jde::Markets::TwsWebSocket
 		DBG( "Account('{}') unsubscribe for sessionId='{}'"sv, account, sessionId );
 		EraseAccountSubscription( sessionId, account );
 	}
-/*	tuple<TickerId, flat_set<Proto::Requests::ETickList>> WebSendGateway::MarketDataTicks( ContractPK contractId )noexcept
-	{
-		flat_set<Proto::Requests::ETickList> ticks;
-
-		TickerId reqId{0};
-		if( auto pContractSubscriptions = _marketSessionSubscriptions.find( contractId ); pContractSubscriptions!=_marketSessionSubscriptions.end() )
-		{
-			ASSERT_DESC( pContractSubscriptions->second.size(), "Should have been removed/added in AddMarketDataSubscription" );
-			for( var& sessionTicks : pContractSubscriptions->second )
-			{
-				for( var tick : sessionTicks.second )
-					ticks.emplace( tick );
-			}
-			auto pExisting = _marketSubscriptions.find( contractId );
-			if( pExisting==_marketSubscriptions.end()  )
-				_marketSubscriptions.emplace( contractId, make_tuple(reqId = _client.RequestId(), ticks) );
-			else
-			{
-				if( get<1>(pExisting->second)!=ticks )
-				{
-					_client.cancelMktData( get<0>(pExisting->second) );//todo move this & probably _marketSubscriptions to TwsSendWorker.
-					pExisting->second = make_tuple( reqId = _client.RequestId(), ticks );
-				}
-				else
-				{
-					ostringstream os{"["};
-					for_each( ticks.begin(), ticks.end(), [&os](var tick){ os << tick << ",";} );
-					os << "]==[";
-					var y = get<1>(pExisting->second);
-					for_each( y.begin(), y.end(), [&os](var tick){ os << tick << ",";} );
-					os << "]";
-					DBG( "ticks equal = {}"sv, os.str() );
-				}
-			}
-		}
-		else if( var p = _marketSubscriptions.find(contractId); p!=_marketSubscriptions.end() )//if need to cancel...
-			reqId = get<0>( p->second );
-
-		return make_tuple( reqId, ticks );
-	}
-
-	tuple<TickerId,flat_set<Proto::Requests::ETickList>> WebSendGateway::AddMarketDataSubscription( ContractPK contractId, flat_set<Proto::Requests::ETickList>&& ticks, SessionPK sessionId )noexcept
-	{
-		std::unique_lock l{ _marketSubscriptionsMutex };
-		auto [pRequestSessions,inserted] = _marketSessionSubscriptions.try_emplace( contractId );
-		if( auto pSessionTicks = inserted ? pRequestSessions->second.end() : pRequestSessions->second.find( sessionId ); pSessionTicks!=pRequestSessions->second.end() )
-			pSessionTicks->second = move( ticks );
-		else
-			pRequestSessions->second.emplace( sessionId, move(ticks) );
-		var result = MarketDataTicks( contractId );
-		_marketTicketContractMap.emplace( get<0>(result), contractId );
-
-		return result;
-	}
-	tuple<TickerId,flat_set<Proto::Requests::ETickList>> WebSendGateway::RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock )noexcept
-	{
-		auto pLock = haveLock ? up<std::unique_lock<std::mutex>>{} : make_unique<std::unique_lock<std::mutex>>( _marketSubscriptionsMutex );
-	 	if( auto pRequestSessions = _marketSessionSubscriptions.find( contractId ); pRequestSessions!=_marketSessionSubscriptions.end() )//does session have any for contract?
-	 	{
-	 		pRequestSessions->second.erase( sessionId );
-	 		if( !pRequestSessions->second.size() )
-			{
-				_marketSessionSubscriptions.erase( pRequestSessions );
-				_marketSubscriptions.erase( contractId );
-			}
-	 	}
-		else
-			DBG( "Could not find market data subscription('{}') sessionId='{}'"sv, contractId, sessionId );
-		return MarketDataTicks( contractId );
-	}*/
 
 	TickerId WebSendGateway::RequestFind( const ClientKey& key )const noexcept
 	{
@@ -285,7 +216,7 @@ namespace Jde::Markets::TwsWebSocket
 			if( p->second.empty() )
 			{
 				_marketSubscriptions.erase( p );
-				THROW( Exception("Could not find any market subscriptions. contractId{} empty", contractId) );
+				THROW( "Could not find any market subscriptions. contractId{} empty", contractId );
 			}
 			typedef flat_map<SessionPK,flat_set<Proto::Requests::ETickList>>::iterator X;
 			for( X pSession = p->second.begin(); pSession != p->second.end(); )
@@ -297,13 +228,13 @@ namespace Jde::Markets::TwsWebSocket
 				}
 				catch( const Exception& )
 				{
-					DBG( "Removing session='{}' for contract id='{}'"sv, pSession->first, contractId );
+					LOG( _logLevel, "({}) Removing for contract id='{}'"sv, pSession->first, contractId );
 					pSession = p->second.erase( pSession );
 				}
 			}
 		}
 		else
-			THROW( Exception("Could not find any market subscriptions.") );
+			THROW( "Could not find any market subscriptions." );
 	}
 
 	void WebSendGateway::PushError( int errorCode, sv errorString, TickerId id )noexcept

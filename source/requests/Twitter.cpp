@@ -15,7 +15,7 @@ namespace Jde
 #pragma region Defines
 	using namespace Markets::TwsWebSocket;
 	using namespace Coroutine;
-	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task2;
+	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken, ELogLevel level )->Coroutine::Task2;
 	using Markets::Proto::Results::Tweets; using ProtoTweet=Markets::Proto::Results::Tweet;
 	using Markets::Proto::Results::TweetAuthors; using Markets::Proto::Results::TweetAuthor;
 	atomic<bool> CanBlock=true;//app may not have permissions
@@ -192,11 +192,13 @@ namespace Jde
 	α Twitter::Search( string symbol, ProcessArg arg )noexcept->Coroutine::Task2
 	{
 		var l = co_await Threading::CoLock( format("Twitter::Search.{}", symbol) );
+		var level = Logging::TagLevel( "tweet" );
 		set<uint> authors;
-		auto push = [=]( Tweets* p )
+		auto push = [=]( up<Tweets>&& p )
 		{
 			p->set_request_id( arg.ClientId );
-			MessageType m; m.set_allocated_tweets( p );
+			LOG( level, "pushing {}", p->values_size() );
+			MessageType m; m.set_allocated_tweets( p.release() );
 			arg.Push( move(m) );
 		};
 		var time = std::time( nullptr );
@@ -206,24 +208,25 @@ namespace Jde
 		if( !pExisting )
 		{
 			if( settings.BackupPath.size() )
+			{
 				pExisting = sp<Tweets>( IO::Proto::TryLoad<Tweets>( format("{}/{}.dat", settings.BackupPath, symbol) ).release() );
+				LOG( level, "fetched from file {}", pExisting ? pExisting->values_size() : 0 );
+			}
 			if( !pExisting )
 				pExisting = make_shared<Tweets>();
 		}
 		else if( Clock::from_time_t(pExisting->update_time())>Clock::now()-20min )
 		{
-			push( new Tweets(*pExisting) );
+			LOG( level, "Pushing {} previously fetched", pExisting->values_size() );
+			push( make_unique<Tweets>(*pExisting) );
 			for( auto& t : pExisting->values() )
-			{
-				DBG( "[{}]={}"sv, t.id(), t.author_id() );
 				authors.emplace( t.author_id() );
-			}
-			SendAuthors( authors, arg, settings.BearerToken );
+			SendAuthors( authors, arg, settings.BearerToken, level );
 			co_return;
 		}
 		else
 		{
-			DBG( "{}>{}"sv, ToIsoString(Clock::from_time_t(pExisting->update_time())), ToIsoString(Clock::now()-20min) );
+			LOG( level, "{}>{}"sv, ToIsoString(Clock::from_time_t(pExisting->update_time())), ToIsoString(Clock::now()-20min) );
 			auto pTemp = make_shared<Tweets>();
 			pTemp->set_update_time( pExisting->update_time() );
 			pTemp->set_earliest_time( pExisting->earliest_time() );
@@ -257,13 +260,13 @@ namespace Jde
 		}
 		var query = format( "{}{}{}", prefix, osIgnored.str(), suffix );
 
-		DBG( "{} - {}"sv, query, ignoredSorted.size() );
+		LOG( level, "{} - {}"sv, query, ignoredSorted.size() );
 		var pBlockedUsers = DB::SelectSet<uint>( "select id from twt_users where blocked=1", "twt_blocks", {} ); set<uint> newBlockedUsers;
 
 		var now = Clock::now();
 		var epoch = now-24h;
 		auto lastChecked = Clock::from_time_t(pExisting->update_time())>epoch ? Clock::from_time_t(pExisting->update_time()) : epoch;
-		DBG( "lastChecked={}"sv, ToIsoString(lastChecked) );
+		LOG( level, "lastChecked={}"sv, ToIsoString(lastChecked) );
 		auto earliest = Clock::from_time_t(pExisting->earliest_time())>epoch ? Clock::from_time_t(pExisting->earliest_time()) : epoch;
 		string nextToken;
 		var startTime = lastChecked>epoch+12h ? epoch+12h : lastChecked>epoch ? lastChecked : epoch;//update likes over 12 hours.
@@ -285,7 +288,8 @@ namespace Jde
 					var a = t.AuthorId;
 					if( newBlockedUsers.contains(a) || pBlockedUsers->contains(a) )
 						continue;
-					if( vector<sv> tags = t.Tags(symbol); tags.size()>4 )
+					vector<sv> tags = t.Tags(symbol);
+					if( tags.size()>4 )
 					{
 						newBlockedUsers.emplace( t.AuthorId );
 						for( var tag : tags )
@@ -312,20 +316,20 @@ namespace Jde
 				}
 				if( toSend.size() )
 				{
-					auto pTweets = new Tweets();
+					auto pTweets = make_unique<Tweets>();
 					for( auto p : toSend )
 					{
 						authors.emplace( p->author_id() );
 						sent.emplace( p->id() );
 						*pTweets->add_values() = *p;
 					}
-					push( pTweets );
+					push( move(pTweets) );
 				}
 				nextToken = recent.MetaData.NextToken.size() ? format( "&next_token={}", recent.MetaData.NextToken ) : string{};
 			} while ( count++<10 && nextToken.size() );
 			lastChecked = now;
 			earliest = epoch;
-			DBG( "earliest={}, lastChecked={}"sv, ToIsoString(earliest), ToIsoString(lastChecked) );
+			LOG( level, "earliest={}, lastChecked={}"sv, ToIsoString(earliest), ToIsoString(lastChecked) );
 		}
 		catch( const Exception& e )
 		{
@@ -345,7 +349,8 @@ namespace Jde
 			}
 			pTweets->set_update_time( Clock::to_time_t(lastChecked) ); pExisting->set_update_time( Clock::to_time_t(lastChecked) );
 			pTweets->set_earliest_time( Clock::to_time_t(earliest) );  pExisting->set_earliest_time( Clock::to_time_t(earliest) );
-			push( pTweets.release() );
+			if( pTweets->values_size() )
+				push( move(pTweets) );
 
 			if( newBlockedUsers.size() )
 			{
@@ -365,7 +370,7 @@ namespace Jde
 			if( settings.BackupPath.size() )
 				IO::Proto::Save( *pExisting, format("{}/{}.dat", settings.BackupPath, symbol) );
 			Cache::Set<Tweets>( format("Tweets.{}", symbol), pExisting );
-			SendAuthors( authors, arg, settings.BearerToken );
+			SendAuthors( authors, arg, settings.BearerToken, level );
 		}
 		catch( const Exception& e )
 		{
@@ -378,7 +383,7 @@ namespace Jde
 		}
 	}
 #pragma region Other
-	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task2
+	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken, ELogLevel level )->Coroutine::Task2
 	{
 		auto pAuthorResults = make_unique<TweetAuthors>(); pAuthorResults->set_request_id( arg.ClientId );
 		if( authors.size() )
@@ -387,12 +392,20 @@ namespace Jde
 			DB::SelectIds( "select id, screen_name, profile_image from twt_users where id in ", authors, add );
 			for( var id : authors )
 			{
-				//DBG( format("https://api.twitter.com/1.1/users/show.json?user_id={}", id) );
-				var pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
+				LOG( level, format("https://api.twitter.com/1.1/users/show.json?user_id={}", id) );
+				sp<string> pResult;
+				try
+				{
+					pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
+				}
+				catch( const Exception& e )
+				{
+					break;
+				}
 				var j = nlohmann::json::parse( *pResult );
 				User user;
 				User::from_json( j, user );
-				DBG( "twt_user_insert({},{},{})"sv, user.Id, user.ScreenName, user.ProfileImageUrl );
+				LOG( level, "twt_user_insert({},{},{})"sv, user.Id, user.ScreenName, user.ProfileImageUrl );
 				DB::ExecuteProc( "twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl} );
 				auto p = pAuthorResults->add_values(); p->set_id( id ); p->set_screen_name( user.ScreenName ); p->set_profile_url( user.ProfileImageUrl );
 			}

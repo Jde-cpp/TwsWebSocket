@@ -17,6 +17,4 @@ namespace Jde::Markets::TwsWebSocket::News
 
 	using TGoogleResult=VectorPtr<sp<Proto::Results::GoogleNews>>; using TGoogleAsync=Task2; using TGoogleCoResult=FunctionAwaitable;
 	α Google( const CIString& symbol )noexcept->TGoogleCoResult;
-
-	TaskError<TGoogleResult> Google2( sv symbol )noexcept;
 }

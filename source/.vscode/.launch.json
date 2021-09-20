@@ -1,7 +1,4 @@
 {
-	// Use IntelliSense to learn about possible attributes.
-	// Hover to view descriptions of existing attributes.
-	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 	"version": "0.2.0",
 	"configurations": [
 		{
@@ -18,21 +15,6 @@
 			"visualizerFile": "${workspaceFolder}/../../Framework/debugging/my.natvis",
 			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 			"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.31":"/home/duffyj/code/libraries/glibc-2.31" },
-			"preLaunchTask": "build"
-		},
-		{
-			"name": "Debug",
-			"type": "cppdbg",
-			"request": "launch",
-			"program": "${workspaceFolder}/../../bin/debug/Jde.TwsWebSocket",
-			"args": ["-c"],
-			"stopAtEntry": false,
-			"cwd": "${workspaceFolder}/../../bin/debug",
-			"environment": [],
-			"externalConsole": false,
-			"MIMode": "gdb",
-			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
-			"sourceFileMap": { "/build/glibc-2ORdQG/glibc-2.31":"/home/duffyj/code/libraries/glibc-2.31" },
 			"preLaunchTask": "build"
 		},
 		{

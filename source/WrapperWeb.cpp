@@ -84,7 +84,7 @@ namespace Jde::Markets::TwsWebSocket
 		TwsClientSync::Instance().SetRequestId( orderId );
 	}
 
-	void WrapperWeb::orderStatus( ::OrderId orderId, const std::string& status, double filled, double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, const std::string& whyHeld, double mktCapPrice )noexcept
+	void WrapperWeb::orderStatus( ::OrderId orderId, str status, double filled, double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, str whyHeld, double mktCapPrice )noexcept
 	{
 		WrapperLog::orderStatus( orderId, status, filled,	remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice );
 		if( !_pWebSend ) return;
@@ -120,7 +120,7 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::openOrderEnd();
 		_webSend.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
 	}
-	void WrapperWeb::positionMulti( int reqId, const std::string& account, const std::string& modelCode, const ::Contract& contract, double pos, double avgCost )noexcept
+	void WrapperWeb::positionMulti( int reqId, str account, str modelCode, const ::Contract& contract, double pos, double avgCost )noexcept
 	{
 		WrapperLog::positionMulti( reqId, account, modelCode, contract, pos, avgCost );
 		auto pUpdate = make_unique<Proto::Results::PositionMulti>();
@@ -171,7 +171,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	}
 	static bool _setAccounts{false};
-	void WrapperWeb::managedAccounts( const std::string& accountsList )noexcept
+	void WrapperWeb::managedAccounts( str accountsList )noexcept
 	{
 		WrapperLog::managedAccounts( accountsList );
 		Proto::Results::StringMap accountList;
@@ -220,7 +220,7 @@ namespace Jde::Markets::TwsWebSocket
 			m.set_allocated_string_map( new Proto::Results::StringMap{userList} );
 		});
 	}
-	void WrapperWeb::accountUpdateMulti( int reqId, const std::string& accountName, const std::string& modelCode, const std::string& key, const std::string& value, const std::string& currency )noexcept
+	void WrapperWeb::accountUpdateMulti( int reqId, str accountName, str modelCode, str key, str value, str currency )noexcept
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
 		auto pUpdate = make_unique<Proto::Results::AccountUpdateMulti>();
@@ -247,8 +247,6 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		if( WrapperCo::HistoricalData(reqId, bar) )
 			return;
-		// if( Cache::TryGet<uint>("breakpoint.BGGSQ") && *Cache::TryGet<uint>("breakpoint.BGGSQ")==reqId )
-		// 	TRACE( "Break here."sv );
 		if( WrapperSync::historicalDataSync(reqId, bar) )
 			return;
 		unique_lock l{ _historicalDataMutex };
@@ -256,7 +254,7 @@ namespace Jde::Markets::TwsWebSocket
 		auto pBar = pData->add_bars();
 		WrapperCache::ToBar( bar, *pBar );
 	}
-	void WrapperWeb::historicalDataEnd( int reqId, const std::string& startDateStr, const std::string& endDateStr )noexcept
+	void WrapperWeb::historicalDataEnd( int reqId, str startDateStr, str endDateStr )noexcept
 	{
 		if( WrapperCo::HistoricalDataEnd(reqId, startDateStr, endDateStr) )
 			return;
@@ -269,13 +267,13 @@ namespace Jde::Markets::TwsWebSocket
 		_historicalData.erase( reqId );
 	}
 
-	void WrapperWeb::error( int reqId, int errorCode, const std::string& errorString )noexcept
+	void WrapperWeb::error( int reqId, int errorCode, str errorString )noexcept
 	{
 		if( !WrapperSync::error2(reqId, errorCode, errorString) )
 		{
 			if( errorCode==162 && _pWebSend->HasHistoricalRequest(reqId) )// _historicalCrcs.Has(id)
 				_pWebSend->Push( reqId, [](MessageType& msg, ClientPK id){ auto p=new Proto::Results::HistoricalData{}; p->set_request_id(id); msg.set_allocated_historical_data(p); } );
-			else
+			else if( reqId>0 )
 				_pWebSend->PushError( errorCode, errorString, reqId );
 		}
 	}
@@ -288,138 +286,14 @@ namespace Jde::Markets::TwsWebSocket
 			TwsClientSync::Instance().cancelMktData( reqId );
 		}
 	}
-/*	void WrapperWeb::tickPrice( TickerId reqId, TickType field, double price, const TickAttrib& attrib )noexcept
-	{
-		if( WrapperSync::TickPrice(reqId, field, price, attrib) )
-			return;
-
-		_pTickWorker->PushPrice( reqId, (ETickType)field, price );
-		// auto pAttributes = new Proto::Results::TickAttrib(); pAttributes->set_can_auto_execute( attrib.canAutoExecute ); pAttributes->set_past_limit( attrib.pastLimit ); pAttributes->set_pre_open( attrib.preOpen );
-		// auto p = new Proto::Results::TickPrice(); p->set_tick_type( (ETickType)field ); p->set_price( price ); p->set_allocated_attributes( pAttributes );
-		// _pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_price(p); } );
-	}
-	void WrapperWeb::tickSize( TickerId reqId, TickType field, int size )noexcept
-	{
-		if( WrapperSync::TickSize(reqId, field, size) )
-			return;
-		_pTickWorker->Push( reqId, (ETickType)field, size );
-		// auto p = new Proto::Results::TickSize(); p->set_tick_type( (ETickType)field ); p->set_size( size );
-		// _pWebSend->PushMarketData( reqId, [p]( MessageType& msg, ClientPK id ){ p->set_request_id(id); msg.set_allocated_tick_size(p); } );
-	}
-
-	void WrapperWeb::tickGeneric( TickerId reqId, TickType field, double value )noexcept
-	{
-		if( WrapperSync::TickGeneric(reqId, field, value) )
-			return;
-
-		_pTickWorker->Push( reqId, (ETickType)field, value );
-		//auto p = new Proto::Results::TickGeneric(); p->set_tick_type( (ETickType)field ); p->set_value( value );
-		//_pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_generic(p); } );
-	}
-
-	void WrapperWeb::tickOptionComputation( TickerId reqId, TickType tickType, int tickAttrib, double impliedVol, double delta, double optPrice, double pvDividend, double gamma, double vega, double theta, double undPrice )noexcept
-	{
-		_pTickWorker->Push( reqId, (ETickType)tickType, tickAttrib, impliedVol, delta, optPrice, pvDividend, gamma, vega, theta, undPrice );
-		//auto p = make_unique<Proto::Results::OptionCalculation>(); p->set_tick_type( (ETickType)tickType ); p->set_price_based( tickAttrib==1 ); p->set_implied_volatility( impliedVol ); p->set_delta( delta ); p->set_option_price( optPrice ); p->set_pv_dividend( pvDividend ); p->set_gamma( gamma ); p->set_vega( vega ); p->set_theta( theta ); p->set_underlying_price( undPrice );
-		//_pWebSend->PushMarketData( reqId, [&p2=p](MessageType& msg, ClientPK id){ p2->set_request_id(id); msg.set_allocated_option_calculation(p2.release());} );
-	}
-	void WrapperWeb::tickNews( int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData )noexcept
-	{
-		_pTickWorker->Push( tickerId, timeStamp, providerCode, articleId, headline, extraData );
-		// auto pUpdate = new Proto::Results::TickNews();//TODO remove all new
-		// pUpdate->set_time( static_cast<uint32>(timeStamp) );
-		// pUpdate->set_provider_code( providerCode );
-		// pUpdate->set_article_id( articleId );
-		// pUpdate->set_headline( headline );
-		// pUpdate->set_extra_data( extraData );
-
-		// _pWebSend->PushMarketData( tickerId, [p=pUpdate](MessageType& msg, ClientPK id){p->set_id( id ); msg.set_allocated_tick_news(p);} );
-	}
-
-	void WrapperWeb::tickString( TickerId reqId, TickType field, const std::string& value )noexcept
-	{
-		if( WrapperSync::TickString(reqId, field, value) )
-			return;
-		_pTickWorker->Push( reqId, (ETickType)field, value );
-//		auto p = new Proto::Results::TickString();  p->set_tick_type( (ETickType)field ); p->set_value( value );
-//		_pWebSend->PushMarketData( reqId, [p](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_tick_string(p); } );
-	}
-*/
 	void WrapperWeb::tickSnapshotEnd( int reqId )noexcept
 	{
 		WrapperLog::tickSnapshotEnd( reqId );
 		_pWebSend->Push( Proto::Results::EResults::TickSnapshotEnd, reqId );
 	}
 
-/*	void WrapperWeb::CancelAccountUpdate( sv accountNumber, unique_lock<mutex>* pLock )noexcept
-	{
-		//unique_lock l2{ _canceledAccountMutex };
-		bool found = false;
-		for( auto p = _canceledAccounts.begin(); p!=_canceledAccounts.end(); )//see if already canceled, and remove old canceled records.
-		{
-			if( p->first==accountNumber )
-				found = true;
-			p = !found && p->second< Clock::now()-1min ? _canceledAccounts.erase( p ) : next( p );
-		}
-		if( !found )
-		{
-			_canceledAccounts.emplace( accountNumber, Clock::now() ); TRACE( "No current listeners for account update '{}', req AccountUpdates"sv, accountNumber );
-			_client.reqAccountUpdates( false, string{accountNumber} );
-			_accountUpdates.clear();
-			_accountPortfolioUpdates.clear();
-		}
-	}
-*/
-/*	void WrapperWeb::updateAccountValue( const std::string& key, const std::string& value, const std::string& currency, const std::string& accountName )noexcept
-	{
-		var haveCallback = WrapperLog::updateAccountValue2( key, value, currency, accountName );
-	/ *	Proto::Results::AccountUpdate update;
-		update.set_account( accountName );
-		update.set_key( key );
-		update.set_value( value );
-		update.set_currency( currency );
-* /
-		unique_lock l{ _accountUpdateMutex };
-		if( / *!_pWebSend->Push(update) &&* / !haveCallback )
-			CancelAccountUpdate( accountName, &l );
-		else
-			_accountUpdates[accountName][key]=update;
-	}
 
-	void WrapperWeb::updatePortfolio( const ::Contract& contract, double position, double marketPrice, double marketValue, double averageCost, double unrealizedPNL, double realizedPNL, const std::string& accountNumber )noexcept
-	{
-		WrapperLog::updatePortfolio( contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountNumber );
-		Proto::Results::PortfolioUpdate update;
-		Contract myContract{ contract };
-		update.set_allocated_contract( myContract.ToProto(true).get() );
-		update.set_position( position );
-		update.set_market_price( marketPrice );
-		update.set_market_value( marketValue );
-		update.set_average_cost( averageCost );
-		update.set_unrealized_pnl( unrealizedPNL );
-		update.set_realized_pnl( realizedPNL );
-		update.set_account_number( accountNumber );
-		if( myContract.SecType==SecurityType::Option )
-		{
-			const string cacheId{ format("reqContractDetails.{}", myContract.Symbol) };
-			if( Cache::Has(cacheId) )
-			{
-				var details = Cache::Get<vector<::ContractDetails>>( cacheId );
-				if( details->size()==1 )
-					update.mutable_contract()->set_underlying_id( details->front().underConId );
-				else
-					WARN( "'{}' returned multiple securities"sv, myContract.Symbol );
-			}
-		}
-
-		unique_lock l{ _accountUpdateMutex };
-		if( !_pWebSend->Push(update) )
-			CancelAccountUpdate( accountNumber, &l );
-		else
-			_accountPortfolioUpdates[accountNumber][contract.conId]=update;
-	}
-*/
-	void WrapperWeb::updateAccountTime( const std::string& timeStamp )noexcept
+	void WrapperWeb::updateAccountTime( str timeStamp )noexcept
 	{
 		WrapperLog::updateAccountTime( timeStamp );//not sure what to do about this, no reqId or accountName
 	}
@@ -493,7 +367,7 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend->Push( EResults::ExecutionDataEnd, reqId );
 	}
 
-	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass, const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
+	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, str exchange, int underlyingConId, str tradingClass, str multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
 	{
 		var handled = WrapperSync::securityDefinitionOptionalParameterSync( reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );
 		if( !handled && CIString{exchange}=="SMART"sv )

@@ -8,17 +8,17 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	namespace beast = boost::beast;         // from <boost/beast.hpp>
-	namespace net = boost::asio;            // from <boost/asio.hpp>
-	namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
-	namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
-	using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+	namespace beast = boost::beast;
+	namespace net = boost::asio;
+	namespace ssl = boost::asio::ssl;
+	namespace websocket = beast::websocket;
+	using tcp = boost::asio::ip::tcp;
 	struct WebSendGateway;
 	struct BeastException : public Exception
 	{
-		BeastException( sv what, beast::error_code&& ec )noexcept;
-		static bool IsTruncated( const beast::error_code& ec )noexcept{ return ec == net::ssl::error::stream_truncated; }
-		static void LogCode( sv what, const beast::error_code& )noexcept;
+		BeastException( sv what, beast::error_code&& ec, ELogLevel level=ELogLevel::Trace )noexcept;
+		Ω IsTruncated( const beast::error_code& ec )noexcept{ return ec == net::ssl::error::stream_truncated; }
+		Ω LogCode( const boost::system::error_code& ec, ELogLevel level, sv what )noexcept->void;
 
 		beast::error_code ErrorCode;
 	};
@@ -57,7 +57,6 @@ namespace Jde::Markets::TwsWebSocket
 		void AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false);
 		void AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept;
 		void AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept;
-		//void AddOutgoing( vector<Proto::Results::MessageUnion>&& messages, SessionPK id )noexcept;
 		void AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false);
 
 		SessionPK AddConnection( sp<SocketStream> stream )noexcept;
@@ -68,9 +67,9 @@ namespace Jde::Markets::TwsWebSocket
 		void SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept;
 		UserPK UserId( SessionPK sessionId )noexcept(false);
 		UserPK TryUserId( SessionPK sessionId )noexcept{ return Try<UserPK>( [sessionId,this]{ return UserId(sessionId); }).value_or(0); };
+		Ω SetLevel( ELogLevel l )noexcept->void;
 	private:
 		WebCoSocket( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept;
-		//void Listen( net::io_context& ioc, ssl::context& ctx, tcp::endpoint endpoint, net::yield_context yield );
 
 		void Run()noexcept;
 		uint8 _threadCount;
