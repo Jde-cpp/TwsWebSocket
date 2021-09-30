@@ -9,7 +9,7 @@ namespace Jde::Markets
 {
 namespace TwsWebSocket
 {
-	α Previous( int32 contractId, Markets::TwsWebSocket::ProcessArg arg )noexcept->Coroutine::Task2
+	α Previous( int32 contractId, Markets::TwsWebSocket::ProcessArg arg, bool sendMultiEnd )noexcept->Coroutine::Task2
 	{
 		//TODO wrap in Try.
 		var pContract = ( co_await TwsClientCo::ContractDetails( contractId ) ).Get<Contract>(); var& contract = *pContract;
@@ -23,7 +23,7 @@ namespace TwsWebSocket
 			auto pBar1 = make_unique<Proto::Results::DaySummary>(); pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
 			pBars->emplace( day, move(pBar1) );
 		}
-		auto load = [isOption,count,current,arg,contract,pBars,pContract,isPreMarket]( bool useRth, DayIndex endDate )->AWrapper
+		auto load = [isOption,count,current,arg,contract,pBars,pContract,isPreMarket]( bool useRth, DayIndex endDate, bool isEnd )->AWrapper
 		{
 			return AWrapper( [=]( HCoroutine h )->Task2
 			{
@@ -107,15 +107,15 @@ namespace TwsWebSocket
 				{
 					h.promise().get_return_object().SetResult( move(e) );
 				}
-				if( arg.SessionId && useRth )
+				if( isEnd )
 					arg.WebSendPtr->Push( EResults::MultiEnd, arg );
 				h.resume();
 			});
 		};
 		var useRth = count==1;
-		co_await load( useRth, current );
+		co_await load( useRth, current, useRth && sendMultiEnd );
 		if( !useRth )
-			co_await load( !useRth, PreviousTradingDay(current) );
+			co_await load( !useRth, PreviousTradingDay(current), sendMultiEnd );
 	}
 	void fnctn( const TwsWebSocket::ProcessArg& arg, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept(false)//, TwsWebSocket::SessionId sessionId, TwsWebSocket::ClientPK requestId
 	{
@@ -143,7 +143,7 @@ namespace TwsWebSocket
 					auto pBar1 = make_unique<Proto::Results::DaySummary>(); pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
 					bars.emplace( day, move(pBar1) );
 				}
-				auto load = [isPreMarket,isOption,count,current,&arg,contract,&bars]( bool useRth, DayIndex endDate )
+				auto load = [isOption,count,current,&arg,contract,&bars]( bool useRth, DayIndex endDate )
 				{
 					auto groupByDay = []( const vector<::Bar>& ibBars )->map<DayIndex,vector<::Bar>>
 					{
@@ -235,7 +235,8 @@ namespace TwsWebSocket
 
 	void TwsWebSocket::PreviousDayValues( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ProcessArg& arg )noexcept
 	{
+		uint i=0;
 		for( var id : contractIds )
-			Previous( id, arg );
+			Previous( id, arg, ++i==contractIds.size() );
 	}
 }

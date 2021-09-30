@@ -329,7 +329,7 @@ namespace Jde::Markets::TwsWebSocket
 					else
 					{
 						if( !pOptionParams )
-							pOptionParams = _sync.ReqSecDefOptParamsSmart( underlyingId, contract.Symbol );
+							pOptionParams = Future<Proto::Results::ExchangeContracts>( TwsClientCo::SecDefOptParams(underlyingId,true) ).get();
 						var end = params.end_expiration() ? params.end_expiration() : std::numeric_limits<DayIndex>::max();
 						for( var expiration : pOptionParams->expirations() )
 						{

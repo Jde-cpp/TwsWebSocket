@@ -39,11 +39,9 @@ namespace Jde::Markets::TwsWebSocket
 		void PushError( int errorCode, sv errorString, TickerId id )noexcept;
 		void PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false);
 
-
 		void Push( MessageType&& pUnion, SessionPK id )noexcept(false);
-		void Push( vector<MessageType>&& pUnion, SessionPK id )noexcept;
+		void Push( vector<MessageType>&& pUnion, SessionPK id )noexcept(false);
 		void PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false);
-
 
 		void Push( EResults eResults, const ClientKey& key )noexcept(false);
 		void Push( EResults eResults, TickerId ibReqId )noexcept;
@@ -52,12 +50,9 @@ namespace Jde::Markets::TwsWebSocket
 
 		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false);
 		optional<bool> TryPush( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept{ return Try<bool>( [&]()->bool{return this->Push(id,set);} ); }
-		//void PushMarketData( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept;
 
 		void AccountDownloadEnd( sv accountNumber )noexcept override;
 		bool PortfolioUpdate( const Proto::Results::PortfolioUpdate& pMessage )noexcept override;
-		//void PushAllocated( unique_ptr<Proto::Results::AccountUpdateMulti> pMessage )noexcept;
-		//bool Push( const Proto::Results::AccountUpdate& accountUpdate )noexcept;
 		void ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, TickerId tickerId )noexcept;
 		void Push( const Proto::Results::CommissionReport& report )noexcept;
 		bool AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept;
@@ -75,7 +70,6 @@ namespace Jde::Markets::TwsWebSocket
 		flat_map<ClientPK,flat_set<TickerId>> _multiRequests; mutable std::mutex _multiRequestMutex;//ie ask for multiple contractDetails
 		flat_set<SessionPK> _executionRequests; mutable std::shared_mutex _executionRequestMutex;
 
-
 		sp<Threading::InterruptibleThread> _pThread;
 		QueueValue<QueueType> _queue;
 		WebCoSocket& _webSocket;
@@ -84,10 +78,7 @@ namespace Jde::Markets::TwsWebSocket
 		UnorderedMapValue<TickerId,ClientKey> _requestSession;//single session single call
 		Collections::UnorderedMap<Proto::Results::EResults,UnorderedSet<SessionPK>> _requestSessions;//multiple sessions can request item, ie market data.
 		flat_map<OrderId,flat_set<SessionPK>> _orderSubscriptions; mutable std::mutex _orderSubscriptionMutex;
-		//tuple<TickerId, flat_set<Proto::Requests::ETickList>> MarketDataTicks( ContractPK contractId )noexcept;
 
-		//flat_map<TickerId,ContractPK> _marketTicketContractMap;//todo move _market* to class
 		flat_map<ContractPK,flat_map<SessionPK,flat_set<Proto::Requests::ETickList>>> _marketSubscriptions; std::shared_mutex _marketSubscriptionMutex;
-		//flat_map<ContractPK,tuple<TickerId,flat_set<Proto::Requests::ETickList>>> _marketSubscriptions; std::mutex _marketSubscriptionsMutex;
 	};
 }

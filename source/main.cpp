@@ -101,7 +101,8 @@ namespace Jde::Markets
 						{
 							var pContent = WatchListData::Content( name );
 							for( auto i=0; i<pContent->securities_size(); ++i )
-								if( var id=pContent->securities(i).contract_id(); id ) PreviousDayValues( id );
+								if( var id=pContent->securities(i).contract_id(); id )
+									Try( [&](){PreviousDayValues( id );} );
 						}
 					}
 					catch( const IOException& e )

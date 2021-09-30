@@ -17,7 +17,6 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	TwsSendWorker::TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept:
-//		_queue{ make_tuple(0,sp<Proto::Requests::RequestUnion>{}) },
 		_webSendPtr{ webSendPtr },
 		_twsPtr{ pTwsClient }
 	{
@@ -39,39 +38,39 @@ namespace Jde::Markets::TwsWebSocket
 	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionKey )noexcept
 	{
 		ClientPK clientId{0};
-		//ClientKey key{key2};
-		var& message = *pData;
-		//ClientKey key = {sessionId, 0, 0};
+		var& m = *pData;
 		try
 		{
-			if( message.has_generic_requests() )
-				Requests( message.generic_requests(), sessionKey );
-			else if( message.has_account_updates() )
-				AccountUpdates( message.account_updates(), sessionKey );
-			else if( message.has_account_updates_multi() )
-				AccountUpdatesMulti( message.account_updates_multi(), sessionKey );
-			else if( message.has_market_data_smart() )
-				MarketDataSmart( message.market_data_smart(), sessionKey );
-			else if( message.has_contract_details() )
-				ContractDetails( message.contract_details(), sessionKey );
-			else if( message.has_historical_data() )
-				HistoricalData( message.historical_data(), sessionKey );
-			else if( message.has_place_order() )
-				Order( message.place_order(), sessionKey );
-			else if( message.has_request_positions() )
-				Positions( message.request_positions(), sessionKey );
-			else if( message.has_request_executions() )
-				Executions( message.request_executions(), sessionKey );
-			else if( message.has_news_article_request() )
-				News::RequestArticle( message.news_article_request().provider_code(), message.news_article_request().article_id(), {sessionKey, clientId=message.news_article_request().id(), _webSendPtr} );
-			else if( message.has_historical_news_request() )
-				News::RequestHistorical( message.historical_news_request().contract_id(), message.historical_news_request().provider_codes(), message.historical_news_request().total_results(), message.historical_news_request().start(), message.historical_news_request().end(), {sessionKey, clientId=message.historical_news_request().id(), _webSendPtr} );
-			else if( message.has_implied_volatility() )
-				CalculateImpliedVolatility( message.implied_volatility().contracts(), {sessionKey, clientId=message.implied_volatility().id()} );
-			else if( message.has_implied_price() )
-				CalculateImpliedPrice( message.implied_price().contracts(), {sessionKey, clientId=message.implied_price().id()} );
+			if( m.has_generic_requests() )
+				Requests( m.generic_requests(), sessionKey );
+			else if( m.has_generic_request() )
+				Request( m.generic_request(), sessionKey );
+			else if( m.has_account_updates() )
+				AccountUpdates( m.account_updates(), sessionKey );
+			else if( m.has_account_updates_multi() )
+				AccountUpdatesMulti( m.account_updates_multi(), sessionKey );
+			else if( m.has_market_data_smart() )
+				MarketDataSmart( m.market_data_smart(), sessionKey );
+			else if( m.has_contract_details() )
+				ContractDetails( m.contract_details(), sessionKey );
+			else if( m.has_historical_data() )
+				HistoricalData( m.historical_data(), sessionKey );
+			else if( m.has_place_order() )
+				Order( m.place_order(), sessionKey );
+			else if( m.has_request_positions() )
+				Positions( m.request_positions(), sessionKey );
+			else if( m.has_request_executions() )
+				Executions( m.request_executions(), sessionKey );
+			else if( m.has_news_article_request() )
+				News::RequestArticle( m.news_article_request().provider_code(), m.news_article_request().article_id(), {sessionKey, clientId=m.news_article_request().id(), _webSendPtr} );
+			else if( m.has_historical_news_request() )
+				News::RequestHistorical( m.historical_news_request().contract_id(), m.historical_news_request().provider_codes(), m.historical_news_request().total_results(), m.historical_news_request().start(), m.historical_news_request().end(), {sessionKey, clientId=m.historical_news_request().id(), _webSendPtr} );
+			else if( m.has_implied_volatility() )
+				CalculateImpliedVolatility( m.implied_volatility().contracts(), {sessionKey, clientId=m.implied_volatility().id()} );
+			else if( m.has_implied_price() )
+				CalculateImpliedPrice( m.implied_price().contracts(), {sessionKey, clientId=m.implied_price().id()} );
 			else
-				ERR( "Unknown Message '{}'"sv, message.Value_case() );
+				ERR( "Unknown Message '{}'", m.Value_case() );
 		}
 		catch( const IBException& e )
 		{
@@ -86,8 +85,7 @@ namespace Jde::Markets::TwsWebSocket
 	::Contract TwsSendWorker::GetContract( ContractPK contractId )noexcept(false)
 	{
 		var pDetails = _tws.ReqContractDetails( contractId ).get();
-		if( pDetails->size()!=1 )
-			THROW( Exception("contractId={} returned {} records"sv, contractId, pDetails->size()) );
+		THROW_IF( pDetails->size()!=1, "contractId={} returned {} records"sv, contractId, pDetails->size() );
 		return pDetails->front().contract;
 	}
 
@@ -189,6 +187,14 @@ namespace Jde::Markets::TwsWebSocket
 		_tws.reqPositionsMulti( _web.AddRequestSession({{session.SessionId},r.id()}), r.account_number(), r.model_code() );
 	}
 
+	α TwsSendWorker::Request( const Proto::Requests::GenericRequest& r, const SessionKey& key )noexcept->void
+	{
+		if( r.type()==ERequests::RequestOptionParams )
+			RequestOptionParams( r.id(), r.item_id(), move(key) );
+		else
+			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", key.SessionId, r.id(), r.type() );
+	}
+
 	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, const SessionKey& session )noexcept
 	{
 		if( !_twsPtr )
@@ -247,8 +253,6 @@ namespace Jde::Markets::TwsWebSocket
 				_tws.cancelOrder( orderId );
 			}
 		}
-		else if( r.type()==ERequests::RequestOptionParams )
-			RequestOptionParams( r.ids(), {session.SessionId, r.id()} );
 		else if( r.type()==ERequests::ReqNewsProviders )
 			News::RequestProviders( ProcessArg{session, r.id(), _webSendPtr} );
 		else
@@ -281,20 +285,18 @@ namespace Jde::Markets::TwsWebSocket
 		TickManager::Subscribe( session.SessionId, 0, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
-	void TwsSendWorker::RequestOptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept
+	α TwsSendWorker::RequestOptionParams( ClientPK clientId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task2
 	{
 		try
 		{
-			for( ClientPK underlyingId : underlyingIds )
-			{
-				if( !underlyingId )
-					THROW( Exception("Requested underlyingId=='{}'.", underlyingId) );
-				_cache.ReqSecDefOptParams( _web.AddRequestSession({key}), underlyingId, GetContract(underlyingId).localSymbol );
-			}
+			auto p = ( co_await TwsClientCo::SecDefOptParams(underlyingId) ).Get<Proto::Results::OptionExchanges>();
+			p->set_request_id( clientId );
+			MessageType m; m.set_allocated_option_exchanges( new Proto::Results::OptionExchanges(*p) );
+			_web.Push( move(m), key.SessionId );
 		}
 		catch( const Exception& e )
 		{
-			_web.Push( e, {key} );
+			_web.Push( e, ClientKey{key,clientId} );
 		}
 	}
 }

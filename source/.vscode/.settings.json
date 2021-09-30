@@ -108,5 +108,5 @@
 		"version": "cpp",
 		"*.def": "cpp"
 	},
-	"window.title": "WebSocketTws"
+	"window.title": "TwsWebSocket"
 }

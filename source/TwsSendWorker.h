@@ -28,11 +28,11 @@ namespace Jde::Markets::TwsWebSocket
 		void OptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept;
 		void Order( const Proto::Requests::PlaceOrder& order, const SessionKey& key )noexcept;
 		void Positions( const Proto::Requests::RequestPositions& request, const SessionKey& key )noexcept;
-		void RequestOptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept;
+		α RequestOptionParams( ClientPK reqId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task2;
 
 		::Contract GetContract( ContractPK contractId )noexcept(false);
-		void Requests( const Proto::Requests::GenericRequests& request, const SessionKey& key )noexcept;
-		//flat_map<ContractPK,TickerId> _mktData; mutable std::mutex _mktDataMutex;
+		α Requests( const Proto::Requests::GenericRequests& request, const SessionKey& key )noexcept->void;
+		α Request( const Proto::Requests::GenericRequest& r, const SessionKey& key )noexcept->void;
 		sp<Threading::InterruptibleThread> _pThread;
 		QueueValue<QueueType> _queue;
 		sp<WebSendGateway> _webSendPtr;

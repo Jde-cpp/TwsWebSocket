@@ -261,7 +261,7 @@ namespace Jde
 		var query = format( "{}{}{}", prefix, osIgnored.str(), suffix );
 
 		LOG( level, "{} - {}"sv, query, ignoredSorted.size() );
-		var pBlockedUsers = DB::SelectSet<uint>( "select id from twt_users where blocked=1", "twt_blocks", {} ); set<uint> newBlockedUsers;
+		var pBlockedUsers = DB::SelectSet<uint>( "select id from twt_handles where blocked=1", "twt_blocks", {} ); set<uint> newBlockedUsers;
 
 		var now = Clock::now();
 		var epoch = now-24h;
@@ -389,7 +389,7 @@ namespace Jde
 		if( authors.size() )
 		{
 			var add = [&authors,&pAuthorResults]( var& row ){ auto p = pAuthorResults->add_values(); p->set_id( row.GetUInt(0) ); p->set_screen_name( row.GetString(1) ); p->set_profile_url( row.GetString(2) ); authors.erase(p->id()); };
-			DB::SelectIds( "select id, screen_name, profile_image from twt_users where id in ", authors, add );
+			DB::SelectIds( "select id, screen_name, profile_image from twt_handles where id in ", authors, add );
 			for( var id : authors )
 			{
 				LOG( level, format("https://api.twitter.com/1.1/users/show.json?user_id={}", id) );

@@ -367,7 +367,7 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend->Push( EResults::ExecutionDataEnd, reqId );
 	}
 
-	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, str exchange, int underlyingConId, str tradingClass, str multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
+/*	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, str exchange, int underlyingConId, str tradingClass, str multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
 	{
 		var handled = WrapperSync::securityDefinitionOptionalParameterSync( reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );
 		if( !handled && CIString{exchange}=="SMART"sv )
@@ -392,5 +392,5 @@ namespace Jde::Markets::TwsWebSocket
 			if( !_pWebSend->Push(reqId, [p](MessageType& msg, ClientPK id)mutable{p->set_request_id( id ); msg.set_allocated_option_exchanges(p);}) )
 				delete p;
 		}
-	}
+	}*/
 }

@@ -93,8 +93,7 @@ namespace Jde::Markets::TwsWebSocket
 		sp<SocketStream> pStream; sp<atomic<bool>> pMutex;
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( id );
-			THROW_IF( p==_sessions.end(), "({})Could not find session."sv, id );
+			var p = _sessions.find( id ); THROW_IFX( p==_sessions.end(), Exception(LogLevel(),format("({})Could not find session for outgoing transmission."sv, id)) );
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}
@@ -117,7 +116,7 @@ namespace Jde::Markets::TwsWebSocket
 	UserPK WebCoSocket::UserId( SessionPK sessionId )noexcept(false)
 	{
 		shared_lock l{ _sessionMutex };
-		var p = _sessions.find( sessionId ); THROW_IF( p==_sessions.end(), Exception("({})Could not find session for UserId", sessionId) );
+		var p = _sessions.find( sessionId ); THROW_IFX( p==_sessions.end(), Exception(LogLevel(), format("({})Could not find UserId.", sessionId)) );
 		return p->second.UserId;
 	}
 

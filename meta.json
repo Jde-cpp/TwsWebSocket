@@ -131,7 +131,7 @@
 		"query": { "length": 512 },
 		"$surrogateKey":["tag"]
 	},
-	"twtUsers":
+	"twtHandles":
 	{
 		"id": "uint64",
 		"screen_name":  { "length": 20 },

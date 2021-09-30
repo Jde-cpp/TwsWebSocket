@@ -9,7 +9,8 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	α SetLevel( ELogLevel l )noexcept->void;
-	ELogLevel _logLevel{ Logging::TagLevel("tick", [](auto l){ SetLevel(l); }) };
+	ELogLevel _logLevel{ Logging::TagLevel("web", [](auto l){ SetLevel(l); }) };
+	//α LogLevel()noexcept{ return _logLevel; }
 	α SetLevel( ELogLevel l )noexcept->void{ _logLevel=l;}
 
 	using Proto::Results::MessageUnion;
@@ -20,14 +21,14 @@ namespace Jde::Markets::TwsWebSocket
 	{}
 	void WebSendGateway::EraseRequestSession( SessionPK sessionId )noexcept
 	{
-		DBG( "EraseRequestSession( {} )"sv, sessionId );
-		std::function<void(const EResults&, UnorderedSet<SessionPK>& )> fnctn = [sessionId]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
+		LOG( _logLevel, "({})EraseRequestSession()"sv, sessionId );
+		//std::function<void(const EResults&, UnorderedSet<SessionPK>& )> fnctn = ;
+		_requestSessions.ForEach( [sessionId]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
 		{
 			sessions.erase( sessionId );
 			if( messageId==EResults::PositionData )
 				sessions.IfEmpty( [&](){ _client.cancelPositions(); });
-		};
-		_requestSessions.ForEach( fnctn );
+		} );
 	}
 
 	void WebSendGateway::EraseAccountSubscription( SessionPK id, sv account, Handle handle )noexcept
@@ -111,7 +112,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	bool WebSendGateway::AddAccountSubscription( sv account, SessionPK sessionId )noexcept
 	{
-		DBG( "({})Account('{}') subscription for sessionId='{}'"sv, sessionId, account );
+		LOG( _logLevel, "({}) Account('{}') subscription for", sessionId, account );
 		var haveAccess = WrapperWeb::TryTestAccess( UM::EAccess::Read, account, sessionId );
 		if( haveAccess )
 		{
@@ -203,7 +204,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_webSocket.AddOutgoing( move(m), id );
 	}
-	void WebSendGateway::Push( vector<MessageType>&& messages, SessionPK id )noexcept
+	void WebSendGateway::Push( vector<MessageType>&& messages, SessionPK id )noexcept(false)
 	{
 		_webSocket.AddOutgoing( move(messages), id );
 	}
@@ -216,7 +217,7 @@ namespace Jde::Markets::TwsWebSocket
 			if( p->second.empty() )
 			{
 				_marketSubscriptions.erase( p );
-				THROW( "Could not find any market subscriptions. contractId{} empty", contractId );
+				THROW( "Could not find any market subscriptions. contractId={}", contractId );
 			}
 			typedef flat_map<SessionPK,flat_set<Proto::Requests::ETickList>>::iterator X;
 			for( X pSession = p->second.begin(); pSession != p->second.end(); )
@@ -328,9 +329,9 @@ namespace Jde::Markets::TwsWebSocket
 		pDetails->set_request_id( clientKey.ClientId );
 		MessageType msg; msg.set_allocated_contract_details( pDetails.release() );
 		if( pComplete )
-			Push( {msg,*pComplete}, clientKey.SessionId );
+			TRY( Push({msg,*pComplete}, clientKey.SessionId) );
 		else
-			Push( move(msg), clientKey.SessionId );
+			TRY( Push(move(msg), clientKey.SessionId) );
 		if( pComplete || !multi )
 			_requestSession.erase( reqId );
 	}
