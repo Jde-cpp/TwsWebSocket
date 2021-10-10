@@ -1,4 +1,4 @@
-#include "WebCoSocket.h"
+﻿#include "WebCoSocket.h"
 #include "server_certificate.hpp"
 #include "../../Framework/source/db/Database.h"
 #include <boost/beast/core.hpp>
@@ -38,7 +38,7 @@ namespace Jde::Markets::TwsWebSocket
 	sp<WebCoSocket> WebCoSocket::_pInstance;
 	flat_map<SessionPK,SessionInfo> WebCoSocket::_sessions; shared_mutex WebCoSocket::_sessionMutex;
 	SessionPK WebCoSocket::_sessionId{0};
-	sp<WebCoSocket> WebCoSocket::Create( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept
+	α WebCoSocket::Create( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept->sp<WebCoSocket> 
 	{
 		ASSERT( !_pInstance );
 		return _pInstance = sp<WebCoSocket>( new WebCoSocket(settings, pClient) );
@@ -52,36 +52,36 @@ namespace Jde::Markets::TwsWebSocket
 		_pThread = make_shared<Threading::InterruptibleThread>( "WebCoSocket", [&](){Run();} );
 	}
 
-	SessionPK WebCoSocket::AddConnection( sp<SocketStream> stream )noexcept
+	α WebCoSocket::AddConnection( sp<SocketStream> stream )noexcept->SessionPK 
 	{
 		var sessionId = ++_sessionId;
 		unique_lock l{ _sessionMutex };
 		_sessions.emplace( sessionId, SessionInfo{stream,make_shared<std::atomic_bool>(false)} );
 		return sessionId;
 	}
-	void WebCoSocket::RemoveConnection( SessionPK sessionId )noexcept
+	α WebCoSocket::RemoveConnection( SessionPK sessionId )noexcept->void
 	{
 		unique_lock l{ _sessionMutex };
 		_sessions.erase( sessionId );
 	}
 
 
-	void WebCoSocket::AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false)
+	α WebCoSocket::AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false)->void
 	{
 		AddOutgoing( vector<MessageType>{move(msg)}, id );
 /**/
 	}
 
-	void WebCoSocket::AddOutgoing( MessageTypePtr pUnion, SessionPK /*id*/ )noexcept
+	α WebCoSocket::AddOutgoing( MessageTypePtr pUnion, SessionPK /*id*/ )noexcept->void
 	{
 		ASSERT( false );
 	}
-	void WebCoSocket::AddOutgoing( const vector<MessageTypePtr>& /*messages*/, SessionPK /*id*/ )noexcept
+	α WebCoSocket::AddOutgoing( const vector<MessageTypePtr>& /*messages*/, SessionPK /*id*/ )noexcept->void
 	{
 		ASSERT( false );
 	}
 
-	void WebCoSocket::AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false)
+	α WebCoSocket::AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false)->void
 	{
 		Proto::Results::Transmission transmission;
 		for( auto&& msg : messages )
@@ -113,15 +113,21 @@ namespace Jde::Markets::TwsWebSocket
 		} );
 	}
 
-	UserPK WebCoSocket::UserId( SessionPK sessionId )noexcept(false)
+	α WebCoSocket::UserId( SessionPK sessionId )noexcept(false)->UserPK
+	{
+		var userPK = TryUserId( sessionId ); THROW_IFX( !userPK, Exception(LogLevel(), format("({})Could not find UserId.", sessionId)) );
+		return userPK;
+	}
+	
+	α WebCoSocket::TryUserId( SessionPK sessionId )noexcept->UserPK
 	{
 		shared_lock l{ _sessionMutex };
-		var p = _sessions.find( sessionId ); THROW_IFX( p==_sessions.end(), Exception(LogLevel(), format("({})Could not find UserId.", sessionId)) );
-		return p->second.UserId;
+		var p = _sessions.find( sessionId ); 
+		return p==_sessions.end() ? 0 : p->second.UserId;
 	}
 
 	string _host;
-	void DoSession( sp<SocketStream> pStream, net::yield_context yld )
+	α DoSession( sp<SocketStream> pStream, net::yield_context yld )->void
 	{
 		Threading::SetThreadDscrptn( "WebSession" );
 		beast::error_code ec;
@@ -164,9 +170,9 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 #ifdef HTTPS
-	void Listen1( net::io_context& ioc, sp<ssl::context> pContext, tcp::endpoint endpoint, net::yield_context yld )noexcept
+	α Listen1( net::io_context& ioc, sp<ssl::context> pContext, tcp::endpoint endpoint, net::yield_context yld )noexcept->void
 #else
-	void Listen1( net::io_context& ioc, tcp::endpoint endpoint, net::yield_context yld )noexcept
+	α Listen1( net::io_context& ioc, tcp::endpoint endpoint, net::yield_context yld )noexcept->void
 #endif
 	{
 		Threading::SetThreadDscrptn("WebListener");
@@ -200,7 +206,7 @@ namespace Jde::Markets::TwsWebSocket
 		{}
 	}
 
-	void WebCoSocket::Run()noexcept
+	α WebCoSocket::Run()noexcept->void
 	{
 		net::io_context ioc{_threadCount};
 		auto const address = net::ip::make_address( "0.0.0.0" );
@@ -223,7 +229,7 @@ namespace Jde::Markets::TwsWebSocket
 			ioc.run(); //TODO see about interuptable threads
 	}
 
-	void WebCoSocket::SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv /*key*/ )noexcept
+	α WebCoSocket::SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv /*key*/ )noexcept->void
 	{
 		{
 			shared_lock l{ _sessionMutex };

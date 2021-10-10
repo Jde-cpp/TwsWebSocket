@@ -1,4 +1,4 @@
-#include "TwsSendWorker.h"
+﻿#include "TwsSendWorker.h"
 #include "requests/News.h"
 #include "WebRequestWorker.h"
 #include <jde/markets/types/MyOrder.h>
@@ -190,7 +190,7 @@ namespace Jde::Markets::TwsWebSocket
 	α TwsSendWorker::Request( const Proto::Requests::GenericRequest& r, const SessionKey& key )noexcept->void
 	{
 		if( r.type()==ERequests::RequestOptionParams )
-			RequestOptionParams( r.id(), r.item_id(), move(key) );
+			RequestOptionParams( r.id(), (int)r.item_id(), move(key) );
 		else
 			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", key.SessionId, r.id(), r.type() );
 	}

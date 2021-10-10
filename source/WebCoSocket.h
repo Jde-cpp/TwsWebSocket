@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
@@ -51,8 +51,8 @@ namespace Jde::Markets::TwsWebSocket
 
 	struct WebCoSocket final
 	{
-		static sp<WebCoSocket> Create( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept;
-		static sp<WebCoSocket> Instance()noexcept{ return _pInstance; }
+		Ω Create( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept->sp<WebCoSocket>;
+		Ω Instance()noexcept->sp<WebCoSocket>{ return _pInstance; }
 
 		void AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false);
 		void AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept;
@@ -65,8 +65,9 @@ namespace Jde::Markets::TwsWebSocket
 		void HandleIncoming( WebRequestMessage&& data )noexcept{ _requestWorker.Push(move(data)); }
 		sp<WebSendGateway> WebSend(){ return _pWebSend; }
 		void SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept;
-		UserPK UserId( SessionPK sessionId )noexcept(false);
-		UserPK TryUserId( SessionPK sessionId )noexcept{ return Try<UserPK>( [sessionId,this]{ return UserId(sessionId); }).value_or(0); };
+		α UserId( SessionPK sessionId )noexcept(false)->UserPK;
+		α TryUserId( SessionPK sessionId )noexcept->UserPK;
+
 		Ω SetLevel( ELogLevel l )noexcept->void;
 	private:
 		WebCoSocket( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept;

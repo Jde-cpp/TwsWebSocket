@@ -19,7 +19,7 @@ namespace Jde
 			auto pResults = make_unique<RedditEntries>(); pResults->set_request_id( arg->ClientId );
 
 			tinyxml2::XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "feed" ); CHECK( pRoot );
-			TRY( pResults->set_update_time(DateTime{pRoot->TryChildText("updated")}.TimeT()) );
+			TRY( pResults->set_update_time((uint32)DateTime{pRoot->TryChildText("updated")}.TimeT()) );
 			for( auto pItem=pRoot->FirstChildElement("entry"); pItem; pItem = pItem->NextSiblingElement("entry") )
 			{
 				auto p = pResults->add_values();
@@ -28,7 +28,7 @@ namespace Jde
 				p->set_content( string{pItem->TryChildText("content")} );
 				p->set_link( string{pItem->TryChildAttribute("link", "href")} );
 				p->set_category( string{pItem->TryChildAttribute("category", "term")} );
-				TRY( p->set_published(DateTime{pItem->TryChildText("published")}.TimeT()) );
+				TRY( p->set_published((uint32)DateTime{pItem->TryChildText("published")}.TimeT()) );
 			}
 			MessageType m; m.set_allocated_reddit( pResults.release() );
 			arg->Push( move(m) );

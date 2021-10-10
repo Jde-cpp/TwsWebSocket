@@ -60,6 +60,9 @@
     <ClInclude Include="requests\EdgarRequests.h">
       <Filter>Header Files\requests</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -110,5 +113,10 @@
     <ClCompile Include="requests\Twitter.cpp">
       <Filter>Source Files\requests</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

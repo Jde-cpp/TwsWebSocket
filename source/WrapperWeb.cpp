@@ -21,7 +21,7 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	extern shared_ptr<Settings::Container> SettingsPtr;
+	//extern shared_ptr<Settings::Container> SettingsPtr;
 
 #define _socket WebSocket::Instance()
 #define _client TwsClientSync::Instance()
@@ -37,7 +37,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		ASSERT( !_pInstance );
 		_pInstance = sp<WrapperWeb>( new WrapperWeb() );
-		sp<TwsClientSync> pClient = _pInstance->CreateClient( SettingsPtr->Get<uint>("twsClientId") );
+		auto pClient = _pInstance->CreateClient( Settings::Get<uint>("twsWebSocket/twsClientId") );
 		return make_tuple( pClient, _pInstance );
 	}
 	WrapperWeb& WrapperWeb::Instance()noexcept
@@ -152,7 +152,7 @@ namespace Jde::Markets::TwsWebSocket
 			else
 				_accounts.emplace( name, Account{description.size() ? description : name, row.GetUInt(3)} );
 		}) ) return;
-		pDataSource->TrySelect( "SELECT account_id, user_id, right_id  FROM ib_account_roles ib join um_group_roles gr on gr.role_id=ib.role_id join um_user_groups ug on gr.group_id=ug.user_id", [&]( const DB::IRow& row )
+		pDataSource->TrySelect( "select account_id, user_id, right_id  FROM ib_account_roles ib join um_group_roles gr on gr.role_id=ib.role_id join um_user_groups ug on gr.group_id=ug.group_id", [&]( const DB::IRow& row )
 		{
 			var accountId = row.GetUInt( 0 );
 			var pAccount = std::find_if( _accounts.begin(), _accounts.end(), [&]( var& x ){ return x.second.Id==accountId; } ); THROW_IF( pAccount==_accounts.end(), Exception(std::to_string(accountId)) );

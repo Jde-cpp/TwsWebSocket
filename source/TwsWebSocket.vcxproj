@@ -66,8 +66,8 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>BOOST_ALL_DYN_LINK;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;NOMINMAX;ONE_CORE;PROTOBUF_USE_DLLS;PROTOBUF_USE_EXCEPTIONS=0;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
-      <DisableSpecificWarnings>4068;4251;4275;4297;5105;5104</DisableSpecificWarnings>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <DisableSpecificWarnings>4068;4251;4275;4297;5105;5104;4305</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>../framework/source;../MarketLibrary/source/;../../Public/</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -93,8 +93,8 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>BOOST_ALL_DYN_LINK;_CONSOLE;_WINSOCK_DEPRECATED_NO_WARNINGS;_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;NOMINMAX;ONE_CORE;PROTOBUF_USE_DLLS;PROTOBUF_USE_EXCEPTIONS=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
-      <DisableSpecificWarnings>4068;4251;4275;4297;5105;5104</DisableSpecificWarnings>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <DisableSpecificWarnings>4068;4251;4275;4297;5105;5104;4305</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>../framework/source;../MarketLibrary/source/;../../Public/</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -147,6 +147,7 @@
     <ClInclude Include="News.h" />
     <ClInclude Include="PreviousDayValues.h" />
     <ClInclude Include="requests\EdgarRequests.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="TwsSendWorker.h" />
     <ClInclude Include="TypeDefs.h" />
     <ClInclude Include="WatchListData.h" />
@@ -158,6 +159,9 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="WebSocket.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

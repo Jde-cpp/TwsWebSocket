@@ -53,8 +53,7 @@ namespace Jde::Markets
 {
 	void TwsWebSocket::Startup( bool initialCall )noexcept
 	{
-		auto pSettings = TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
-		if( Settings::TryGet<bool>("um/use").value_or(false) )
+		//if( Settings::TryGet<bool>("um/use").value_or(false) ) currently need to configure um so meta is loaded.
 		{
 			try
 			{
@@ -63,6 +62,7 @@ namespace Jde::Markets
 			catch( const Exception& e )
 			{
 				CRITICAL( "Could not configure user tables. - {}"sv, e.what() );
+				std::cerr << e.what() << std::endl;
 				std::this_thread::sleep_for( 1s );
 				std::terminate();
 			}
@@ -70,7 +70,7 @@ namespace Jde::Markets
 		sp<TwsClientSync> pClient;
 		sp<WrapperWeb> pWrapper;
 		TRY( auto p = TwsWebSocket::WrapperWeb::CreateInstance(); pClient = get<0>( p ); pWrapper = get<1>( p );  );
-
+		auto pSettings = TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
 		auto pSocket = TwsWebSocket::WebCoSocket::Create( *pSettings, pClient );
 		if( pWrapper )
 		{

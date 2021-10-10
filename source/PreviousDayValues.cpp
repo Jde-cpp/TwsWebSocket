@@ -1,4 +1,4 @@
-#include "PreviousDayValues.h"
+﻿#include "PreviousDayValues.h"
 #include "WebSocket.h"
 #include "WebRequestWorker.h"
 #define _sync TwsClientSync::Instance()
@@ -70,7 +70,7 @@ namespace TwsWebSocket
 					for( auto pDayBar = pBars->begin(); pDayBar!=pBars->end(); pDayBar = loaded ? pBars->erase(pDayBar) : std::next(pDayBar) )
 					{
 						var day = pDayBar->first; auto pIbBar = trades.find( day );
-						if( !(loaded = pIbBar!=trades.end()) )
+						if( loaded = pIbBar!=trades.end(), !loaded )
 							continue;
 						auto pBar = move( pDayBar->second ); auto ibTrades = pIbBar->second;
 						pBar->set_count( static_cast<uint32>(ibTrades.size()) );
@@ -117,7 +117,7 @@ namespace TwsWebSocket
 		if( !useRth )
 			co_await load( !useRth, PreviousTradingDay(current), sendMultiEnd );
 	}
-	void fnctn( const TwsWebSocket::ProcessArg& arg, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept(false)//, TwsWebSocket::SessionId sessionId, TwsWebSocket::ClientPK requestId
+	α fnctn( const TwsWebSocket::ProcessArg& arg, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept(false)//, TwsWebSocket::SessionId sessionId, TwsWebSocket::ClientPK requestId
 	{
 		try
 		{
@@ -226,14 +226,14 @@ namespace TwsWebSocket
 		}
 	}
 }
-	void TwsWebSocket::PreviousDayValues( ContractPK contractId )noexcept( false )//loads into cache for later
+	α TwsWebSocket::PreviousDayValues( ContractPK contractId )noexcept( false )->void//loads into cache for later
 	{
 		google::protobuf::RepeatedField<google::protobuf::int32> contractIds;
 		contractIds.Add( contractId );
 		TwsWebSocket::fnctn( {}, contractIds );
 	}
 
-	void TwsWebSocket::PreviousDayValues( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ProcessArg& arg )noexcept
+	α TwsWebSocket::PreviousDayValues( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ProcessArg& arg )noexcept->void
 	{
 		uint i=0;
 		for( var id : contractIds )

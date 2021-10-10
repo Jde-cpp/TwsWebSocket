@@ -1,14 +1,18 @@
 {
 	"barPath": "",
 	"GoogleAuthClientId": "926418369328-dm78ui3p1tar2oen6qgkv3rkb33t5pik.apps.googleusercontent.com",
-	"dbDriver": "Jde.DB.Odbc.dll",
-	"connectionString": "DSN=Jde_TWS_Connection",
-	"metaDataPath": "meta.json",
+	"db":
+	{
+		"driver": "Jde.DB.Odbc.dll",
+		"connectionString": "DSN=Jde_TWS_Connection",
+		"meta": "../meta.json"
+	},
 	"logging":
 	{
-		"level": 1,
-		"path": "..",
-		"serverPortx":  4321
+		"tags": [ "threads", "web", "tweet", "" ],
+		"console":{},
+		"file":{ "path": ".." },
+		"server": { "port": 4321, "level": "Debug", "diagnosticsLevel": "Debug", "tags": {"threads":"Debug"} }
 	},
 	"twsWebSocket":
 	{
@@ -26,6 +30,7 @@
 	},
 	"um":
 	{
+		"user.email": "foo@gmail.com",
 		"use": true
 	}
 }

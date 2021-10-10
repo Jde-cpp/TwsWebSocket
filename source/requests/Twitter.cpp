@@ -308,7 +308,7 @@ namespace Jde
 					}
 					if( !p )
 					{
-						p = existing.emplace( createdAt, pExisting->add_values() )->second; p->set_id( t.Id ); p->set_author_id( t.AuthorId ); p->set_created_at( createdAt ); p->set_text( t.Text );
+						p = existing.emplace( createdAt, pExisting->add_values() )->second; p->set_id( t.Id ); p->set_author_id( t.AuthorId ); p->set_created_at( (uint32)createdAt ); p->set_text( t.Text );
 					}
 					p->set_retweet( t.Metrics.Retweet ); p->set_reply( t.Metrics.Reply ); p->set_like( t.Metrics.Like ); p->set_quote( t.Metrics.Quote );
 					if( t.Metrics.Like>5 )
@@ -347,8 +347,8 @@ namespace Jde
 					authors.emplace( t.author_id() );
 				}
 			}
-			pTweets->set_update_time( Clock::to_time_t(lastChecked) ); pExisting->set_update_time( Clock::to_time_t(lastChecked) );
-			pTweets->set_earliest_time( Clock::to_time_t(earliest) );  pExisting->set_earliest_time( Clock::to_time_t(earliest) );
+			pTweets->set_update_time( (uint32)Clock::to_time_t(lastChecked) ); pExisting->set_update_time( (uint32)Clock::to_time_t(lastChecked) );
+			pTweets->set_earliest_time( (uint32)Clock::to_time_t(earliest) );  pExisting->set_earliest_time( (uint32)Clock::to_time_t(earliest) );
 			if( pTweets->values_size() )
 				push( move(pTweets) );
 
@@ -363,8 +363,8 @@ namespace Jde
 					pCache->emplace( id );
 				}
 				Cache::Set( "twt_blocks", pCache );
-				for( var& [tag,count] : *pIgnoredTags )
-					DB::ExecuteProc( "twt_tag_ignore(?,?)", {tag,count} );
+				for( var& [tag,count2] : *pIgnoredTags )
+					DB::ExecuteProc( "twt_tag_ignore(?,?)", {tag,count2} );
 				Cache::Set( "twt_tags", pIgnoredTags );
 			}
 			if( settings.BackupPath.size() )
@@ -398,7 +398,7 @@ namespace Jde
 				{
 					pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
 				}
-				catch( const Exception& e )
+				catch( const Exception& )
 				{
 					break;
 				}

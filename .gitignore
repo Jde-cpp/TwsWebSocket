@@ -56,3 +56,4 @@ setup/.vs/*
 *.msi
 .gitignore
 setup/Release/*
+*.aps

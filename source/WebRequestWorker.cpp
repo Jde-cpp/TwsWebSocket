@@ -1,4 +1,4 @@
-#include "WebRequestWorker.h"
+﻿#include "WebRequestWorker.h"
 #include "./BlocklyWorker.h"
 #include "./Flex.h"
 #include "requests/News.h"
@@ -27,11 +27,11 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_pThread = make_shared<Threading::InterruptibleThread>( "WebRequestWorker", [&](){Run();} );
 	}
-	void WebRequestWorker::Push( QueueType&& msg )noexcept
+	α WebRequestWorker::Push( QueueType&& msg )noexcept->void
 	{
 		_queue.Push( std::move(msg) );
 	}
-	void WebRequestWorker::Run()noexcept
+	α WebRequestWorker::Run()noexcept->void
 	{
 		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.empty() )
 		{
@@ -40,7 +40,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 #define ARG(x) {{{session}, x}, _pWebSend}
-	void WebRequestWorker::HandleRequest( QueueType&& msg )noexcept
+	α WebRequestWorker::HandleRequest( QueueType&& msg )noexcept->void
 	{
 		try
 		{
@@ -56,7 +56,8 @@ namespace Jde::Markets::TwsWebSocket
 			_pWebSend->Push( e, {msg, 0} );
 		}
 	}
-	void WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& session )noexcept
+#pragma warning(disable:4456)
+	α WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& session )noexcept->void
 	{
 		while( transmission.messages().size() )
 		{
@@ -87,7 +88,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void WebRequestWorker::Receive( ERequests type, str name, const ClientKey& arg )noexcept
+	α WebRequestWorker::Receive( ERequests type, str name, const ClientKey& arg )noexcept->void
 	{
 		if( type==ERequests::Query )
 		{
@@ -192,7 +193,7 @@ namespace Jde::Markets::TwsWebSocket
 //			EdgarRequests::Investors( name, {arg, _pWebSend} );
 	}
 
-/*	void WebRequestWorker::ReceiveRest( const ClientKey& arg, Proto::Requests::ERequests type, sv url, sv item )noexcept
+/*	α WebRequestWorker::ReceiveRest( const ClientKey& arg, Proto::Requests::ERequests type, sv url, sv item )noexcept->void
 	{
 		if( UM::IsTarget(url) )
 		{
@@ -235,7 +236,7 @@ namespace Jde::Markets::TwsWebSocket
 			handled = false;//WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, request.type(), sessionId );
 		return handled;
 	}
-	void WebRequestWorker::ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept
+	α WebRequestWorker::ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept->void
 	{
 		var start = Chrono::BeginningOfDay( Clock::from_time_t(req.start()) );
 		var end = Chrono::EndOfDay( Clock::from_time_t(req.end()) );
@@ -245,7 +246,7 @@ namespace Jde::Markets::TwsWebSocket
 		}).detach();
 	}
 
-	void WebRequestWorker::ReceiveStdDev( ContractPK contractId, double days, DayIndex start, const ProcessArg& inputArg )noexcept
+	α WebRequestWorker::ReceiveStdDev( ContractPK contractId, double days, DayIndex start, const ProcessArg& inputArg )noexcept->void
 	{
 		std::thread( [contractId, days, start, inputArg]()
 		{
@@ -265,7 +266,7 @@ namespace Jde::Markets::TwsWebSocket
 		} ).detach();
 	}
 
-	void WebRequestWorker::ReceiveOptions( const SessionKey& session, const Proto::Requests::RequestOptions& params )noexcept
+	α WebRequestWorker::ReceiveOptions( const SessionKey& session, const Proto::Requests::RequestOptions& params )noexcept->void
 	{
 		std::thread( [params, web=ProcessArg ARG(params.id())]()
 		{
@@ -365,7 +366,7 @@ namespace Jde::Markets::TwsWebSocket
 		} ).detach();
 	}
 
-	void WebRequestWorker::RequestFundamentalData( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ClientKey& key )noexcept
+	α WebRequestWorker::RequestFundamentalData( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ClientKey& key )noexcept->void
 	{
 		std::thread( [current=PreviousTradingDay(), contractIds, web=ProcessArg{key,_pWebSend}]()
 		{

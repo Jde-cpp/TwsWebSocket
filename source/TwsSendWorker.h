@@ -1,5 +1,7 @@
-#pragma once
+﻿#pragma once
+#include <jde/coroutine/Task.h>
 #include "../../Framework/source/threading/InterruptibleThread.h"
+
 
 namespace Jde::Markets{ struct TwsClientSync; }
 namespace Jde::Markets::TwsWebSocket
@@ -28,7 +30,7 @@ namespace Jde::Markets::TwsWebSocket
 		void OptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept;
 		void Order( const Proto::Requests::PlaceOrder& order, const SessionKey& key )noexcept;
 		void Positions( const Proto::Requests::RequestPositions& request, const SessionKey& key )noexcept;
-		α RequestOptionParams( ClientPK reqId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task2;
+		α RequestOptionParams( ClientPK reqId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Coroutine::Task2;
 
 		::Contract GetContract( ContractPK contractId )noexcept(false);
 		α Requests( const Proto::Requests::GenericRequests& request, const SessionKey& key )noexcept->void;
