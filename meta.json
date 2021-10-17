@@ -144,7 +144,7 @@
 	"umUsers":
 	{
 		"$parent": "$description",
-		"authenticatorId": "umAuthenticators"
+		"authenticatorId": "umAuthenticators?"
 	},
 	"umAuthenticators":
 	{

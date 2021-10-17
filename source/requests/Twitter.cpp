@@ -189,6 +189,7 @@ namespace Jde
 			arg.Push( e );
 		}
 	}
+
 	α Twitter::Search( string symbol, ProcessArg arg )noexcept->Coroutine::Task2
 	{
 		var l = co_await Threading::CoLock( format("Twitter::Search.{}", symbol) );
@@ -242,7 +243,7 @@ namespace Jde
 		for( auto& t : *pExisting->mutable_values() )
 			existing.emplace( t.created_at(), &t );
 
-		var once = std::to_string( IO::Crc::Calc32RunTime(string{symbol}+std::to_string(time)) );
+		var once = std::to_string( Calc32RunTime(string{symbol}+std::to_string(time)) );
 		var additional = DB::Scaler<string>( "select query from twt_queries where tag=?", {symbol} ).value_or( string{} );
 		var prefix = additional.size() ? format("{}%20{}", Ssl::Encode(symbol), Ssl::Encode(additional) ) : Ssl::Encode( symbol );
 		constexpr sv suffix = "%20-is:retweet%20lang:en"sv;
@@ -271,6 +272,7 @@ namespace Jde
 		string nextToken;
 		var startTime = lastChecked>epoch+12h ? epoch+12h : lastChecked>epoch ? lastChecked : epoch;//update likes over 12 hours.
 		var startTimeUrl = format( "&start_time={}&max_results=100", ToIsoString(startTime) );
+		var require$Hash = ciSymbol=="SPY";
 		set<uint> sent;
 		uint count=0;
 		try
@@ -288,7 +290,10 @@ namespace Jde
 					var a = t.AuthorId;
 					if( newBlockedUsers.contains(a) || pBlockedUsers->contains(a) )
 						continue;
-					vector<sv> tags = t.Tags(symbol);
+					vector<sv> tags = t.Tags( symbol );
+					if( require$Hash && find_if(tags.begin(), tags.end(), [&]( auto& x ){return x.size()==symbol.size()+1 && x.starts_with('$') && ciSymbol==x.substr(1);})==tags.end() )
+						continue;
+					//DBG( "{}", t.Text );
 					if( tags.size()>4 )
 					{
 						newBlockedUsers.emplace( t.AuthorId );

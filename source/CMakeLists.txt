@@ -48,6 +48,8 @@ target_precompile_headers(Jde.TwsWebSocket
 		<EWrapper.h>
 		<Execution.h>
 		<Order.h>
+		<OrderState.h>
+		<CommonDefs.h>
 
 		<jde/TypeDefs.h>
 		<jde/coroutine/Task.h>

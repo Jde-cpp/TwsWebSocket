@@ -105,7 +105,7 @@ namespace Jde::Markets::TwsWebSocket
 					orphans.emplace( sessionId, handle );
 			}
 			l.unlock();
-			for_each( orphans.begin(), orphans.end(), [&](auto idHandle ){ EraseAccountSubscription( idHandle.first, accountNumber, idHandle.second ); } );
+			for_each( orphans.begin(), orphans.end(), [&]( auto idHandle ){EraseAccountSubscription(idHandle.first, accountNumber, idHandle.second);} );
 		}
 		return haveSubscription;
 	}

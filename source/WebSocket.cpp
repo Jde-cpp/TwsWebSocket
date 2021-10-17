@@ -20,8 +20,7 @@ namespace Jde::Markets::TwsWebSocket
 		Threading::Interrupt( "webSocket", 100ms, true ),
 		_port{ port },
 		_pClientSync{ pClient },
-	//	_pWebSend{ make_shared<WebSendGateway>(*this, _pClientSync) },
-		_requestWorker{ /**this,*/ _pWebSend, _pClientSync }
+		_requestWorker{ _pWebSend, _pClientSync }
 	{
 		_pAcceptor = make_shared<Threading::InterruptibleThread>( "wsAcceptor", [&](){Accept();} );//accesses members, so not initialized above.
 		IApplication::AddThread( _pAcceptor );
@@ -56,8 +55,7 @@ namespace Jde::Markets::TwsWebSocket
 	void WebSocket::Accept()noexcept
 	{
 		Threading::SetThreadDscrptn( "webAcceptor" );
-
-		boost::asio::io_context ioc{1};
+		boost::asio::io_context ioc{ 1 };
 		try
 		{
 			_pAcceptObject =  shared_ptr<tcp::acceptor>( new tcp::acceptor{ioc, {boost::asio::ip::tcp::v4(), (short unsigned int)_port}} );
@@ -72,8 +70,8 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			try
 			{
-				tcp::socket socket{ioc};// This will receive the new connection
-				_pAcceptObject->accept(socket);// Block until we get a connection
+				tcp::socket socket{ ioc };// This will receive the new connection
+				_pAcceptObject->accept( socket );// Block until we get a connection
 				DBG( "Accepted Connection."sv );
 				auto pSession = make_shared<websocket::stream<tcp::socket>>( std::move(socket) );
 				pSession->binary( true );
@@ -141,7 +139,7 @@ namespace Jde::Markets::TwsWebSocket
 					break;
 				}
 			}
-			catch( std::exception const& e )
+			catch( const std::exception& e )
 			{
 				ERR( "std::exception returned: '{}'"sv, e.what() );
 			}

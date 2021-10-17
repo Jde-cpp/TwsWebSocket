@@ -106,7 +106,9 @@
 		"cstdbool": "cpp",
 		"charconv": "cpp",
 		"version": "cpp",
-		"*.def": "cpp"
+		"*.def": "cpp",
+		"__availability": "cpp",
+		"__memory": "cpp"
 	},
 	"window.title": "TwsWebSocket"
 }

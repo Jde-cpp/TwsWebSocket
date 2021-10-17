@@ -17,13 +17,13 @@ namespace Jde::Markets::TwsWebSocket
 {
 	extern shared_ptr<Settings::Container> SettingsPtr;
 
-	typedef map<uint16,Proto::Results::Flex> CacheType;
+	using CacheType=map<uint16,Proto::Results::Flex>;
 	shared_mutex _cacheMutex;
 	constexpr sv CacheName{ "Flex::SendTrades" };
 	atomic<uint32> DirectoryCrc{0};
 
-	sp<CacheType> Load()noexcept(false);
-	void Flex::SendTrades( str /*accountNumber*/, TimePoint startTime, TimePoint endTime, const ProcessArg& web )noexcept
+	α Load()noexcept(false)->sp<CacheType>;
+	α Flex::SendTrades( str /*accountNumber*/, TimePoint startTime, TimePoint endTime, const ProcessArg& web )noexcept->void
 	{
 		try
 		{
@@ -59,7 +59,7 @@ namespace Jde::Markets::TwsWebSocket
 			web.Push( e );
 		}
 	}
-	time_t ToTimeT( str date )noexcept
+	α ToTimeT( str date )noexcept->time_t
 	{
 		time_t value{0};
 		if( date.size()==15 )
@@ -72,7 +72,7 @@ namespace Jde::Markets::TwsWebSocket
 			ERR( "Could not parse date '{}'."sv, date );
 		return value;
 	}
-	sp<CacheType> Load()noexcept(false)
+	α Load()noexcept(false)->sp<CacheType>
 	{
 		unique_lock l{ _cacheMutex };
 		var root = Jde::Markets::TwsWebSocket::SettingsPtr->Get<fs::path>( "flexPath" );
@@ -90,7 +90,7 @@ namespace Jde::Markets::TwsWebSocket
 			crcStream << entry.path().string() << ";" << fs::_FilesystemClock::to_time_t( entry.last_write_time() );
 #endif
 		}
-		var crc = IO::Crc::Calc32( crcStream.str() );
+		var crc = Calc32RunTime( crcStream.str() );
 		if( crc==DirectoryCrc )
 		{
 			auto pCache = Cache::Get<CacheType>( string(CacheName) );

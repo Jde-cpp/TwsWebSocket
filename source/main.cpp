@@ -10,7 +10,7 @@
 
 #define var const auto
 #ifndef _MSC_VER
-namespace Jde{  string IApplication::CompanyName()noexcept{ return "Jde-Cpp"; } }
+namespace Jde{  string OSApp::CompanyName()noexcept{ return "Jde-Cpp"; } }
 #endif
 namespace Jde::Markets::TwsWebSocket
 {
