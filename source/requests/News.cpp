@@ -35,7 +35,7 @@ namespace Jde::Markets::TwsWebSocket
 			MessageType type; type.set_allocated_string_map( pMap.release() );
 			arg.Push( move(type) );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
 			arg.Push( e );
 		}
@@ -59,10 +59,6 @@ namespace Jde::Markets::TwsWebSocket
 			MessageType type; type.set_allocated_news( move(pResults.release()) );
 			arg.Push( move(type) );
 		}
-		catch( const Exception& e )
-		{
-			arg.Push( e );
-		}
 		catch( const std::exception& e )
 		{
 			arg.Push( e );
@@ -73,7 +69,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		try
 		{
-			auto query = format( "search/${}+when:1d&hl=en-US&gl=US&ceid=US:en", symbol );
+			auto query = format( "search?q={}&hl=en-US&gl=US&ceid=US%3Aen", symbol );
 			if( symbol=="SPY" )
 				query = "topics/CAAqJAgKIh5DQkFTRUFvS0wyMHZNSE4zYm5OMGNCSUNaVzRvQUFQAQ?hl=en-US&gl=US&ceid=US:en";
 			else if( symbol=="TSLA" )
@@ -100,9 +96,9 @@ namespace Jde::Markets::TwsWebSocket
 					var second = Str::To<uint8>( pubDateString.substr(23,2) );
 					p->set_publication_date( (uint32)DateTime{year, month, day, hour, minute, second}.TimeT() );
 				}
-				catch( const Exception& e )
+				catch( const IException& e )
 				{
-					e.Log( pubDateString );
+					DBG( "could not parse '{}' - {}", pubDateString, e.what() );
 				}
 
 				//
@@ -116,10 +112,10 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			h.promise().get_return_object().SetResult( results );
 		}
-		catch( const std::exception& e )
+		catch( std::exception& e )
 		{
 			LOGS( ELogLevel::Error, e.what() );
-			h.promise().get_return_object().SetResult( move(e) );
+			h.promise().get_return_object().SetResult( std::make_exception_ptr(move(e)) );
 		}
 		h.resume();
 	}};}

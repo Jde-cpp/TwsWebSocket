@@ -103,7 +103,7 @@ namespace TwsWebSocket
 							arg.WebSendPtr->Push( move(msg), arg.SessionId );
 					}
 				}
-				catch( Exception& e )
+				catch( std::exception& e )
 				{
 					h.promise().get_return_object().SetResult( move(e) );
 				}
@@ -126,11 +126,11 @@ namespace TwsWebSocket
 				sp<vector<ContractDetails>> pDetails;
 				try
 				{
-					pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IF( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {}.", contractId, pDetails->size()), -1) );
+					pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IFX( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {} records.", contractId, pDetails->size()), -1, 0) );
 				}
 				catch( const IBException& e )
 				{
-					THROW( IBException( format("ReqContractDetails( {} ) returned {}.", contractId, e.what()), e.ErrorCode, e.RequestId) );
+					THROWX( IBException( format("ReqContractDetails( {} ) returned {}.", contractId, e.what()), e.ErrorCode, e.RequestId) );
 				}
 				Contract contract{ pDetails->front() };
 				var current = CurrentTradingDay( contract );

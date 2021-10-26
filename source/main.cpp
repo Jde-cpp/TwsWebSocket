@@ -34,17 +34,11 @@ int main( int argc, char** argv )
 	catch( const EnvironmentException& e )
 	{
 		std::cerr << e.what() << std::endl;
-		LOGS( ELogLevel::Critical, e.what() );
 	}
-	catch( const Exception& e )
+	catch( const IException& e )
 	{
-		if( e.GetLevel()!=ELogLevel::Trace )
-		{
-			std::cerr << e.what() << std::endl;
-			LOGS( ELogLevel::Critical, e.what() );
-		}
-		else
-			std::cout << e.what() << std::endl;
+		auto& os = e.Level()==ELogLevel::Trace ? std::cout : std::cerr;
+		os << e.what() << std::endl;
 	}
 	return result;
 }
@@ -59,7 +53,7 @@ namespace Jde::Markets
 			{
 				UM::Configure();
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
 				CRITICAL( "Could not configure user tables. - {}"sv, e.what() );
 				std::cerr << e.what() << std::endl;
@@ -105,16 +99,12 @@ namespace Jde::Markets
 									Try( [&](){PreviousDayValues( id );} );
 						}
 					}
-					catch( const IOException& e )
-					{
-						e.Log( "Could not load watch lists" );
-					}
+					catch( const IOException& )
+					{}
 				}
 			}
-			catch( const IBException& e )
-			{
-				e.Log( "Startup Position load ending" );
-			}
+			catch( const IBException& )
+			{}
 		}
 		if( initialCall )
 		{

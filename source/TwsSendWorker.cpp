@@ -76,7 +76,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			_webSendPtr->Push( e, {sessionKey, clientId} );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
 			_webSendPtr->Push( e, {sessionKey, clientId} );
 		}
@@ -153,9 +153,8 @@ namespace Jde::Markets::TwsWebSocket
 				auto p = *pp;
 				p->Run();
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
-				e.Log();
 				_webSendPtr->Push( e, {{session.SessionId}, r.id()} );
 			}
 			//todo allow cancel
@@ -294,7 +293,7 @@ namespace Jde::Markets::TwsWebSocket
 			MessageType m; m.set_allocated_option_exchanges( new Proto::Results::OptionExchanges(*p) );
 			_web.Push( move(m), key.SessionId );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
 			_web.Push( e, ClientKey{key,clientId} );
 		}

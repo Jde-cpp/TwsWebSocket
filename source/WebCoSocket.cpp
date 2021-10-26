@@ -22,19 +22,20 @@ namespace Jde::Markets::TwsWebSocket
 	α WebCoSocket::SetLevel( ELogLevel l )noexcept->void{ _level=l; }
 	α LogLevel()noexcept{ return _level; }
 
-	BeastException::BeastException( sv what, beast::error_code&& ec, ELogLevel level )noexcept:
-		Exception{ level, format("{} returned ({}){}", what, ec.value(), ec.message()) },
+	BeastException::BeastException( sv what, beast::error_code&& ec, ELogLevel level, const source_location& sl )noexcept:
+		IException{ {std::to_string(ec.value()), ec.message()}, format("{} returned ({{}}){{}}", what), sl, level },
 		ErrorCode{ move(ec) }
 	{}
 
 	α BeastException::LogCode( const beast::error_code& ec, ELogLevel level, sv what )noexcept->void
 	{
-		if( BeastException::IsTruncated(ec) || ec.value()==125 || what=="~DoSession" )
+		if( BeastException::IsTruncated(ec) || ec.value()==125 || ec.value()==995 || what=="~DoSession" )
 			LOG( level, "{} - ({}){}"sv, what, ec.value(), ec.message() );
 		else
 			WARN( "{} - ({}){}"sv, what, ec.value(), ec.message() );
 	}
-
+	//α BeastException::Log()const noexcept->void
+	//{}
 	sp<WebCoSocket> WebCoSocket::_pInstance;
 	flat_map<SessionPK,SessionInfo> WebCoSocket::_sessions; shared_mutex WebCoSocket::_sessionMutex;
 	SessionPK WebCoSocket::_sessionId{0};
@@ -129,7 +130,6 @@ namespace Jde::Markets::TwsWebSocket
 	string _host;
 	α DoSession( sp<SocketStream> pStream, net::yield_context yld )->void
 	{
-		Threading::SetThreadDscrptn( "WebSession" );
 		beast::error_code ec;
 		SessionPK sessionId = 0;
 		try
@@ -143,26 +143,24 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				res.set( http::field::server, std::string(BOOST_BEAST_VERSION_STRING) + " websocket-server-coro-ssl" );
 			}) );
-			pStream->async_accept( yld[ec] ); THROW_IF( ec, BeastException("accept", move(ec)) );
-			auto pWebCoSocket = WebCoSocket::Instance(); THROW_IF( !pWebCoSocket, Exception("!pWebCoSocket") );
+			pStream->async_accept( yld[ec] ); THROW_IFX( ec, BeastException("accept", move(ec)) );
+			auto pWebCoSocket = WebCoSocket::Instance(); THROW_IF( !pWebCoSocket, "!pWebCoSocket" );
 			sessionId = pWebCoSocket->AddConnection( pStream );
-			UserPK userId = 5;
+			UserPK userId{ 0 };
 			//pWebCoSocket->SetLogin( {{sessionId,userId },0}, EAuthType::Google, "foo@gmail.com", true, "Mr foo", "", Clock::now()+24h, {} );
 			for( ;; )
 			{
-				beast::flat_buffer buffer;// This buffer will hold the incoming message
-				pStream->async_read( buffer, yld[ec] ); //THROW_IF( ec, BeastException("async_read", move(ec)) );// Read a message
-				if( ec )// This indicates that the session was closed
+				beast::flat_buffer buffer;
+				pStream->async_read( buffer, yld[ec] );
+				if( ec )
 					break;
 				auto data = boost::beast::buffers_to_string( buffer.data() );
-				if( !userId )
-					userId = pWebCoSocket->UserId( sessionId );
-
+				userId = userId ? userId : pWebCoSocket->TryUserId( sessionId );
 				pWebCoSocket->HandleIncoming( {{sessionId,userId}, std::move(data)} );
 			}
 			BeastException::LogCode( ec, LogLevel(), "~DoSession" );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
 			DBG( "({})Session Terminated on exception {}"sv, sessionId, e.what() );
 			if( auto pWebCoSocket = WebCoSocket::Instance(); pWebCoSocket && sessionId )
@@ -202,7 +200,7 @@ namespace Jde::Markets::TwsWebSocket
 				}
 			}
 		}
-		catch( const Exception& )
+		catch( const IException& )
 		{}
 	}
 
@@ -231,6 +229,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	α WebCoSocket::SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv /*key*/ )noexcept->void
 	{
+		UserPK userId;
 		{
 			shared_lock l{ _sessionMutex };
 			var p = _sessions.find( client.SessionId ); RETURN_IF( p==_sessions.end(), "({})Could not find session for Login.", client.SessionId );
@@ -241,10 +240,17 @@ namespace Jde::Markets::TwsWebSocket
 			settings.Name = name;
 			settings.PictureUrl = pictureUrl;
 			settings.Expiration = expiration;
-			settings.UserId = DB::TryScaler<UserPK>( "select id from um_users where name=? and authenticator_id=?", {email,(uint)type} ).value_or( 0 );
+			userId = settings.UserId = DB::TryScaler<UserPK>( "select id from um_users where name=? and authenticator_id=?", {email,(uint)type} ).value_or( 0 );
 		}
 
-		auto pValue = make_unique<Proto::Results::MessageValue>(); pValue->set_type( Proto::Results::EResults::Authentication ); pValue->set_int_value( client.ClientId );
+		auto pValue = make_unique<Proto::Results::MessageValue>(); pValue->set_type( Proto::Results::EResults::Authentication ); 
+		if( userId )
+			pValue->set_int_value( client.ClientId );
+		else
+		{
+			DBG( "({})Could not find user name='{}' for authenticator='{}'", client.SessionId, email, Str::FromEnum(AuthTypeStrings, type) );
+			pValue->set_string_value( "Could not find user name" );
+		}
 		MessageType msg; msg.set_allocated_message( pValue.release() );
 		AddOutgoing( move(msg), client.SessionId );
 	}

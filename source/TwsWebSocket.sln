@@ -53,6 +53,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Odbc", "..\..\Odbc\source\O
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Google", "..\..\Google\source\Google.vcxproj", "{C7188528-A17F-457F-886C-6976383A36EE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7FC3CC33-B345-423E-99B6-5D499E531FBF} = {7FC3CC33-B345-423E-99B6-5D499E531FBF}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Edgar", "..\..\Private\source\markets\edgar\Edgar.vcxproj", "{30ADF2AD-9EA2-4A2B-B86A-8FC2BE04D7FC}"
 	ProjectSection(ProjectDependencies) = postProject

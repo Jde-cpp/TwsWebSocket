@@ -49,7 +49,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			Blockly::Proto::RequestUnion msg;
 			if( google::protobuf::io::CodedInputStream stream{reinterpret_cast<const unsigned char*>(x.MessagePtr->data()), (int)x.MessagePtr->size()}; !msg.MergePartialFromCodedStream(&stream) )
-				THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
+				THROW( "transmission.MergePartialFromCodedStream returned false" );
 			if( msg.has_save() )
 			{
 				Blockly::Save( msg.save() );
@@ -63,7 +63,7 @@ namespace Jde::Markets::TwsWebSocket
 			else if( msg.has_id_request() )
 			{
 				var type = msg.id_request().type(); var id = msg.id_request().id();
-				THROW_IF( id.empty(), Exception("Request {}, passed empty id", id) );
+				THROW_IF( id.empty(), "Request {}, passed empty id", id );
 				if( type==ERequestType::Load )
 					Send( std::move(x), [p=Blockly::Load(id).release()](auto& out)mutable{out.set_allocated_function(p);} );
 				else
@@ -88,14 +88,8 @@ namespace Jde::Markets::TwsWebSocket
 				Send( std::move(x), [&pFunctions](auto& out){out.set_allocated_functions(pFunctions.release());} );
 			}
 		}
-		catch( const IOException& e )
+		catch( const IException& e )
 		{
-			DBG( "IOExeption returned: '{}'"sv, e.what() );
-			_webSendPtr->Push( e, move(x) );
-		}
-		catch( const Exception& e )
-		{
-			DBG( "Exeption returned: '{}'"sv, e.what() );
 			_webSendPtr->Push( e, move(x) );
 		}
 	}

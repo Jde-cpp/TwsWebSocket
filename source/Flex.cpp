@@ -1,4 +1,4 @@
-#include "Flex.h"
+﻿#include "Flex.h"
 #include <fstream>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -54,7 +54,7 @@ namespace Jde::Markets::TwsWebSocket
 			//Make _webSend global instance.tw
 			web.Push( move(msg) );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
 			web.Push( e );
 		}
@@ -75,9 +75,7 @@ namespace Jde::Markets::TwsWebSocket
 	α Load()noexcept(false)->sp<CacheType>
 	{
 		unique_lock l{ _cacheMutex };
-		var root = Jde::Markets::TwsWebSocket::SettingsPtr->Get<fs::path>( "flexPath" );
-		if( !fs::exists(root) )
-			THROW( Exception("'{}' does not exist", root.string()) );
+		var root = SettingsPtr->TryGet<fs::path>( "flexPath" ).value_or( IApplication::ApplicationDataFolder()/"flex" ); CHECK_FILE_EXISTS( root );
 		var pEntries = IO::FileUtilities::GetDirectory( root );
 		ostringstream crcStream;
 		for( var& entry : *pEntries )
@@ -86,8 +84,7 @@ namespace Jde::Markets::TwsWebSocket
 #ifdef _MSC_VER
 				crcStream << entry.path().string() << ";"; //TODO:  << entry.last_write_time();
 #else
-			//crcStream << entry.path().string() << ";" << Clock::to_time_t( entry.last_write_time() );
-			crcStream << entry.path().string() << ";" << fs::_FilesystemClock::to_time_t( entry.last_write_time() );
+				crcStream << entry.path().string() << ";" << fs::_FilesystemClock::to_time_t( entry.last_write_time() );
 #endif
 		}
 		var crc = Calc32RunTime( crcStream.str() );
@@ -160,7 +157,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( boost::exception& e )
 		{
-			THROW( Exception("Could not parse flex files - '{}'", boost::diagnostic_information(&e)) );
+			THROW( "Could not parse flex files - '{}'", boost::diagnostic_information(&e) );
 		}
 		auto pValues = make_shared<CacheType>();
 		for( var& idConfirm : trades )

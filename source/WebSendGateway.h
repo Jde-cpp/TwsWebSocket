@@ -33,8 +33,8 @@ namespace Jde::Markets::TwsWebSocket
 
 		bool HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
 
-		void TryPush( const Exception& e, const ClientKey& key )noexcept{ TRY(PushError(-1, e.what(), key)); }
-		void Push( const Exception& e, const ClientKey& key )noexcept(false){ PushError( -1, e.what(), key );}
+		void TryPush( const std::exception& e, const ClientKey& key )noexcept{ TRY(Push(e, key)); }
+		void Push( const std::exception& e, const ClientKey& key )noexcept(false){ PushError( -1, e.what(), key );}
 		void Push( const IBException& e, const ClientKey& key )noexcept(false){ PushError( e.ErrorCode, e.what(), key );}
 		void PushError( int errorCode, sv errorString, TickerId id )noexcept;
 		void PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false);

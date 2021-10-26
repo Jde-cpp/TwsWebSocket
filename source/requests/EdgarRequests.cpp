@@ -14,7 +14,7 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg; msg.set_allocated_filings( p.release() );
 				arg.Push( move(msg) );
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
 				arg.Push( e );
 			}
@@ -31,7 +31,7 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg; msg.set_allocated_investors( p.release() );
 				arg.Push( move(msg) );
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
 				arg.Push( e );
 			}
@@ -46,8 +46,4 @@ namespace Jde::Markets::TwsWebSocket
 			return Edgar::Form13F::LoadInvestors( pDetails->front().longName );
 		}, move(arg) );
 	}
-/*	void EdgarRequests::Investors( Cusip cusip, ProcessArg&& arg )noexcept
-	{
-		return Investors2( [&cusip](){ return Edgar::Form13F::LoadInvestors(cusip); }, move(arg) );
-	}*/
 }

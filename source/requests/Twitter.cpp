@@ -32,13 +32,12 @@ namespace Jde
 				if( pSettings )
 					from_json( pSettings->Json(), *this );
 			}
-			static void from_json( const nlohmann::json& j, TwitterSettings& o )noexcept
+			Ω from_json( const nlohmann::json& j, TwitterSettings& o )noexcept->void
 			{
 				try
 				{
 					FROM_JSON( "apiSecretKey", ApiSecretKey );
 					FROM_JSON( "apiKey", ApiKey );
-					FROM_JSON( "backupPath", BackupPath );
 					FROM_JSON( "bearerToken", BearerToken );
 					FROM_JSON( "accessToken", AccessToken );
 					FROM_JSON( "accessTokenSecret", AccessTokenSecret );
@@ -50,12 +49,11 @@ namespace Jde
 					LOGS( ELogLevel::Warning, e.what() );
 				}
 			}
-			bool CanBlock()const noexcept{ return ApiSecretKey.size() && ApiKey.size() && AccessToken.size() && AccessTokenSecret.size(); }
+			α CanBlock()const noexcept{ return ApiSecretKey.size() && ApiKey.size() && AccessToken.size() && AccessTokenSecret.size(); }
 			string ApiSecretKey;
 			string ApiKey;
 			string AccessToken;
 			string AccessTokenSecret;
-			string BackupPath;
 			string BearerToken;
 			uint8 MinimumLikes{10};
 		};
@@ -184,7 +182,7 @@ namespace Jde
 			auto result = ( co_await Block2( userId, settings) ).Get<string>();
 			arg.Push( EResults::Success );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
 			arg.Push( e );
 		}
@@ -206,13 +204,11 @@ namespace Jde
 		TwitterSettings settings; if( !settings.BearerToken.size() ) co_return arg.Push( Exception("twitter\bearerToken not found in settings.") );
 
 		auto pExisting = Cache::Get<Tweets>( format("Tweets.{}", symbol) );
+		var existingPath = IApplication::ApplicationDataFolder()/"tweets"/( symbol+".dat" );
 		if( !pExisting )
 		{
-			if( settings.BackupPath.size() )
-			{
-				pExisting = sp<Tweets>( IO::Proto::TryLoad<Tweets>( format("{}/{}.dat", settings.BackupPath, symbol) ).release() );
-				LOG( level, "fetched from file {}", pExisting ? pExisting->values_size() : 0 );
-			}
+			pExisting = sp<Tweets>( IO::Proto::TryLoad<Tweets>(existingPath).release() );
+			LOG( level, "fetched from file {}", pExisting ? pExisting->values_size() : 0 );
 			if( !pExisting )
 				pExisting = make_shared<Tweets>();
 		}
@@ -336,9 +332,8 @@ namespace Jde
 			earliest = epoch;
 			LOG( level, "earliest={}, lastChecked={}"sv, ToIsoString(earliest), ToIsoString(lastChecked) );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
-			e.Log();
 			arg.Push( e );
 		}
 		try
@@ -372,12 +367,11 @@ namespace Jde
 					DB::ExecuteProc( "twt_tag_ignore(?,?)", {tag,count2} );
 				Cache::Set( "twt_tags", pIgnoredTags );
 			}
-			if( settings.BackupPath.size() )
-				IO::Proto::Save( *pExisting, format("{}/{}.dat", settings.BackupPath, symbol) );
+			IO::Proto::Save( *pExisting, existingPath );
 			Cache::Set<Tweets>( format("Tweets.{}", symbol), pExisting );
 			SendAuthors( authors, arg, settings.BearerToken, level );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
 			arg.Push( e );
 		}
@@ -403,7 +397,7 @@ namespace Jde
 				{
 					pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
 				}
-				catch( const Exception& )
+				catch( const IException& )
 				{
 					break;
 				}

@@ -14,12 +14,11 @@ namespace Jde::Markets::TwsWebSocket
 	namespace websocket = beast::websocket;
 	using tcp = boost::asio::ip::tcp;
 	struct WebSendGateway;
-	struct BeastException : public Exception
+	struct BeastException : public IException
 	{
-		BeastException( sv what, beast::error_code&& ec, ELogLevel level=ELogLevel::Trace )noexcept;
+		BeastException( sv what, beast::error_code&& ec, ELogLevel level=ELogLevel::Trace, SRCE )noexcept;
 		Ω IsTruncated( const beast::error_code& ec )noexcept{ return ec == net::ssl::error::stream_truncated; }
 		Ω LogCode( const boost::system::error_code& ec, ELogLevel level, sv what )noexcept->void;
-
 		beast::error_code ErrorCode;
 	};
 
@@ -34,6 +33,7 @@ namespace Jde::Markets::TwsWebSocket
 		None = 0,
 		Google=1
 	};
+	constexpr array<sv,2> AuthTypeStrings = { "None", "Google" };
 
 	struct SessionInfo
 	{

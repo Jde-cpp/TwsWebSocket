@@ -33,7 +33,7 @@ namespace Jde
 			MessageType m; m.set_allocated_reddit( pResults.release() );
 			arg->Push( move(m) );
 		}
-		catch( const Exception& e )
+		catch( const IException& e )
 		{
 			arg->Push( e );
 		}

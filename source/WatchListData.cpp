@@ -29,10 +29,8 @@ namespace Jde::Markets::TwsWebSocket
 				if( !portfolio.has_value() || portfolio==pFile->is_portfolio() )
 					names.push_back( pFile->name() );
 			}
-			catch( const Exception& e )
-			{
-				e.Log();
-			}
+			catch( const IException& )
+			{}
 		}
 		return names;
 	}
@@ -48,7 +46,7 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg; msg.set_allocated_string_list( pNames );
 				arg.Push( move(msg) );
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
 				arg.Push( e );
 			}
@@ -57,8 +55,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	up<Proto::Watch::File> WatchListData::Content( str name )noexcept(false)
 	{
-		if( !name.size() )
-			THROW( Exception("did not specify a watch name value.") );
+		THROW_IF( !name.size(), "did not specify a watch name value." );
 		var dir = GetDir();
 		var file = dir/Str::Replace( name+".watch", ' ', '_' );
 		return IO::Proto::Load<Proto::Watch::File>( file );
@@ -77,7 +74,7 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg; msg.set_allocated_watch_list( pWatchList );
 				arg.Push( move(msg) );
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
 				arg.Push( e );
 			}
@@ -112,14 +109,11 @@ namespace Jde::Markets::TwsWebSocket
 			try
 			{
 				var dir = GetDir();
-				var path = dir/Str::Replace( name, ' ', '_' );
-				if( !fs::exists(path) )
-					THROW( IOException(path, "watch does not exist") );
-
+				var path = dir/Str::Replace( name, ' ', '_' ); CHECK_FILE_EXISTS( path );
 				fs::remove( path );
 				arg.Push( EResults::Accept );
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
 				arg.Push( e );
 			}
@@ -133,14 +127,13 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				var dir = GetDir();
 				var name = file.name();
-				if( !name.size() )
-					THROW( Exception("need a watchlist name.") );
+				THROW_IF( !name.size(), "need a watchlist name." );
 
 				var path = dir/Str::Replace( name+".watch", ' ', '_' );
 				IO::Proto::Save( file, path );
 				arg.Push( EResults::Accept );
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
 				arg.Push( e );
 			}

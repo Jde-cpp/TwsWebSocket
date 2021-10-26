@@ -156,9 +156,8 @@ namespace Jde::Markets::TwsWebSocket
 				{
 					Push( move(msg), sessionId );
 				}
-				catch( const Exception& e )
+				catch( const IException& )
 				{
-					e.Log();
 					orphans.emplace_back( sessionId );
 				}
 			});
@@ -178,9 +177,8 @@ namespace Jde::Markets::TwsWebSocket
 				{
 					Push( move(msg), sessionId );
 				}
-				catch( Exception& e )
+				catch( const IException& )
 				{
-					e.Log();
 					orphans.emplace_back( sessionId );
 				}
 			});
@@ -227,7 +225,7 @@ namespace Jde::Markets::TwsWebSocket
 					_webSocket.AddOutgoing( messages, pSession->first );
 					++pSession;
 				}
-				catch( const Exception& )
+				catch( const IException& )
 				{
 					LOG( _logLevel, "({}) Removing for contract id='{}'"sv, pSession->first, contractId );
 					pSession = p->second.erase( pSession );
@@ -244,7 +242,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			var key = GetClientRequest( id );
 			if( key.SessionId )
-				Push( IBException{errorString, errorCode}, key );
+				Push( IBException{errorString, errorCode, -1}, key );
 			else
 				DBG( "Could not find session for error req:  '{}'."sv, id );
 		}
@@ -255,12 +253,11 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				try
 				{
-					pThis->Push( IBException{errorString, errorCode}, key );
+					pThis->Push( IBException{errorString, errorCode, -1}, key );
 				}
-				catch( const Exception& e )
+				catch( const IException& )
 				{
 					lostIds.push_back( tickerId );
-					e.Log();
 				}
 			});
 			for_each( lostIds.begin(), lostIds.end(), [&](auto id){_requestSession.erase(id);} );

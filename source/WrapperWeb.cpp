@@ -21,8 +21,6 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	//extern shared_ptr<Settings::Container> SettingsPtr;
-
 #define _socket WebSocket::Instance()
 #define _client TwsClientSync::Instance()
 #define _webSend if( _pWebSend ) (*_pWebSend)
@@ -155,7 +153,7 @@ namespace Jde::Markets::TwsWebSocket
 		pDataSource->TrySelect( "select account_id, user_id, right_id  FROM ib_account_roles ib join um_group_roles gr on gr.role_id=ib.role_id join um_user_groups ug on gr.group_id=ug.group_id", [&]( const DB::IRow& row )
 		{
 			var accountId = row.GetUInt( 0 );
-			var pAccount = std::find_if( _accounts.begin(), _accounts.end(), [&]( var& x ){ return x.second.Id==accountId; } ); THROW_IF( pAccount==_accounts.end(), Exception(std::to_string(accountId)) );
+			var pAccount = std::find_if( _accounts.begin(), _accounts.end(), [&]( var& x ){ return x.second.Id==accountId; } ); THROW_IF( pAccount==_accounts.end(), std::to_string(accountId) );
 			pAccount->second.Access.emplace( (UserPK)row.GetUInt(1), (UM::EAccess)row.GetUInt16(2) );
 		} );
 	}
@@ -366,31 +364,4 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::execDetailsEnd( reqId );
 		_pWebSend->Push( EResults::ExecutionDataEnd, reqId );
 	}
-
-/*	void WrapperWeb::securityDefinitionOptionalParameter( int reqId, str exchange, int underlyingConId, str tradingClass, str multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes )noexcept
-	{
-		var handled = WrapperSync::securityDefinitionOptionalParameterSync( reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );
-		if( !handled && CIString{exchange}=="SMART"sv )
-			*Collections::InsertUnique( _optionParams, reqId )->add_exchanges() = ToOptionParam( exchange, underlyingConId, tradingClass, multiplier, expirations, strikes );
-	}
-
-	void WrapperWeb::securityDefinitionOptionalParameterEnd( int reqId )noexcept
-	{
-		bool handled = WrapperSync::securityDefinitionOptionalParameterEndSync( reqId );
-		if( !handled )
-		{
-			unique_ptr<Proto::Results::OptionExchanges> pExchanges;
-			if( auto pReqExchanges = _optionParams.find( reqId ); pReqExchanges!=_optionParams.end() )
-			{
-				pExchanges = move( pReqExchanges->second );
-				_optionParams.erase( pReqExchanges );
-			}
-			else
-				pExchanges = make_unique<Proto::Results::OptionExchanges>();
-
-			auto p = pExchanges.release();
-			if( !_pWebSend->Push(reqId, [p](MessageType& msg, ClientPK id)mutable{p->set_request_id( id ); msg.set_allocated_option_exchanges(p);}) )
-				delete p;
-		}
-	}*/
 }

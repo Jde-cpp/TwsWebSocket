@@ -47,12 +47,11 @@ namespace Jde::Markets::TwsWebSocket
 			Proto::Requests::RequestTransmission transmission;
 			var data = std::move( msg.Data );
 			if( google::protobuf::io::CodedInputStream stream{reinterpret_cast<const unsigned char*>(data.data()), (int)data.size()}; !transmission.MergePartialFromCodedStream(&stream) )
-				THROW( IOException("transmission.MergePartialFromCodedStream returned false") );
+				THROW( "transmission.MergePartialFromCodedStream returned false" );
 			HandleRequest( move(transmission), move(msg) );
 		}
-		catch( const IOException& e )
+		catch( const IException& e )
 		{
-			ERR( "IOExeption returned: '{}'"sv, e.what() );
 			_pWebSend->Push( e, {msg, 0} );
 		}
 	}
@@ -111,9 +110,8 @@ namespace Jde::Markets::TwsWebSocket
 				LOGS( ELogLevel::Debug, e.what() );
 				_pWebSend->TryPush( Exception("could not parse query"), arg );
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
-				e.Log();
 				_pWebSend->TryPush( e, arg );
 			}
 		}
@@ -168,9 +166,9 @@ namespace Jde::Markets::TwsWebSocket
 				else
 				{
 					var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
-					THROW_IF( token.Aud!=Settings::TryGet<string>("GoogleAuthClientId"), Exception("Invalid client id") );
-					THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", Exception("Invalid iss") );
-					var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), Exception("token expired") );
+					THROW_IF( token.Aud!=Settings::TryGet<string>("GoogleAuthClientId"), "Invalid client id" );
+					THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", "Invalid iss" );
+					var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), "token expired" );
 					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
 				}
 				// var expiration = Clock::now()+std::chrono::hours(100 * 24);
@@ -259,7 +257,7 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg; msg.set_allocated_statistics( p );
 				inputArg.Push( move(msg) );
 			}
-			catch( const Exception& e )
+			catch( const IException& e )
 			{
 				inputArg.Push( e );
 			}
@@ -276,15 +274,15 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				//TODO see if I have, if not download it, else try getting from tws. (make sure have date.)
 				if( underlyingId==0 )
-					THROW( Exception("({}.{}) did not pass a contract id.", web.SessionId, web.ClientId) );
-				var pDetails = _sync.ReqContractDetails( underlyingId ).get(); THROW_IF( pDetails->size()!=1 , Exception("({}.{}) '{}' had '{}' contracts", web.SessionId, web.ClientId, underlyingId, pDetails->size()) );
+					THROW( "({}.{}) did not pass a contract id.", web.SessionId, web.ClientId );
+				var pDetails = _sync.ReqContractDetails( underlyingId ).get(); THROW_IF( pDetails->size()!=1 , "({}.{}) '{}' had '{}' contracts", web.SessionId, web.ClientId, underlyingId, pDetails->size() );
 				var contract = Contract{ pDetails->front() };
 				if( contract.SecType==SecurityType::Option )
-					THROW( Exception("({}.{})Passed in option contract ({})'{}', expected underlying", web.SessionId, web.ClientId, underlyingId, contract.LocalSymbol) );
+					THROW( "({}.{})Passed in option contract ({})'{}', expected underlying", web.SessionId, web.ClientId, underlyingId, contract.LocalSymbol );
 
 				const std::array<sv,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
 				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !params.start_expiration() )
-					THROW( Exception("({}.{})ReceiveOptions request for '{}' specified no date.", web.SessionId, web.ClientId, contract.Symbol) );
+					THROW( "({}.{})ReceiveOptions request for '{}' specified no date.", web.SessionId, web.ClientId, contract.Symbol );
 
 				auto pResults = make_unique<Proto::Results::OptionValues>(); pResults->set_id( params.id() );
 				sp<Proto::Results::ExchangeContracts> pOptionParams;
@@ -293,7 +291,7 @@ namespace Jde::Markets::TwsWebSocket
 					auto fetch = [&]( DayIndex expiration )noexcept(false)
 					{
 						var ibContract = TwsClientCache::ToContract( contract.Symbol, expiration, right, params.start_srike() && params.start_srike()==params.end_strike() ? params.start_srike() : 0 );
-						auto pContracts = _sync.ReqContractDetails( ibContract ).get(); THROW_IF( pContracts->size()<1, Exception("'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size()) );
+						auto pContracts = _sync.ReqContractDetails( ibContract ).get(); THROW_IF( pContracts->size()<1, "'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size() );
 						var start = params.start_srike(); var end = params.end_strike();
 						if( !ibContract.strike && (start!=0 || end!=0) )//remove contracts outside bounds?
 						{
@@ -359,10 +357,10 @@ namespace Jde::Markets::TwsWebSocket
 					web.Push( move(msg)  );
 				}
 				else
-					web.WebSendPtr->Push( IBException{"No previous dates found", -2}, {{web.SessionId}, underlyingId} );
+					web.WebSendPtr->Push( IBException{"No previous dates found", -2, -1}, {{web.SessionId}, underlyingId} );
 			}
 			catch( const IBException& e ){ web.Push( e ); }
-			catch( const Exception& e ){ web.Push( e ); }
+			catch( const IException& e ){ web.Push( e ); }
 		} ).detach();
 	}
 
@@ -385,7 +383,7 @@ namespace Jde::Markets::TwsWebSocket
 					MessageType msg; msg.set_allocated_fundamentals( pRatios.release() );
 					web.Push( move(msg) );
 				}
-				catch( const Exception& e )
+				catch( const IException& e )
 				{
 					web.Push( e );
 					return;
