@@ -39,7 +39,7 @@ namespace Jde::Markets::TwsWebSocket
 	sp<WebCoSocket> WebCoSocket::_pInstance;
 	flat_map<SessionPK,SessionInfo> WebCoSocket::_sessions; shared_mutex WebCoSocket::_sessionMutex;
 	SessionPK WebCoSocket::_sessionId{0};
-	α WebCoSocket::Create( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept->sp<WebCoSocket> 
+	α WebCoSocket::Create( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept->sp<WebCoSocket>
 	{
 		ASSERT( !_pInstance );
 		return _pInstance = sp<WebCoSocket>( new WebCoSocket(settings, pClient) );
@@ -53,7 +53,7 @@ namespace Jde::Markets::TwsWebSocket
 		_pThread = make_shared<Threading::InterruptibleThread>( "WebCoSocket", [&](){Run();} );
 	}
 
-	α WebCoSocket::AddConnection( sp<SocketStream> stream )noexcept->SessionPK 
+	α WebCoSocket::AddConnection( sp<SocketStream> stream )noexcept->SessionPK
 	{
 		var sessionId = ++_sessionId;
 		unique_lock l{ _sessionMutex };
@@ -94,7 +94,7 @@ namespace Jde::Markets::TwsWebSocket
 		sp<SocketStream> pStream; sp<atomic<bool>> pMutex;
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( id ); THROW_IFX( p==_sessions.end(), Exception(LogLevel(),format("({})Could not find session for outgoing transmission."sv, id)) );
+			var p = _sessions.find( id ); THROW_IFL( p==_sessions.end(), "({})Could not find session for outgoing transmission."sv, id );
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}
@@ -116,14 +116,14 @@ namespace Jde::Markets::TwsWebSocket
 
 	α WebCoSocket::UserId( SessionPK sessionId )noexcept(false)->UserPK
 	{
-		var userPK = TryUserId( sessionId ); THROW_IFX( !userPK, Exception(LogLevel(), format("({})Could not find UserId.", sessionId)) );
+		var userPK = TryUserId( sessionId ); THROW_IFL( !userPK, "({})Could not find UserId.", sessionId );
 		return userPK;
 	}
-	
+
 	α WebCoSocket::TryUserId( SessionPK sessionId )noexcept->UserPK
 	{
 		shared_lock l{ _sessionMutex };
-		var p = _sessions.find( sessionId ); 
+		var p = _sessions.find( sessionId );
 		return p==_sessions.end() ? 0 : p->second.UserId;
 	}
 
@@ -143,7 +143,7 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				res.set( http::field::server, std::string(BOOST_BEAST_VERSION_STRING) + " websocket-server-coro-ssl" );
 			}) );
-			pStream->async_accept( yld[ec] ); THROW_IFX( ec, BeastException("accept", move(ec)) );
+			pStream->async_accept( yld[ec] ); THROW_IFX2( ec, BeastException("accept", move(ec)) );
 			auto pWebCoSocket = WebCoSocket::Instance(); THROW_IF( !pWebCoSocket, "!pWebCoSocket" );
 			sessionId = pWebCoSocket->AddConnection( pStream );
 			UserPK userId{ 0 };
@@ -243,7 +243,7 @@ namespace Jde::Markets::TwsWebSocket
 			userId = settings.UserId = DB::TryScaler<UserPK>( "select id from um_users where name=? and authenticator_id=?", {email,(uint)type} ).value_or( 0 );
 		}
 
-		auto pValue = make_unique<Proto::Results::MessageValue>(); pValue->set_type( Proto::Results::EResults::Authentication ); 
+		auto pValue = make_unique<Proto::Results::MessageValue>(); pValue->set_type( Proto::Results::EResults::Authentication );
 		if( userId )
 			pValue->set_int_value( client.ClientId );
 		else

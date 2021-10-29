@@ -18,187 +18,227 @@
 	},
 	"$smallValues":
 	{
-		"id": "smallId",
-		"name": "name",
-		"$surrogateKey":["id"],
-		"$naturalKey":["name"]
+		"columns": [
+			{ "name": "id", "type": "smallId", "sequence": true },
+			{ "name": "name" }
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["name"]
 	},
 	"$values":
 	{
-		"id": "id",
-		"name": "name",
-		"$surrogateKey":["id"],
-		"$naturalKey":["name"]
+		"columns": [
+			{ "name": "id", "type": "id" },
+			{ "name": "name", "type": "name"}
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["name"]
 	},
 	"$data":
 	{
-		"id":{ "sequence": true },
-		"name": "name",
-		"$surrogateKey":["id"],
-		"$naturalKey":["name"]
+		"columns": [
+			{ "name": "id", "sequence": true },
+			{ "name": "name", "type": "name"}
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["name"]
 	},
 	"$nk":
 	{
-		"$parent": "$data",
-		"attributes": "uint16?",
-		"created": "created",
-		"updated": { "type": "dateTime?", "insertable": false, "updateable": false },
-		"deleted": { "type": "dateTime?", "insertable": false, "updateable": false }
+		"parent": "$data",
+		"columns": [
+			{ "name": "attributes", "type": "uint16?" },
+			{ "name": "created", "type": "created" },
+			{ "name": "updated", "type": "dateTime?", "insertable": false, "updateable": false },
+			{ "name": "deleted", "type": "dateTime?", "insertable": false, "updateable": false }
+		]
 	},
 	"$description":
 	{
-		"$parent": "$nk",
-		"target": "$target",
-		"description": "description?",
-		"$naturalKey": ["target"]
+		"parent": "$nk",
+		"columns": [
+			{ "name": "target", "type": "$target" },
+			{ "name": "description", "type": "description?" }
+		],
+		"naturalKey":["target"]
 	},
 	"$scripts": ["sql/twt_user_block.sql", "sql/twt_tag_ignore.sql", "sql/twt_user_insert.sql"],
 	"dgrClasses":
 	{
-		"id": "crc",
-		"name": { "length":150 },
-		"$data": ["None", "COM", "EMF", "MF", "CALL", "PUT", "WT", "OA", "MIUS", "PFD", "IFUS"],
-		"$surrogateKey":["id"],
-		"$naturalKey":["name"]
+		"columns": [
+			{ "name": "id", "type": "crc" },
+			{ "name": "name", "length":150 }
+		],
+		"data": ["None", "COM", "EMF", "MF", "CALL", "PUT", "WT", "OA", "MIUS", "PFD", "IFUS"],
+		"surrogateKey":["id"],
+		"naturalKey":["name"]
 	},
 	"dgrFilings":
 	{
-		"id": {"type":"id", "sequence": true },
-		"cik": "mrkCompanies",
-		"formId": "dgrForms",
-		"submit_cik": "cik?",
-		"year": "uint8",
-		"sequence": "uint32",
-		"filingDay": "day",
-		"$surrogateKey":["id"],
-		"$naturalKey":["cik", "year", "sequence", "submit_cik"]
+		"columns": [
+			{ "name": "id", "type":"id", "sequence": true },
+			{ "name": "cik", "type": "mrkCompanies" },
+			{ "name": "formId", "type": "dgrForms" },
+			{ "name": "submit_cik", "type": "cik?" },
+			{ "name": "year", "type": "uint8" },
+			{ "name": "sequence", "type": "uint32" },
+			{ "name": "filingDay", "type": "day" }
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["cik", "year", "sequence", "submit_cik"]
 	},
 	"dgrForms":
 	{
-		"$parent": "$smallValues",
-		"$data": ["None", "10-K", "2-E", "3", "4", "5", "6-K", "7-M", "8-K", "9-M", "10-Q", "11-K", "12b-25", "13F-HR", {"id":114, "name":"114"} ]
+		"parent": "$smallValues",
+		"data": ["None", "10-K", "2-E", "3", "4", "5", "6-K", "7-M", "8-K", "9-M", "10-Q", "11-K", "12b-25", "13F-HR", {"id":114, "name":"114"} ]
 	},
 	"ibAccounts":
 	{
-		"$parent": "$description"
+		"parent": "$description"
 	},
 	"ibAccountRoles":
 	{
-		"roleId": "umRoles",
-		"accountId": "ibAccounts",
-		"rightId": { "type": "umRights", "default":"4" },
-		"$surrogateKey":["roleId","accountId"]
+		"columns": [
+			{ "name": "roleId", "type": "umRoles" },
+			{ "name": "accountId", "type": "ibAccounts" },
+			{ "name": "rightId", "type": "umRights", "default":"4" }
+		],
+		"surrogateKey":["roleId","accountId"]
 	},
 	"ibStockContracts":
 	{
-		"id": "uint32",
-		"cusip": "cusip",
-		"primary_exchange_id": "tinyId",
-		"name": { "length": 255 },
-		"symbol": { "length": 10 },
-		"$surrogateKey":["id"]
+		"columns": [
+			{ "name": "id", "type": "uint32" },
+			{ "name": "cusip", "type": "cusip" },
+			{ "name": "primary_exchange_id", "type": "tinyId" },
+			{ "name": "name", "length": 255 },
+			{ "name": "symbol", "length": 10 }
+		],
+		"surrogateKey":["id"]
 	},
 	"mrkCusips":
 	{
-		"id": "cusip",
-		"name": "name",
-		"cik": "cik?",
-		"$surrogateKey":["id"]
+		"columns": [
+			{ "name": "id", "type": "cusip" },
+			{ "name": "name", "type": "name" },
+			{ "name": "cik", "type": "cik?" }
+		],
+		"surrogateKey":["id"]
 	},
 	"mrkCompanies":
 	{
-		"id": "cik",
-		"name": "name",
-		"$surrogateKey":["id"]
+		"columns": [
+			{ "name": "id", "type": "cik" },
+			{ "name": "name", "type": "name" }
+		],
+		"surrogateKey":["id"]
 	},
 	"twtBlocks":
 	{
-		"user_id": "uint64",
-		"created": "created",
-		"$surrogateKey":["user_id"]
+		"columns": [
+			{ "name": "user_id", "type": "uint64" },
+			{ "name": "created", "type": "created" }
+		],
+		"surrogateKey":["user_id"]
 	},
 	"twtTags":
 	{
-		"id":{ "sequence": true },
-		"tag": { "length": 255 },
-		"ignored_count": "uint32",
-		"$surrogateKey":["id"],
-		"$naturalKey":["tag"]
+		"columns": [
+			{ "name": "id", "sequence": true },
+			{ "name": "tag", "length": 255 },
+			{ "name": "ignored_count", "type": "uint32" }
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["tag"]
 	},
 	"twtQueries":
 	{
-		"tag": { "length": 255 },
-		"query": { "length": 512 },
-		"$surrogateKey":["tag"]
+		"columns": [
+			{ "name": "tag", "length": 255 },
+			{ "name": "query", "length": 512 }
+		],
+		"surrogateKey":["tag"]
 	},
 	"twtHandles":
 	{
-		"id": "uint64",
-		"screen_name":  { "length": 20 },
-		"blocked": "bool",
-		"profile_image": { "type":"varchar?", "length": 512 },
-		"updated": "updated",
-		"$surrogateKey":["id"],
-		"$naturalKey":["screen_name"]
+		"columns": [
+			{ "name": "id", "type": "uint64" },
+			{ "name": "screen_name", "length": 20 },
+			{ "name": "blocked", "type": "bool" },
+			{ "name": "profile_image", "type":"varchar?", "length": 512 },
+			{ "name": "updated", "type": "updated" }
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["screen_name"]
 	},
 	"umUsers":
 	{
-		"$parent": "$description",
-		"authenticatorId": "umAuthenticators?"
+		"parent": "$description",
+		"columns": [
+			{ "name": "authenticatorId", "type": "umAuthenticators?" }
+		]
 	},
 	"umAuthenticators":
 	{
-		"$parent": "$values",
-		"$data": ["None", "Google"]
+		"parent": "$values",
+		"data": ["None", "Google"]
 	},
 	"umGroups":
 	{
-		"$parent": "$description",
-		"$data": [{"id":1, "attributes":5, "name":"Everyone", "target":"everyone" }, {"id":2, "attributes":6, "name":"Users", "target":"users"}]
+		"parent": "$description",
+		"data": [{"id":1, "attributes":5, "name":"Everyone", "target":"everyone" }, {"id":2, "attributes":6, "name":"Users", "target":"users"}]
 	},
 	"umUserGroups":
 	{
-		"userId": "umUsers",
-		"groupId": "umGroups",
-		"$surrogateKey":["userId", "groupId"]
+		"columns": [
+			{ "name": "userId", "type": "umUsers" },
+			{ "name": "groupId", "type": "umGroups" }
+		],
+		"surrogateKey":["userId", "groupId"]
 	},
 	"umRoles":
 	{
-		"$parent": "$description",
-		"$data": [{"id":1, "attributes":4, "name":"User Management", "target": "user_management" }]
+		"parent": "$description",
+		"data": [{"id":1, "attributes":4, "name":"User Management", "target": "user_management" }]
 	},
 	"umGroupRoles":
 	{
-		"groupId": "umGroups",
-		"roleId": "umRoles",
-		"$surrogateKey":["groupId","roleId"],
-		"$data": [{"groupId":1, "roleId":1 }]
+		"columns": [
+			{ "name": "groupId", "type": "umGroups" },
+			{ "name": "roleId", "type": "umRoles" }
+		],
+		"surrogateKey":["groupId","roleId"],
+		"data": [{"groupId":1, "roleId":1 }]
 	},
 	"umRights":
 	{
-		"$parent": "$values",
-		"$flagsData": ["None","Administer", "Write", "Read"]
+		"parent": "$values",
+		"flagsData": ["None","Administer", "Write", "Read"]
 	},
 	"umRolePermissions":
 	{
-		"roleId": "umRoles",
-		"permissionId": "umPermissions",
-		"rightId": { "type": "umRights", "default":"4" },
-		"$surrogateKey":["roleId","permissionId"],
-		"$data": [{"roleId":1, "permissionId":1, "rightId": 7}]
+		"columns": [
+			{ "name": "roleId", "type": "umRoles" },
+			{ "name": "permissionId", "type": "umPermissions" },
+			{ "name": "rightId", "type": "umRights", "default":"4" }
+		],
+		"surrogateKey":["roleId","permissionId"],
+		"data": [{"roleId":1, "permissionId":1, "rightId": 7}]
 	},
 	"umApis":
 	{
-		"$parent": "$values",
-		"$data": ["None","UM", "Web", "Tws", "Blockly"]
+		"parent": "$values",
+		"data": ["None","UM", "Web", "Tws", "Blockly"]
 	},
 	"umPermissions":
 	{
-		"id":{ "sequence": true },
-		"apiId": "umApis",
-		"name": "name?",
-		"$surrogateKey":["id"],
-		"$naturalKey":["apiId","name"],
-		"$data": [{"id":1, "apiId":1}, {"id":2, "apiId":3} ]
+		"columns": [
+			{ "name": "id", "sequence": true },
+			{ "name": "apiId", "type": "umApis" },
+			{ "name": "name", "type": "name?" }
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["apiId","name"],
+		"data": [{"id":1, "apiId":1}, {"id":2, "apiId":3} ]
 	}
 }

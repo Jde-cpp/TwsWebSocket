@@ -126,11 +126,11 @@ namespace TwsWebSocket
 				sp<vector<ContractDetails>> pDetails;
 				try
 				{
-					pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IFX( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {} records.", contractId, pDetails->size()), -1, 0) );
+					pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IFX2( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {} records.", contractId, pDetails->size()), -1, 0) );
 				}
-				catch( const IBException& e )
+				catch( IBException& e )
 				{
-					THROWX( IBException( format("ReqContractDetails( {} ) returned {}.", contractId, e.what()), e.ErrorCode, e.RequestId) );
+					throw IBException{ SRCE_CUR, move(e), "ReqContractDetails( {} )", contractId };
 				}
 				Contract contract{ pDetails->front() };
 				var current = CurrentTradingDay( contract );

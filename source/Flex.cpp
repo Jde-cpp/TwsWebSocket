@@ -75,7 +75,7 @@ namespace Jde::Markets::TwsWebSocket
 	α Load()noexcept(false)->sp<CacheType>
 	{
 		unique_lock l{ _cacheMutex };
-		var root = SettingsPtr->TryGet<fs::path>( "flexPath" ).value_or( IApplication::ApplicationDataFolder()/"flex" ); CHECK_FILE_EXISTS( root );
+		var root = SettingsPtr->TryGet<fs::path>( "flexPath" ).value_or( IApplication::ApplicationDataFolder()/"flex" ); CHECK_PATH( root );
 		var pEntries = IO::FileUtilities::GetDirectory( root );
 		ostringstream crcStream;
 		for( var& entry : *pEntries )

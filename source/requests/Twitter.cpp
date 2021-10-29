@@ -391,7 +391,7 @@ namespace Jde
 			DB::SelectIds( "select id, screen_name, profile_image from twt_handles where id in ", authors, add );
 			for( var id : authors )
 			{
-				LOG( level, format("https://api.twitter.com/1.1/users/show.json?user_id={}", id) );
+				Log( level, format("https://api.twitter.com/1.1/users/show.json?user_id={}", id) );
 				sp<string> pResult;
 				try
 				{

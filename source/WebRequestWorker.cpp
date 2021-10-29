@@ -220,7 +220,7 @@ namespace Jde::Markets::TwsWebSocket
 		else if( request.type()==ERequests::Filings || request.type()==ERequests::Investors )
 		{
 			if( request.ids().size()!=1 )
-				_pWebSend->Push( Exception("ids sent: {} expected 1."sv, request.ids().size()), {{session}, request.id()} );
+				_pWebSend->Push( Exception{SRCE_CUR, "ids sent: {} expected 1."sv, request.ids().size()}, {{session}, request.id()} );
 			else
 			{
 				var contractId = request.ids()[0];

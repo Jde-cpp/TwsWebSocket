@@ -31,10 +31,6 @@ int main( int argc, char** argv )
 		IApplication::CleanUp();
 		result = 0;
 	}
-	catch( const EnvironmentException& e )
-	{
-		std::cerr << e.what() << std::endl;
-	}
 	catch( const IException& e )
 	{
 		auto& os = e.Level()==ELogLevel::Trace ? std::cout : std::cerr;
