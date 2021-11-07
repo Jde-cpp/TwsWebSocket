@@ -1,11 +1,12 @@
 ﻿#include "WebCoSocket.h"
-#include "server_certificate.hpp"
-#include "../../Framework/source/db/Database.h"
 #include <boost/beast/core.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/ssl.hpp>
 #include <boost/asio/spawn.hpp>
+#include "server_certificate.hpp"
+#include "../../Framework/source/db/Database.h"
+
 
 //https://www.boost.org/doc/libs/develop/libs/beast/example/websocket/server/coro-ssl/websocket_server_coro_ssl.cpp
 namespace beast = boost::beast;         // from <boost/beast.hpp>
@@ -18,9 +19,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 namespace Jde::Markets::TwsWebSocket
 {
-	ELogLevel _level{ Logging::TagLevel("web", [](auto l){ WrapperLog::SetLevel(l);}) };
-	α WebCoSocket::SetLevel( ELogLevel l )noexcept->void{ _level=l; }
-	α LogLevel()noexcept{ return _level; }
+	static const LogTag& _logLevel = Logging::TagLevel( "tws.web" );
 
 	BeastException::BeastException( sv what, beast::error_code&& ec, ELogLevel level, const source_location& sl )noexcept:
 		IException{ {std::to_string(ec.value()), ec.message()}, format("{} returned ({{}}){{}}", what), sl, level },
@@ -30,12 +29,15 @@ namespace Jde::Markets::TwsWebSocket
 	α BeastException::LogCode( const beast::error_code& ec, ELogLevel level, sv what )noexcept->void
 	{
 		if( BeastException::IsTruncated(ec) || ec.value()==125 || ec.value()==995 || what=="~DoSession" )
-			LOG( level, "{} - ({}){}"sv, what, ec.value(), ec.message() );
+			LOGL( level, "{} - ({}){}"sv, what, ec.value(), ec.message() );
 		else
 			WARN( "{} - ({}){}"sv, what, ec.value(), ec.message() );
 	}
-	//α BeastException::Log()const noexcept->void
-	//{}
+
+	SessionInfo::~SessionInfo()
+	{
+		LOG( "({})~SessionInfo()", SessionId );
+	}
 	sp<WebCoSocket> WebCoSocket::_pInstance;
 	flat_map<SessionPK,SessionInfo> WebCoSocket::_sessions; shared_mutex WebCoSocket::_sessionMutex;
 	SessionPK WebCoSocket::_sessionId{0};
@@ -57,7 +59,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		var sessionId = ++_sessionId;
 		unique_lock l{ _sessionMutex };
-		_sessions.emplace( sessionId, SessionInfo{stream,make_shared<std::atomic_bool>(false)} );
+		_sessions.emplace( sessionId, SessionInfo{stream,ms<std::atomic_flag>()} );
 		return sessionId;
 	}
 	α WebCoSocket::RemoveConnection( SessionPK sessionId )noexcept->void
@@ -91,22 +93,29 @@ namespace Jde::Markets::TwsWebSocket
 		auto pBuffer = make_shared<std::vector<char>>( size );
 		transmission.SerializeToArray( pBuffer->data(), (int)pBuffer->size() );
 
-		sp<SocketStream> pStream; sp<atomic<bool>> pMutex;
+		sp<SocketStream> pStream; sp<std::atomic_flag> pMutex;
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( id ); THROW_IFL( p==_sessions.end(), "({})Could not find session for outgoing transmission."sv, id );
+			var p = _sessions.find( id ); THROW_IFL( p==_sessions.end(), "({})Could not find session for outgoing transmission.", id );
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}
-		while( pMutex->exchange(true) )//TODO This function shouldn't lock.  async_write only wants one write at a time.  also, locked up program once
-			std::this_thread::yield();
-		pStream->async_write( boost::asio::buffer(pBuffer->data(), pBuffer->size()), [size, id, pMutex, pBuffer]( const boost::system::error_code& ec, size_t bytesTransferred )noexcept
+		if( !pMutex )//not sure why this happens.
+			return;
+		while( pMutex->test_and_set(std::memory_order_acquire) )
 		{
-			*pMutex = false;
+         while( pMutex->test(std::memory_order_relaxed) )
+				std::this_thread::yield();
+		}
+		//while( pMutex->exchange(true) )
+		//	std::this_thread::yield();
+		pStream->async_write( boost::asio::buffer(pBuffer->data(), pBuffer->size()), [size, id, pMutex2=pMutex, pBuffer]( const boost::system::error_code& ec, size_t bytesTransferred )noexcept
+		{
+			pMutex2->clear( std::memory_order_release );
 			if( ec )
 			{
-				BeastException::LogCode( ec, LogLevel(), format("({})async_write - killing session", id) );
-				unique_lock l{ _sessionMutex };
+				BeastException::LogCode( ec, _logLevel.Level, format("({})async_write - killing session", id) );
+				unique_lock l2{ _sessionMutex };
 				_sessions.erase( id );
 			}
 			else if( size!=bytesTransferred )
@@ -143,7 +152,7 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				res.set( http::field::server, std::string(BOOST_BEAST_VERSION_STRING) + " websocket-server-coro-ssl" );
 			}) );
-			pStream->async_accept( yld[ec] ); THROW_IFX2( ec, BeastException("accept", move(ec)) );
+			pStream->async_accept( yld[ec] ); THROW_IFX( ec, BeastException("accept", move(ec)) );
 			auto pWebCoSocket = WebCoSocket::Instance(); THROW_IF( !pWebCoSocket, "!pWebCoSocket" );
 			sessionId = pWebCoSocket->AddConnection( pStream );
 			UserPK userId{ 0 };
@@ -158,7 +167,7 @@ namespace Jde::Markets::TwsWebSocket
 				userId = userId ? userId : pWebCoSocket->TryUserId( sessionId );
 				pWebCoSocket->HandleIncoming( {{sessionId,userId}, std::move(data)} );
 			}
-			BeastException::LogCode( ec, LogLevel(), "~DoSession" );
+			BeastException::LogCode( ec, _logLevel.Level, "~DoSession" );
 		}
 		catch( const IException& e )
 		{
@@ -187,7 +196,7 @@ namespace Jde::Markets::TwsWebSocket
 				tcp::socket socket(ioc);
 				acceptor.async_accept( socket, yld[ec] );
 				if(ec)
-					BeastException::LogCode( ec, LogLevel(), "accept" );
+					BeastException::LogCode( ec, _logLevel.Level, "accept" );
 				else
 				{
 #ifdef HTTPS
@@ -249,7 +258,7 @@ namespace Jde::Markets::TwsWebSocket
 		else
 		{
 			DBG( "({})Could not find user name='{}' for authenticator='{}'", client.SessionId, email, Str::FromEnum(AuthTypeStrings, type) );
-			pValue->set_string_value( "Could not find user name" );
+			pValue->set_string_value( std::to_string(client.ClientId) );
 		}
 		MessageType msg; msg.set_allocated_message( pValue.release() );
 		AddOutgoing( move(msg), client.SessionId );

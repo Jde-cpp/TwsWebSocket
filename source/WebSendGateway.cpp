@@ -8,10 +8,8 @@
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
-	α SetLevel( ELogLevel l )noexcept->void;
-	ELogLevel _logLevel{ Logging::TagLevel("web", [](auto l){ SetLevel(l); }) };
-	//α LogLevel()noexcept{ return _logLevel; }
-	α SetLevel( ELogLevel l )noexcept->void{ _logLevel=l;}
+	static const LogTag& _logLevel = Logging::TagLevel( "tws.toWeb" );
+
 
 	using Proto::Results::MessageUnion;
 	using Proto::Results::MessageValue;
@@ -21,7 +19,7 @@ namespace Jde::Markets::TwsWebSocket
 	{}
 	α WebSendGateway::EraseRequestSession( SessionPK sessionId )noexcept->void
 	{
-		LOG( _logLevel, "({})EraseRequestSession()"sv, sessionId );
+		LOG( "({})EraseRequestSession()"sv, sessionId );
 		//std::function<void(const EResults&, UnorderedSet<SessionPK>& )> fnctn = ;
 		_requestSessions.ForEach( [sessionId]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
 		{
@@ -112,7 +110,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	bool WebSendGateway::AddAccountSubscription( sv account, SessionPK sessionId )noexcept
 	{
-		LOG( _logLevel, "({}) Account('{}') subscription for", sessionId, account );
+		LOG( "({}) Account('{}') subscription for", sessionId, account );
 		var haveAccess = WrapperWeb::TryTestAccess( UM::EAccess::Read, account, sessionId );
 		if( haveAccess )
 		{
@@ -227,7 +225,7 @@ namespace Jde::Markets::TwsWebSocket
 				}
 				catch( const IException& )
 				{
-					LOG( _logLevel, "({}) Removing for contract id='{}'"sv, pSession->first, contractId );
+					LOG( "({}) Removing for contract id='{}'"sv, pSession->first, contractId );
 					pSession = p->second.erase( pSession );
 				}
 			}

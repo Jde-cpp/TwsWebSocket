@@ -2,7 +2,8 @@
 // or project specific include files that are used frequently, but
 // are changed infrequently
 //
-
+#include <jde/TypeDefs.h>
+#pragma warning( push )
 #ifdef _MSC_VER
 	#define TWSAPIDLLEXP __declspec( dllimport )
 	#include <SDKDDKVer.h>
@@ -18,11 +19,11 @@
 #include <list>
 #include <shared_mutex>
 
-#pragma warning( disable : 4245)
-#pragma warning( disable : 4701)
+#pragma warning( disable : 4245 )
+#pragma warning( disable : 4267 )
+#pragma warning( disable : 4505 )
+#pragma warning( disable : 4701 )
 #include <boost/crc.hpp>
-#pragma warning( default : 4245)
-#pragma warning( default : 4701)
 
 #include <boost/container/flat_set.hpp>
 #include <boost/core/noncopyable.hpp>
@@ -31,8 +32,7 @@
 #include <EWrapper.h>
 #include <Execution.h>
 #include <Order.h>
-
-#include <jde/TypeDefs.h>
+#pragma warning( pop )
 #include "../../Framework/source/collections/Queue.h"
 #include <jde/markets/TypeDefs.h>
 #include "./TypeDefs.h"

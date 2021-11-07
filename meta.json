@@ -20,7 +20,7 @@
 	{
 		"columns": [
 			{ "name": "id", "type": "smallId", "sequence": true },
-			{ "name": "name" }
+			{ "name": "name", "type": "name" }
 		],
 		"surrogateKey":["id"],
 		"naturalKey":["name"]
@@ -57,7 +57,7 @@
 	{
 		"parent": "$nk",
 		"columns": [
-			{ "name": "target", "type": "$target" },
+			{ "name": "target", "type": "$target?" },
 			{ "name": "description", "type": "description?" }
 		],
 		"naturalKey":["target"]

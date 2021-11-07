@@ -37,8 +37,9 @@ namespace Jde::Markets::TwsWebSocket
 
 	struct SessionInfo
 	{
+		~SessionInfo();
 		sp<SocketStream> StreamPtr;
-		sp<atomic<bool>> WriteLockPtr;
+		sp<std::atomic_flag> WriteLockPtr;
 		EAuthType AuthType{EAuthType::None};
 		string Email;
 		bool EmailVerified{false};

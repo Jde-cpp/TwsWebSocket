@@ -19,7 +19,7 @@
 	},
 	"logging":
 	{
-		"tags": [ "http","" ],
+		"tags": [ "_http","_sql", "tws-requests", "tws.webRequests", "mrk.hist", "_tweet" ],
 		"console":{},
 		"file":{ "path": ".." },
 		"server": { "port": 4321, "level": "Debug", "diagnosticsLevel": "Debug", "tags": {"threads":"Debug"} }

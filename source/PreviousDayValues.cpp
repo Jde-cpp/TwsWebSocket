@@ -117,6 +117,7 @@ namespace TwsWebSocket
 		if( !useRth )
 			co_await load( !useRth, PreviousTradingDay(current), sendMultiEnd );
 	}
+	/*
 	α fnctn( const TwsWebSocket::ProcessArg& arg, const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds )noexcept(false)//, TwsWebSocket::SessionId sessionId, TwsWebSocket::ClientPK requestId
 	{
 		try
@@ -126,7 +127,7 @@ namespace TwsWebSocket
 				sp<vector<ContractDetails>> pDetails;
 				try
 				{
-					pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IFX2( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {} records.", contractId, pDetails->size()), -1, 0) );
+					pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IFX( pDetails->size()!=1, IBException( format("ReqContractDetails( {} ) returned {} records.", contractId, pDetails->size()), -1, 0) );
 				}
 				catch( IBException& e )
 				{
@@ -224,13 +225,13 @@ namespace TwsWebSocket
 			else
 				throw e;
 		}
-	}
+	}*/
 }
 	α TwsWebSocket::PreviousDayValues( ContractPK contractId )noexcept( false )->void//loads into cache for later
 	{
 		google::protobuf::RepeatedField<google::protobuf::int32> contractIds;
 		contractIds.Add( contractId );
-		TwsWebSocket::fnctn( {}, contractIds );
+		Previous( contractId, {}, false );
 	}
 
 	α TwsWebSocket::PreviousDayValues( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ProcessArg& arg )noexcept->void

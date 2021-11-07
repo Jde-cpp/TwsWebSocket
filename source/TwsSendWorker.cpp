@@ -16,6 +16,8 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
+	static const LogTag& _logLevel = Logging::TagLevel( "tws.webRequests" );
+
 	TwsSendWorker::TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept:
 		_webSendPtr{ webSendPtr },
 		_twsPtr{ pTwsClient }
@@ -38,7 +40,7 @@ namespace Jde::Markets::TwsWebSocket
 	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionKey )noexcept
 	{
 		ClientPK clientId{0};
-		var& m = *pData;
+		auto& m = *pData;
 		try
 		{
 			if( m.has_generic_requests() )
@@ -54,7 +56,7 @@ namespace Jde::Markets::TwsWebSocket
 			else if( m.has_contract_details() )
 				ContractDetails( m.contract_details(), sessionKey );
 			else if( m.has_historical_data() )
-				HistoricalData( m.historical_data(), sessionKey );
+				HistoricalData( move(*m.mutable_historical_data()), sessionKey );
 			else if( m.has_place_order() )
 				Order( m.place_order(), sessionKey );
 			else if( m.has_request_positions() )
@@ -122,12 +124,37 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void TwsSendWorker::HistoricalData( const Proto::Requests::RequestHistoricalData& r, const SessionKey& session )noexcept(false)
+	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData&& r, SessionKey session )noexcept(false)->Task2
 	{
-		_tws.ReqHistoricalData( _web.AddRequestSession({{session.SessionId},r.id()}), Contract{r.contract()}, Chrono::DaysSinceEpoch(Clock::from_time_t(r.date())), r.days(), r.bar_size(), r.display(), r.use_rth() );
+		try
+		{
+			var pContract = ( co_await TwsClientCo::ContractDetails(r.contract().id()) ).Get<Contract>();
+			var endDate = Chrono::DaysSinceEpoch( Clock::from_time_t(r.date()) );
+			LOG( "({})HistoricalData( '{}', '{}', {}, '{}', '{}', {} )", session.SessionId, pContract->Symbol, Chrono::DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
+			var pBars = ( co_await TwsClientCo::HistoricalData(pContract, endDate, r.days(), r.bar_size(), r.display(), r.use_rth()) ).Get<vector<::Bar>>();
+			auto p = mu<Proto::Results::HistoricalData>(); p->set_request_id( r.id() ); 
+			for( var& bar : *pBars )
+			{
+				var time = bar.time.size()==8 ? DateTime{ (uint16)stoi(bar.time.substr(0,4)), (uint8)stoi(bar.time.substr(4,2)), (uint8)stoi(bar.time.substr(6,2)) } : DateTime( stoi(bar.time) );
+				auto& proto = *p->add_bars();
+				proto.set_time( (int)time.TimeT() );
+
+				proto.set_high( bar.high );
+				proto.set_low( bar.low );
+				proto.set_open( bar.open );
+				proto.set_close( bar.close );
+				proto.set_wap( ToDouble(bar.wap) );
+				proto.set_volume( bar.volume );
+				proto.set_count( bar.count );
+			}
+			MessageType msg; 	msg.set_allocated_historical_data( p.release() );
+			_web.Push( move(msg), session.SessionId );
+		}
+		catch( const IException& )
+		{}
 	}
 
-	void TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, const SessionKey& session )noexcept
+	α TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, const SessionKey& session )noexcept->void
 	{
 		_web.AddExecutionRequest( session.SessionId );
 
@@ -137,7 +164,7 @@ namespace Jde::Markets::TwsWebSocket
 		_tws.reqExecutions( _web.AddRequestSession({{session.SessionId},r.id()}), filter );
 	}
 
-	void TwsSendWorker::Order( const Proto::Requests::PlaceOrder& r, const SessionKey& session )noexcept
+	α TwsSendWorker::Order( const Proto::Requests::PlaceOrder& r, const SessionKey& session )noexcept->void
 	{
 		var reqId = _web.AddRequestSession( {{session.SessionId},r.id()}, r.order().id() );
 		const Jde::Markets::Contract contract{ r.contract() };

@@ -220,7 +220,7 @@ namespace Jde::Markets::TwsWebSocket
 		else if( request.type()==ERequests::Filings || request.type()==ERequests::Investors )
 		{
 			if( request.ids().size()!=1 )
-				_pWebSend->Push( Exception{SRCE_CUR, "ids sent: {} expected 1."sv, request.ids().size()}, {{session}, request.id()} );
+				_pWebSend->Push( Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, request.ids().size()}, {{session}, request.id()} );
 			else
 			{
 				var contractId = request.ids()[0];
@@ -244,24 +244,20 @@ namespace Jde::Markets::TwsWebSocket
 		}).detach();
 	}
 
-	α WebRequestWorker::ReceiveStdDev( ContractPK contractId, double days, DayIndex start, const ProcessArg& inputArg )noexcept->void
+	α WebRequestWorker::ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )noexcept->Task2
 	{
-		std::thread( [contractId, days, start, inputArg]()
+		try
 		{
-			var pDetails = _sync.ReqContractDetails( contractId ).get();
-			try
-			{
-				THROW_IF( pDetails->size()!=1, "Contract '{}' return '{}' records"sv, contractId, pDetails->size() );
-				var pStats = HistoricalDataCache::ReqStats( {pDetails->front()}, days, start );
-				auto p = new Proto::Results::Statistics(); p->set_request_id(inputArg.ClientId); p->set_count(static_cast<uint32>(pStats->Count)); p->set_average(pStats->Average);p->set_variance(pStats->Variance);p->set_min(pStats->Min); p->set_max(pStats->Max);
-				MessageType msg; msg.set_allocated_statistics( p );
-				inputArg.Push( move(msg) );
-			}
-			catch( const IException& e )
-			{
-				inputArg.Push( e );
-			}
-		} ).detach();
+			var pContract = ( co_await TwsClientCo::ContractDetails(contractId) ).Get<const Contract>();
+			var pStats = ( co_await HistoricalDataCache::ReqStats(pContract, days, start) ).Get<HistoricalDataCache::StatCount>();
+			auto p = new Proto::Results::Statistics(); p->set_request_id(inputArg.ClientId); p->set_count(static_cast<uint32>(pStats->Count)); p->set_average(pStats->Average);p->set_variance(pStats->Variance);p->set_min(pStats->Min); p->set_max(pStats->Max);
+			MessageType msg; msg.set_allocated_statistics( p );
+			inputArg.Push( move(msg) );
+		}
+		catch( IException& e )
+		{
+			inputArg.Push( move(e) );
+		}
 	}
 
 	α WebRequestWorker::ReceiveOptions( const SessionKey& session, const Proto::Requests::RequestOptions& params )noexcept->void

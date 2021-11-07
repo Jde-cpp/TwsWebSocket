@@ -82,15 +82,15 @@ namespace Jde::Markets::TwsWebSocket
 		TwsClientSync::Instance().SetRequestId( orderId );
 	}
 
-	void WrapperWeb::orderStatus( ::OrderId orderId, str status, double filled, double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, str whyHeld, double mktCapPrice )noexcept
+	void WrapperWeb::orderStatus( ::OrderId orderId, str status, ::Decimal filled, ::Decimal remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, str whyHeld, double mktCapPrice )noexcept
 	{
 		WrapperLog::orderStatus( orderId, status, filled,	remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice );
 		if( !_pWebSend ) return;
 		auto p = make_unique<Proto::Results::OrderStatus>();
 		p->set_order_id( orderId );
 		p->set_status( ToOrderStatus(status) );
-		p->set_filled( filled );
-		p->set_remaining( remaining );
+		p->set_filled( ToDouble(filled) );
+		p->set_remaining( ToDouble(remaining) );
 		p->set_average_fill_price( avgFillPrice );
 		p->set_perm_id( permId );
 		p->set_parent_id( parentId );
@@ -118,13 +118,13 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::openOrderEnd();
 		_webSend.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
 	}
-	void WrapperWeb::positionMulti( int reqId, str account, str modelCode, const ::Contract& contract, double pos, double avgCost )noexcept
+	void WrapperWeb::positionMulti( int reqId, str account, str modelCode, const ::Contract& contract, ::Decimal pos, double avgCost )noexcept
 	{
 		WrapperLog::positionMulti( reqId, account, modelCode, contract, pos, avgCost );
 		auto pUpdate = make_unique<Proto::Results::PositionMulti>();
 		pUpdate->set_account( account );
 		pUpdate->set_allocated_contract( Contract{contract}.ToProto(true).get() );
-		pUpdate->set_position( pos );
+		pUpdate->set_position( ToDouble(pos) );
 		pUpdate->set_avgerage_cost( avgCost );
 		pUpdate->set_model_code( modelCode );
 
@@ -182,7 +182,7 @@ namespace Jde::Markets::TwsWebSocket
 			auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
 			for( var& name : accounts )
 			{
-				if( !_deletedAccounts.contains(name) && !_accounts.contains(name) && pDataSource->TryExecuteProc("ib_account_insert( ?, 0, ?, ? )", {name,nullptr,name}) )
+				if( !_deletedAccounts.contains(name) && !_accounts.contains(name) && pDataSource->TryExecuteProc("ib_account_insert( ?, 0, ?, null )", {name,name}) )
 				{
 					_accounts.emplace( name, Account{name} );
 					INFO( "inserted account '{}'."sv, name );
@@ -241,7 +241,7 @@ namespace Jde::Markets::TwsWebSocket
 		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::PositionMultiEnd );// pValue->set_int_value( reqId );
 		_pWebSend->Push( reqId, [pValue](MessageType& msg, ClientPK id){ pValue->set_int_value(id); msg.set_allocated_message(pValue); } );
 	}
-	void WrapperWeb::historicalData( TickerId reqId, const ::Bar& bar )noexcept
+/*	void WrapperWeb::historicalData(TickerId reqId, const ::Bar& bar)noexcept
 	{
 		if( WrapperCo::HistoricalData(reqId, bar) )
 			return;
@@ -264,13 +264,15 @@ namespace Jde::Markets::TwsWebSocket
 		TRY( _pWebSend->Push(reqId, [p=pData.release()](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_historical_data(p); }) );
 		_historicalData.erase( reqId );
 	}
-
+	*/
 	void WrapperWeb::error( int reqId, int errorCode, str errorString )noexcept
 	{
 		if( !WrapperSync::error2(reqId, errorCode, errorString) )
 		{
 			if( errorCode==162 && _pWebSend->HasHistoricalRequest(reqId) )// _historicalCrcs.Has(id)
-				_pWebSend->Push( reqId, [](MessageType& msg, ClientPK id){ auto p=new Proto::Results::HistoricalData{}; p->set_request_id(id); msg.set_allocated_historical_data(p); } );
+			{	
+				ASSERT(false);// not sure of use case _pWebSend->Push( reqId, [](MessageType& msg, ClientPK id){ auto p=new Proto::Results::HistoricalData{}; p->set_request_id(id); msg.set_allocated_historical_data(p); } );
+			}
 			else if( reqId>0 )
 				_pWebSend->PushError( errorCode, errorString, reqId );
 		}
@@ -342,13 +344,13 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_account_number( ib.acctNumber );
 		p->set_exchange( ib.exchange );
 		p->set_side( ib.side );
-		p->set_shares( ib.shares );
+		p->set_shares( ToDouble(ib.shares) );
 		p->set_price( ib.price );
 		p->set_perm_id( ib.permId );
 		p->set_client_id( ib.clientId );
 		p->set_order_id( ib.orderId );
 		p->set_liquidation( ib.liquidation );
-		p->set_cumulative_quantity( ib.cumQty );
+		p->set_cumulative_quantity( ToDouble(ib.cumQty) );
 		p->set_avg_price( ib.avgPrice );
 		p->set_order_ref( ib.orderRef );
 		p->set_ev_rule( ib.evRule );
