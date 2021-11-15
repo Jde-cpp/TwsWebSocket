@@ -15,7 +15,7 @@
 using boost::property_tree::ptree;
 namespace Jde::Markets::TwsWebSocket
 {
-	extern shared_ptr<Settings::Container> SettingsPtr;
+	extern sp<Settings::Container> SettingsPtr;
 
 	using CacheType=map<uint16,Proto::Results::Flex>;
 	shared_mutex _cacheMutex;
@@ -27,8 +27,8 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		try
 		{
-			var startDay = Chrono::DaysSinceEpoch( startTime );
-			var endDay = Chrono::DaysSinceEpoch( endTime );
+			var startDay = Chrono::ToDays( startTime );
+			var endDay = Chrono::ToDays( endTime );
 			auto pData = Load();
 
 			shared_lock l{ _cacheMutex };
@@ -49,7 +49,7 @@ namespace Jde::Markets::TwsWebSocket
 					os << flex.trades( i ).shares() << "," << flex.trades( i ).commission() << std::endl;
 				}
 			}
-			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, web.SessionId, Chrono::DateDisplay(startDay), Chrono::DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
+			DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, web.SessionId, DateDisplay(startDay), DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
 			Proto::Results::MessageUnion msg; msg.set_allocated_flex( pResults );
 			//Make _webSend global instance.tw
 			web.Push( move(msg) );
@@ -163,14 +163,14 @@ namespace Jde::Markets::TwsWebSocket
 		for( var& idConfirm : trades )
 		{
 			var& confirm = idConfirm.second;
-			var day = Chrono::DaysSinceEpoch( Clock::from_time_t(confirm.time()) );
+			var day = Chrono::ToDays( Clock::from_time_t(confirm.time()) );
 			auto& flex = pValues->try_emplace( day, Proto::Results::Flex{} ).first->second;
 			*flex.add_trades() = confirm;
 		}
 		for( var& idOrder : orders )
 		{
 			var& order = idOrder.second;
-			var day = Chrono::DaysSinceEpoch( Clock::from_time_t(order.time()) );
+			var day = Chrono::ToDays( Clock::from_time_t(order.time()) );
 			auto& flex = pValues->try_emplace( day, Proto::Results::Flex{} ).first->second;
 			*flex.add_orders() = order;
 		}

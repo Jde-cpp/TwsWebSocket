@@ -19,7 +19,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 namespace Jde::Markets::TwsWebSocket
 {
-	static const LogTag& _logLevel = Logging::TagLevel( "tws.web" );
+	static const LogTag& _logLevel = Logging::TagLevel( "app.web" );
 
 	BeastException::BeastException( sv what, beast::error_code&& ec, ELogLevel level, const source_location& sl )noexcept:
 		IException{ {std::to_string(ec.value()), ec.message()}, format("{} returned ({{}}){{}}", what), sl, level },
@@ -107,8 +107,6 @@ namespace Jde::Markets::TwsWebSocket
          while( pMutex->test(std::memory_order_relaxed) )
 				std::this_thread::yield();
 		}
-		//while( pMutex->exchange(true) )
-		//	std::this_thread::yield();
 		pStream->async_write( boost::asio::buffer(pBuffer->data(), pBuffer->size()), [size, id, pMutex2=pMutex, pBuffer]( const boost::system::error_code& ec, size_t bytesTransferred )noexcept
 		{
 			pMutex2->clear( std::memory_order_release );
@@ -156,7 +154,6 @@ namespace Jde::Markets::TwsWebSocket
 			auto pWebCoSocket = WebCoSocket::Instance(); THROW_IF( !pWebCoSocket, "!pWebCoSocket" );
 			sessionId = pWebCoSocket->AddConnection( pStream );
 			UserPK userId{ 0 };
-			//pWebCoSocket->SetLogin( {{sessionId,userId },0}, EAuthType::Google, "foo@gmail.com", true, "Mr foo", "", Clock::now()+24h, {} );
 			for( ;; )
 			{
 				beast::flat_buffer buffer;

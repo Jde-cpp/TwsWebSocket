@@ -16,7 +16,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	α News::RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task2
 	{
-		auto p = ( co_await TwsClientCo::NewsArticle(providerCode, articleId) ).Get<Proto::Results::NewsArticle>();
+		auto p = ( co_await Tws::NewsArticle(providerCode, articleId) ).Get<Proto::Results::NewsArticle>();
 		p->set_request_id( arg.ClientId );
 		MessageType m; m.set_allocated_news_article( new Proto::Results::NewsArticle(*p) );
 		arg.Push( move(m) );
@@ -26,7 +26,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		try
 		{
-			auto pProviders = (co_await TwsClientCo::NewsProviders()).Get<map<string,string>>();
+			auto pProviders = (co_await Tws::NewsProviders()).Get<map<string,string>>();
 			auto pMap = make_unique<Proto::Results::StringMap>();
 			pMap->set_result( EResults::NewsProviders );
 			for( var& [code,name] : *pProviders )
@@ -45,9 +45,9 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		try
 		{
-			var pContract = (co_await TwsClientCo::ContractDetails( contractId )).Get<Contract>();// if( variant.index()==1 ) std::rethrow_exception( get<1>(variant) ); var pContract = move( get<0>(variant) );
+			var pContract = (co_await Tws::ContractDetails( contractId )).Get<Contract>();// if( variant.index()==1 ) std::rethrow_exception( get<1>(variant) ); var pContract = move( get<0>(variant) );
 
-			auto pWait = TwsClientCo::HistoricalNews( pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
+			auto pWait = Tws::HistoricalNews( pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
 			auto pGoogle = (co_await Google( pContract->Symbol) ).Get<vector<sp<Proto::Results::GoogleNews>>>();
 			auto pHistorical = (co_await pWait).Get<Proto::Results::NewsCollection>();
 
@@ -112,10 +112,9 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			h.promise().get_return_object().SetResult( results );
 		}
-		catch( std::exception& e )
+		catch( IException& e )
 		{
-			LOGS( ELogLevel::Error, e.what() );
-			h.promise().get_return_object().SetResult( std::make_exception_ptr(move(e)) );
+			h.promise().get_return_object().SetResult( e.Clone() );
 		}
 		h.resume();
 	}};}

@@ -11,6 +11,7 @@
 #include "../../Framework/source/db/GraphQL.h"
 #include "../../MarketLibrary/source/data/HistoricalDataCache.h"
 #include "../../MarketLibrary/source/data/OptionData.h"
+#include "../../MarketLibrary/source/data/StatAwait.h"
 #include "../../Google/source/TokenInfo.h"
 #include "../../Ssl/source/Ssl.h"
 
@@ -20,6 +21,7 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
+	static const LogTag& _logLevel = Logging::TagLevel( "app.webRequests" );
 	WebRequestWorker::WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept:
 		_pTwsSend{ make_shared<TwsSendWorker>(webSend, pTwsClient) },
 		_pWebSend{webSend},
@@ -107,7 +109,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( const json::exception& e )
 			{
-				LOGS( ELogLevel::Debug, e.what() );
+				Logging::Log( Logging::Message(ELogLevel::Debug, e.what()) );
 				_pWebSend->TryPush( Exception("could not parse query"), arg );
 			}
 			catch( const IException& e )
@@ -175,7 +177,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( const std::exception& e )
 			{
-				LOGS( ELogLevel::Warning, e.what() );
+				Logging::Log( Logging::Message(ELogLevel::Warning, e.what()) );
 				_pWebSend->Push( e, arg );
 			}
 		}
@@ -248,8 +250,8 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		try
 		{
-			var pContract = ( co_await TwsClientCo::ContractDetails(contractId) ).Get<const Contract>();
-			var pStats = ( co_await HistoricalDataCache::ReqStats(pContract, days, start) ).Get<HistoricalDataCache::StatCount>();
+			var pContract = ( co_await Tws::ContractDetails(contractId) ).Get<const Contract>();
+			var pStats = ( co_await ReqStats(pContract, days, start) ).Get<StatCount>();
 			auto p = new Proto::Results::Statistics(); p->set_request_id(inputArg.ClientId); p->set_count(static_cast<uint32>(pStats->Count)); p->set_average(pStats->Average);p->set_variance(pStats->Variance);p->set_min(pStats->Min); p->set_max(pStats->Max);
 			MessageType msg; msg.set_allocated_statistics( p );
 			inputArg.Push( move(msg) );
@@ -324,7 +326,7 @@ namespace Jde::Markets::TwsWebSocket
 					else
 					{
 						if( !pOptionParams )
-							pOptionParams = Future<Proto::Results::ExchangeContracts>( TwsClientCo::SecDefOptParams(underlyingId,true) ).get();
+							pOptionParams = Future<Proto::Results::ExchangeContracts>( Tws::SecDefOptParams(underlyingId,true) ).get();
 						var end = params.end_expiration() ? params.end_expiration() : std::numeric_limits<DayIndex>::max();
 						for( var expiration : pOptionParams->expirations() )
 						{

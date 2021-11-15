@@ -218,8 +218,8 @@
 	"umRolePermissions":
 	{
 		"columns": [
-			{ "name": "roleId", "type": "umRoles" },
-			{ "name": "permissionId", "type": "umPermissions" },
+			{ "name": "roleId", "type": "umRoles", "updateable":false },
+			{ "name": "permissionId", "type": "umPermissions", "updateable":false },
 			{ "name": "rightId", "type": "umRights", "default":"4" }
 		],
 		"surrogateKey":["roleId","permissionId"],

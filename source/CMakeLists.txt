@@ -6,6 +6,7 @@ include(SetUpConfigurations)
 link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 #Custom######################################################
 include_directories( "$ENV{REPO_DIR}/tws-api/source/cppclient/client" )
+include_directories( "$ENV{REPO_DIR}/IntelRDFPMathLib20U2/LIBRARY/src" )
 include_directories( "${PROJECT_SOURCE_DIR}/../../Public" )
 #add_definitions( -DJDE_EDGAR )
 #######################################################
@@ -29,6 +30,7 @@ target_link_libraries(Jde.TwsWebSocket boost_thread )
 target_link_libraries(Jde.TwsWebSocket boost_chrono )
 target_link_libraries(Jde.TwsWebSocket boost_coroutine)
 target_link_libraries(Jde.TwsWebSocket boost_iostreams)
+target_link_libraries(Jde.TwsWebSocket bid)
 target_link_libraries(Jde.TwsWebSocket stdc++)
 #target_link_libraries(Jde.TwsWebSocket stdc++fs)
 

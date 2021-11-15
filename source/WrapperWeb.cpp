@@ -31,31 +31,31 @@ namespace Jde::Markets::TwsWebSocket
 	WrapperWeb::WrapperWeb()noexcept
 	{}
 
-	tuple<sp<TwsClientSync>,sp<WrapperWeb>> WrapperWeb::CreateInstance()noexcept(false)
+	α WrapperWeb::CreateInstance()noexcept(false)->tuple<sp<TwsClientSync>,sp<WrapperWeb>>
 	{
 		ASSERT( !_pInstance );
 		_pInstance = sp<WrapperWeb>( new WrapperWeb() );
-		auto pClient = _pInstance->CreateClient( Settings::Get<uint>("twsWebSocket/twsClientId") );
+		auto pClient = _pInstance->CreateClient( Settings::Get<uint>("tws/clientId") );
 		return make_tuple( pClient, _pInstance );
 	}
-	WrapperWeb& WrapperWeb::Instance()noexcept
+	α WrapperWeb::Instance()noexcept->WrapperWeb&
 	{
 		ASSERT( _pInstance );
 		return *_pInstance;
 	}
-	sp<TwsClientSync> WrapperWeb::CreateClient( uint twsClientId )noexcept(false)
+	α WrapperWeb::CreateClient( uint twsClientId )noexcept(false)->sp<TwsClientSync>
 	{
 		return WrapperSync::CreateClient( twsClientId );
 	}
 
-	bool WrapperWeb::TryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept{auto p = _pInstance; return p ? p->tryTestAccess( requested, name, sessionId, allowDeleted ) : false; }
-	bool WrapperWeb::tryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept
+	α WrapperWeb::TryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept->bool{auto p = _pInstance; return p ? p->tryTestAccess( requested, name, sessionId, allowDeleted ) : false; }
+	α WrapperWeb::tryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept->bool
 	{
 		var pSocket = WebCoSocket::Instance();
 		return pSocket ? TryTestAccess( requested, pSocket->TryUserId(sessionId), name, allowDeleted ) : false;
 	}
-	bool WrapperWeb::TryTestAccess( UM::EAccess requested, UserPK userId, sv name, bool allowDeleted )noexcept{auto p = _pInstance; return p ? p->tryTestAccess( requested, userId, name, allowDeleted ) : false; }
-	bool WrapperWeb::tryTestAccess( UM::EAccess requested, UserPK userId, sv name, bool allowDeleted )noexcept
+	α WrapperWeb::TryTestAccess( UM::EAccess requested, UserPK userId, sv name, bool allowDeleted )noexcept->bool{auto p = _pInstance; return p ? p->tryTestAccess( requested, userId, name, allowDeleted ) : false; }
+	α WrapperWeb::tryTestAccess( UM::EAccess requested, UserPK userId, sv name, bool allowDeleted )noexcept->bool
 	{
 		shared_lock l{ _accountMutex };
 		 if( !allowDeleted && _deletedAccounts.find( string{name} )!=_deletedAccounts.end() )
@@ -76,13 +76,13 @@ namespace Jde::Markets::TwsWebSocket
 		return haveAccess;
 	}
 
-	void WrapperWeb::nextValidId( ::OrderId orderId)noexcept
+	α WrapperWeb::nextValidId( ::OrderId orderId)noexcept->void
 	{
 		WrapperLog::nextValidId( orderId );
 		TwsClientSync::Instance().SetRequestId( orderId );
 	}
 
-	void WrapperWeb::orderStatus( ::OrderId orderId, str status, ::Decimal filled, ::Decimal remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, str whyHeld, double mktCapPrice )noexcept
+	α WrapperWeb::orderStatus( ::OrderId orderId, str status, ::Decimal filled, ::Decimal remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, str whyHeld, double mktCapPrice )noexcept->void
 	{
 		WrapperLog::orderStatus( orderId, status, filled,	remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice );
 		if( !_pWebSend ) return;
@@ -102,7 +102,7 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend->Push( EResults::OrderStatus_, [&p](MessageType& msg){msg.set_allocated_order_status(new Proto::Results::OrderStatus{*p});} );
 		_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_id( id ); msg.set_allocated_order_status( p.release() );} );
 	}
-	void WrapperWeb::openOrder( ::OrderId orderId, const ::Contract& contract, const ::Order& order, const ::OrderState& state )noexcept
+	α WrapperWeb::openOrder( ::OrderId orderId, const ::Contract& contract, const ::Order& order, const ::OrderState& state )noexcept->void
 	{
 		WrapperLog::openOrder( orderId, contract, order, state );
 		if( !_pWebSend ) return;
@@ -113,12 +113,12 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend->Push( EResults::OpenOrder_, [&p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
 		_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_web_id(id); msg.set_allocated_open_order( p.release() );} );
 	}
-	void WrapperWeb::openOrderEnd()noexcept
+	α WrapperWeb::openOrderEnd()noexcept->void
 	{
 		WrapperLog::openOrderEnd();
 		_webSend.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
 	}
-	void WrapperWeb::positionMulti( int reqId, str account, str modelCode, const ::Contract& contract, ::Decimal pos, double avgCost )noexcept
+	α WrapperWeb::positionMulti( int reqId, str account, str modelCode, const ::Contract& contract, ::Decimal pos, double avgCost )noexcept->void
 	{
 		WrapperLog::positionMulti( reqId, account, modelCode, contract, pos, avgCost );
 		auto pUpdate = make_unique<Proto::Results::PositionMulti>();
@@ -130,12 +130,12 @@ namespace Jde::Markets::TwsWebSocket
 
 		_pWebSend->Push( reqId, [&p=pUpdate](MessageType& msg, ClientPK id){p->set_id( id ); msg.set_allocated_position_multi(p.release());} );
 	}
-	void WrapperWeb::positionMultiEnd( int reqId )noexcept
+	α WrapperWeb::positionMultiEnd( int reqId )noexcept->void
 	{
 		WrapperLog::positionMultiEnd( reqId );
 		_pWebSend->Push( EResults::PositionMultiEnd, reqId );
 	}
-	void WrapperWeb::LoadAccess()noexcept
+	α WrapperWeb::LoadAccess()noexcept->void
 	{
 		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
 		unique_lock l{ _accountMutex };
@@ -153,11 +153,14 @@ namespace Jde::Markets::TwsWebSocket
 		pDataSource->TrySelect( "select account_id, user_id, right_id  FROM ib_account_roles ib join um_group_roles gr on gr.role_id=ib.role_id join um_user_groups ug on gr.group_id=ug.group_id", [&]( const DB::IRow& row )
 		{
 			var accountId = row.GetUInt( 0 );
-			var pAccount = std::find_if( _accounts.begin(), _accounts.end(), [&]( var& x ){ return x.second.Id==accountId; } ); THROW_IF( pAccount==_accounts.end(), std::to_string(accountId) );
-			pAccount->second.Access.emplace( (UserPK)row.GetUInt(1), (UM::EAccess)row.GetUInt16(2) );
+			var pAccount = std::find_if( _accounts.begin(), _accounts.end(), [&]( var& x ){ return x.second.Id==accountId; } );
+			if( pAccount!=_accounts.end() )
+				pAccount->second.Access.emplace( (UserPK)row.GetUInt(1), (UM::EAccess)row.GetUInt16(2) );
+			else
+				TRACE( "({}) accountId is deleted", accountId );
 		} );
 	}
-	void WrapperWeb::LoadMinimumAccess()noexcept
+	α WrapperWeb::LoadMinimumAccess()noexcept->void
 	{
 		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
 		unique_lock l{ _accountMutex };
@@ -169,7 +172,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	}
 	static bool _setAccounts{false};
-	void WrapperWeb::managedAccounts( str accountsList )noexcept
+	α WrapperWeb::managedAccounts( str accountsList )noexcept->void
 	{
 		WrapperLog::managedAccounts( accountsList );
 		Proto::Results::StringMap accountList;
@@ -218,7 +221,7 @@ namespace Jde::Markets::TwsWebSocket
 			m.set_allocated_string_map( new Proto::Results::StringMap{userList} );
 		});
 	}
-	void WrapperWeb::accountUpdateMulti( int reqId, str accountName, str modelCode, str key, str value, str currency )noexcept
+	α WrapperWeb::accountUpdateMulti( int reqId, str accountName, str modelCode, str key, str value, str currency )noexcept->void
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
 		auto pUpdate = make_unique<Proto::Results::AccountUpdateMulti>();
@@ -235,42 +238,18 @@ namespace Jde::Markets::TwsWebSocket
 			m.set_allocated_account_update_multi( p.release() );
 		});
 	}
-	void WrapperWeb::accountUpdateMultiEnd( int reqId )noexcept
+	α WrapperWeb::accountUpdateMultiEnd( int reqId )noexcept->void
 	{
 		WrapperLog::accountUpdateMultiEnd( reqId );
 		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::PositionMultiEnd );// pValue->set_int_value( reqId );
 		_pWebSend->Push( reqId, [pValue](MessageType& msg, ClientPK id){ pValue->set_int_value(id); msg.set_allocated_message(pValue); } );
 	}
-/*	void WrapperWeb::historicalData(TickerId reqId, const ::Bar& bar)noexcept
-	{
-		if( WrapperCo::HistoricalData(reqId, bar) )
-			return;
-		if( WrapperSync::historicalDataSync(reqId, bar) )
-			return;
-		unique_lock l{ _historicalDataMutex };
-		auto& pData = _historicalData.emplace( reqId, make_unique<Proto::Results::HistoricalData>() ).first->second;
-		auto pBar = pData->add_bars();
-		WrapperCache::ToBar( bar, *pBar );
-	}
-	void WrapperWeb::historicalDataEnd( int reqId, str startDateStr, str endDateStr )noexcept
-	{
-		if( WrapperCo::HistoricalDataEnd(reqId, startDateStr, endDateStr) )
-			return;
-		if( WrapperSync::historicalDataEndSync(reqId, startDateStr, endDateStr) )
-			return;
-
-		unique_lock l{ _historicalDataMutex };
-		auto& pData = _historicalData.emplace( reqId, make_unique<Proto::Results::HistoricalData>() ).first->second;
-		TRY( _pWebSend->Push(reqId, [p=pData.release()](MessageType& msg, ClientPK id){ p->set_request_id(id); msg.set_allocated_historical_data(p); }) );
-		_historicalData.erase( reqId );
-	}
-	*/
-	void WrapperWeb::error( int reqId, int errorCode, str errorString )noexcept
+	α WrapperWeb::error( int reqId, int errorCode, str errorString )noexcept->void
 	{
 		if( !WrapperSync::error2(reqId, errorCode, errorString) )
 		{
 			if( errorCode==162 && _pWebSend->HasHistoricalRequest(reqId) )// _historicalCrcs.Has(id)
-			{	
+			{
 				ASSERT(false);// not sure of use case _pWebSend->Push( reqId, [](MessageType& msg, ClientPK id){ auto p=new Proto::Results::HistoricalData{}; p->set_request_id(id); msg.set_allocated_historical_data(p); } );
 			}
 			else if( reqId>0 )
@@ -278,7 +257,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void WrapperWeb::HandleBadTicker( TickerId reqId )noexcept
+	α WrapperWeb::HandleBadTicker( TickerId reqId )noexcept->void
 	{
 		if( _canceledItems.emplace(reqId) )
 		{
@@ -286,19 +265,19 @@ namespace Jde::Markets::TwsWebSocket
 			TwsClientSync::Instance().cancelMktData( reqId );
 		}
 	}
-	void WrapperWeb::tickSnapshotEnd( int reqId )noexcept
+	α WrapperWeb::tickSnapshotEnd( int reqId )noexcept->void
 	{
 		WrapperLog::tickSnapshotEnd( reqId );
 		_pWebSend->Push( Proto::Results::EResults::TickSnapshotEnd, reqId );
 	}
 
 
-	void WrapperWeb::updateAccountTime( str timeStamp )noexcept
+	α WrapperWeb::updateAccountTime( str timeStamp )noexcept->void
 	{
 		WrapperLog::updateAccountTime( timeStamp );//not sure what to do about this, no reqId or accountName
 	}
 
-	void WrapperWeb::contractDetails( int reqId, const ::ContractDetails& contractDetails )noexcept
+	α WrapperWeb::contractDetails( int reqId, const ::ContractDetails& contractDetails )noexcept->void
 	{
 		if( WrapperCo::_contractSingleHandles.Has(reqId) )
 			WrapperCo::contractDetails( reqId, contractDetails );
@@ -313,7 +292,7 @@ namespace Jde::Markets::TwsWebSocket
 			ToProto( contractDetails, *pReqDetails->second->add_details() );
 		}
 	}
-	void WrapperWeb::contractDetailsEnd( int reqId )noexcept
+	α WrapperWeb::contractDetailsEnd( int reqId )noexcept->void
 	{
 		if( WrapperCo::_contractSingleHandles.Has(reqId) )
 			WrapperCo::contractDetailsEnd( reqId );
@@ -328,12 +307,12 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void WrapperWeb::commissionReport( const CommissionReport& ib )noexcept
+	α WrapperWeb::commissionReport( const CommissionReport& ib )noexcept->void
 	{
 		Proto::Results::CommissionReport a; a.set_exec_id( ib.execId ); a.set_commission( ib.commission ); a.set_currency( ib.currency ); a.set_realized_pnl( ib.realizedPNL ); a.set_yield( ib.yield ); a.set_yield_redemption_date( ib.yieldRedemptionDate );
 		_pWebSend->Push( a );
 	}
-	void WrapperWeb::execDetails( int reqId, const ::Contract& contract, const Execution& ib )noexcept
+	α WrapperWeb::execDetails( int reqId, const ::Contract& contract, const Execution& ib )noexcept->void
 	{
 		auto p = make_unique<Proto::Results::Execution>();
 		p->set_exec_id( ib.execId );
@@ -361,7 +340,7 @@ namespace Jde::Markets::TwsWebSocket
 		_pWebSend->Push( reqId, [&p](MessageType& msg, ClientPK id){ p->set_id( id ); msg.set_allocated_execution( p.release() );} );
 
 	}
-	void WrapperWeb::execDetailsEnd( int reqId )noexcept
+	α WrapperWeb::execDetailsEnd( int reqId )noexcept->void
 	{
 		WrapperLog::execDetailsEnd( reqId );
 		_pWebSend->Push( EResults::ExecutionDataEnd, reqId );

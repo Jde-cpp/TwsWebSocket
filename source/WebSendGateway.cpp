@@ -8,7 +8,7 @@
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
-	static const LogTag& _logLevel = Logging::TagLevel( "tws.toWeb" );
+	static const LogTag& _logLevel = Logging::TagLevel( "app.toWeb" );
 
 
 	using Proto::Results::MessageUnion;
@@ -20,7 +20,6 @@ namespace Jde::Markets::TwsWebSocket
 	α WebSendGateway::EraseRequestSession( SessionPK sessionId )noexcept->void
 	{
 		LOG( "({})EraseRequestSession()"sv, sessionId );
-		//std::function<void(const EResults&, UnorderedSet<SessionPK>& )> fnctn = ;
 		_requestSessions.ForEach( [sessionId]( const EResults& messageId, UnorderedSet<SessionPK>& sessions )
 		{
 			sessions.erase( sessionId );
@@ -295,7 +294,7 @@ namespace Jde::Markets::TwsWebSocket
 		contractSubscriptions[sessionId] = ticks;
 	}
 
-	α WebSendGateway::ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, ReqId reqId )noexcept->void
+	α WebSendGateway::ContractDetails( up<Proto::Results::ContractDetailsResult> pDetails, ReqId reqId )noexcept->void
 	{
 		var clientKey = _requestSession.Find( reqId ).value_or( ClientKey{} );
 		if( !clientKey.SessionId )

@@ -16,7 +16,7 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	static const LogTag& _logLevel = Logging::TagLevel( "tws.webRequests" );
+	static const LogTag& _logLevel = Logging::TagLevel( "app.webRequests" );
 
 	TwsSendWorker::TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept:
 		_webSendPtr{ webSendPtr },
@@ -124,15 +124,15 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData&& r, SessionKey session )noexcept(false)->Task2
+	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData r, SessionKey session )noexcept(false)->Task2
 	{
 		try
 		{
-			var pContract = ( co_await TwsClientCo::ContractDetails(r.contract().id()) ).Get<Contract>();
-			var endDate = Chrono::DaysSinceEpoch( Clock::from_time_t(r.date()) );
-			LOG( "({})HistoricalData( '{}', '{}', {}, '{}', '{}', {} )", session.SessionId, pContract->Symbol, Chrono::DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
-			var pBars = ( co_await TwsClientCo::HistoricalData(pContract, endDate, r.days(), r.bar_size(), r.display(), r.use_rth()) ).Get<vector<::Bar>>();
-			auto p = mu<Proto::Results::HistoricalData>(); p->set_request_id( r.id() ); 
+			var pContract = ( co_await Tws::ContractDetails(r.contract().id()) ).Get<Contract>();
+			var endDate = Chrono::ToDays( Clock::from_time_t(r.date()) );
+			LOG( "({})HistoricalData( '{}', '{}', {}, '{}', '{}', {} )", session.SessionId, pContract->Symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
+			var pBars = ( co_await Tws::HistoricalData(pContract, endDate, r.days(), r.bar_size(), r.display(), r.use_rth()) ).Get<vector<::Bar>>();
+			auto p = mu<Proto::Results::HistoricalData>(); p->set_request_id( r.id() );
 			for( var& bar : *pBars )
 			{
 				var time = bar.time.size()==8 ? DateTime{ (uint16)stoi(bar.time.substr(0,4)), (uint8)stoi(bar.time.substr(4,2)), (uint8)stoi(bar.time.substr(6,2)) } : DateTime( stoi(bar.time) );
@@ -315,7 +315,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		try
 		{
-			auto p = ( co_await TwsClientCo::SecDefOptParams(underlyingId) ).Get<Proto::Results::OptionExchanges>();
+			auto p = ( co_await Tws::SecDefOptParams(underlyingId) ).Get<Proto::Results::OptionExchanges>();
 			p->set_request_id( clientId );
 			MessageType m; m.set_allocated_option_exchanges( new Proto::Results::OptionExchanges(*p) );
 			_web.Push( move(m), key.SessionId );

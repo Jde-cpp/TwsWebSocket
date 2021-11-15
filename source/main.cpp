@@ -14,7 +14,7 @@ namespace Jde{  string OSApp::CompanyName()noexcept{ return "Jde-Cpp"; } }
 #endif
 namespace Jde::Markets::TwsWebSocket
 {
-	shared_ptr<Settings::Container> SettingsPtr;
+	sp<Settings::Container> SettingsPtr;
 	void Startup( bool initialCall=true )noexcept;
 }
 

@@ -11,67 +11,67 @@ namespace Jde::Markets::TwsWebSocket
 	struct WebCoSocket;
 	struct WebSendGateway final: std::enable_shared_from_this<WebSendGateway>, boost::noncopyable, IAccountUpdateHandler //TODO not a worker, WebSendGateway
 	{
-		typedef tuple<SessionPK,MessageTypePtr> QueueType;
+		typedef tuple<SessionPK,MessageTypePtr> TQueue;
 		WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
-		void Shutdown()noexcept{ _pThread->Interrupt(); _pThread->Join(); }
-		void EraseRequestSession( SessionPK id )noexcept;
-		void EraseAccountSubscription( SessionPK id, sv account={}, Handle handle=0 )noexcept;
-		void EraseSession( SessionPK id )noexcept;
-		void AddExecutionRequest( SessionPK id ){ unique_lock l{_executionRequestMutex}; _executionRequests.emplace( id ); }
-		void AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept;
-		bool AddAccountSubscription( sv account, SessionPK sessionId )noexcept;
-		bool UpdateAccountValue( sv key, sv value, sv currency, sv accountName )noexcept override;
-		void AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept;
-		tuple<TickerId,flat_set<Proto::Requests::ETickList>> RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock=false )noexcept;
-		void CancelAccountSubscription( sv account, SessionPK sessionId )noexcept;
-		void AddMultiRequest( const flat_set<TickerId>& ids, const ClientKey& key );
+		α Shutdown()noexcept{ _pThread->Interrupt(); _pThread->Join(); }
+		α EraseRequestSession( SessionPK id )noexcept->void;
+		α EraseAccountSubscription( SessionPK id, sv account={}, Handle handle=0 )noexcept->void;
+		α EraseSession( SessionPK id )noexcept->void;
+		α AddExecutionRequest( SessionPK id ){ unique_lock l{_executionRequestMutex}; _executionRequests.emplace( id ); }
+		α AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept->void;
+		α AddAccountSubscription( sv account, SessionPK sessionId )noexcept->bool;
+		α UpdateAccountValue( sv key, sv value, sv currency, sv accountName )noexcept->bool override;
+		α AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept->void;
+		α RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock=false )noexcept->tuple<TickerId,flat_set<Proto::Requests::ETickList>>;
+		α CancelAccountSubscription( sv account, SessionPK sessionId )noexcept->void;
+		α AddMultiRequest( const flat_set<TickerId>& ids, const ClientKey& key )->void;
 
-		TickerId AddRequestSession( const ClientKey& key )noexcept{ const auto ib = _pClientSync->RequestId(); _requestSession.emplace(ib, key); return ib; }
-		TickerId AddRequestSession( const ClientKey& key, TickerId ib )noexcept{ auto value = ib; if( value ) _requestSession.emplace(ib, key); else value = AddRequestSession(key); return value; }
-		TickerId RequestFind( const ClientKey& key )const noexcept;
-		void RequestErase( TickerId id )noexcept{ _requestSession.erase(id); }
+		α AddRequestSession( const ClientKey& key )noexcept{ const auto ib = _pClientSync->RequestId(); _requestSession.emplace(ib, key); return ib; }
+		α AddRequestSession( const ClientKey& key, TickerId ib )noexcept{ auto value = ib; if( value ) _requestSession.emplace(ib, key); else value = AddRequestSession(key); return value; }
+		α RequestFind( const ClientKey& key )const noexcept->TickerId;
+		α RequestErase( TickerId id )noexcept{ _requestSession.erase(id); }
 
-		bool HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
+		α HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
 
-		void TryPush( const std::exception& e, const ClientKey& key )noexcept{ TRY(Push(e, key)); }
-		void Push( const std::exception& e, const ClientKey& key )noexcept(false){ PushError( -1, e.what(), key );}
-		void Push( const IBException& e, const ClientKey& key )noexcept(false){ PushError( e.ErrorCode, e.what(), key );}
-		void PushError( int errorCode, sv errorString, TickerId id )noexcept;
-		void PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false);
+		α TryPush( const std::exception& e, const ClientKey& key )noexcept->void{ TRY(Push(e, key)); }
+		α Push( const std::exception& e, const ClientKey& key )noexcept(false)->void{ PushError( -1, e.what(), key );}
+		α Push( const IBException& e, const ClientKey& key )noexcept(false)->void{ PushError( e.ErrorCode, e.what(), key );}
+		α PushError( int errorCode, sv errorString, TickerId id )noexcept->void;
+		α PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false)->void;
 
-		void Push( MessageType&& pUnion, SessionPK id )noexcept(false);
-		void Push( vector<MessageType>&& pUnion, SessionPK id )noexcept(false);
-		void PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false);
+		α Push( MessageType&& pUnion, SessionPK id )noexcept(false)->void;
+		α Push( vector<MessageType>&& pUnion, SessionPK id )noexcept(false)->void;
+		α PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false)->void;
 
-		void Push( EResults eResults, const ClientKey& key )noexcept(false);
-		void Push( EResults eResults, TickerId ibReqId )noexcept;
-		void Push( EResults eResults, function<void(MessageType&)> set )noexcept;
-		void Push( EResults eResults, function<void(MessageType&, SessionPK)> set )noexcept;
+		α Push( EResults eResults, const ClientKey& key )noexcept(false)->void;
+		α Push( EResults eResults, TickerId ibReqId )noexcept->void;
+		α Push( EResults eResults, function<void(MessageType&)> set )noexcept->void;
+		α Push( EResults eResults, function<void(MessageType&, SessionPK)> set )noexcept->void;
 
-		bool Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false);
-		optional<bool> TryPush( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept{ return Try<bool>( [&]()->bool{return this->Push(id,set);} ); }
+		α Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false)->bool;
+		α TryPush( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept{ return Try<bool>( [&]()->bool{return this->Push(id,set);} ); }
 
-		void AccountDownloadEnd( sv accountNumber )noexcept override;
-		bool PortfolioUpdate( const Proto::Results::PortfolioUpdate& pMessage )noexcept override;
-		void ContractDetails( unique_ptr<Proto::Results::ContractDetailsResult> pDetails, TickerId tickerId )noexcept;
-		void Push( const Proto::Results::CommissionReport& report )noexcept;
-		bool AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept;
-		void AddRequestSessions( SessionPK id, const vector<Proto::Results::EResults>& webSendMessages )noexcept;
+		α AccountDownloadEnd( sv accountNumber )noexcept->void override;
+		α PortfolioUpdate( const Proto::Results::PortfolioUpdate& pMessage )noexcept->bool override;
+		α ContractDetails( up<Proto::Results::ContractDetailsResult> pDetails, TickerId tickerId )noexcept->void;
+		α Push( const Proto::Results::CommissionReport& report )noexcept->void;
+		α AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept->bool;
+		α AddRequestSessions( SessionPK id, const vector<Proto::Results::EResults>& webSendMessages )noexcept->void;
 
-		void SetClientSync( sp<TwsClientSync> pClient )noexcept{ DBG( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
+		α SetClientSync( sp<TwsClientSync> pClient )noexcept->void{ DBG( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
 	private:
-		void Push( string&& data, SessionPK sessionId )noexcept;
-		ClientKey GetClientRequest( TickerId ibReqId )noexcept{return _requestSession.Find( ibReqId ).value_or( ClientKey{} ); }
+		α Push( string&& data, SessionPK sessionId )noexcept->void;
+		α GetClientRequest( TickerId ibReqId )noexcept{return _requestSession.Find( ibReqId ).value_or( ClientKey{} ); }
 
-		void Run()noexcept;
-		void HandleRequest( SessionPK sessionId, string&& data )noexcept;
+		α Run()noexcept->void;
+		α HandleRequest( SessionPK sessionId, string&& data )noexcept->void;
 
-		flat_map<string,flat_map<SessionPK,Handle>> _accountSubscriptions; std::shared_mutex _accountSubscriptionMutex; unique_ptr<unique_lock<shared_mutex>> _accountSubscriptionPtr;
+		flat_map<string,flat_map<SessionPK,Handle>> _accountSubscriptions; std::shared_mutex _accountSubscriptionMutex; up<unique_lock<shared_mutex>> _accountSubscriptionPtr;
 		flat_map<ClientPK,flat_set<TickerId>> _multiRequests; mutable std::mutex _multiRequestMutex;//ie ask for multiple contractDetails
 		flat_set<SessionPK> _executionRequests; mutable std::shared_mutex _executionRequestMutex;
 
 		sp<Threading::InterruptibleThread> _pThread;
-		QueueValue<QueueType> _queue;
+		QueueValue<TQueue> _queue;
 		WebCoSocket& _webSocket;
 		sp<TwsClientSync> _pClientSync;
 		UnorderedMapValue<TickerId,uint32> _historicalCrcs; //mutable std::mutex _historicalCacheMutex;

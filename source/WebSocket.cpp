@@ -15,7 +15,7 @@ using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
 namespace Jde::Markets::TwsWebSocket
 {
-	shared_ptr<WebSocket> WebSocket::_pInstance{nullptr};
+	sp<WebSocket> WebSocket::_pInstance{nullptr};
 	WebSocket::WebSocket( uint16 port, sp<TwsClientSync> pClient )noexcept:
 		Threading::Interrupt( "webSocket", 100ms, true ),
 		_port{ port },
@@ -29,7 +29,7 @@ namespace Jde::Markets::TwsWebSocket
 	WebSocket& WebSocket::Create( uint16 port, sp<TwsClientSync> pClient )noexcept
 	{
 		ASSERT( !_pInstance );
-		_pInstance = shared_ptr<WebSocket>{ new WebSocket(port, pClient) };
+		_pInstance = sp<WebSocket>{ new WebSocket(port, pClient) };
 		IApplication::AddShutdown( _pInstance );
 		return *_pInstance;
 	}
@@ -58,7 +58,7 @@ namespace Jde::Markets::TwsWebSocket
 		boost::asio::io_context ioc{ 1 };
 		try
 		{
-			_pAcceptObject =  shared_ptr<tcp::acceptor>( new tcp::acceptor{ioc, {boost::asio::ip::tcp::v4(), (short unsigned int)_port}} );
+			_pAcceptObject =  sp<tcp::acceptor>( new tcp::acceptor{ioc, {boost::asio::ip::tcp::v4(), (short unsigned int)_port}} );
 		}
 		catch( boost::system::system_error& e )
 		{
@@ -86,7 +86,7 @@ namespace Jde::Markets::TwsWebSocket
 		DBG( "Leaving WebSocket::Accept()"sv );
 	}
 
-	void WebSocket::DoSession( shared_ptr<Stream> pSession )noexcept
+	void WebSocket::DoSession( sp<Stream> pSession )noexcept
 	{
 		var sessionId = ++_sessionId;
 		{
@@ -100,12 +100,12 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				if( se.code()==websocket::error::closed )
 					DBG( "Socket Closed on session {} when sending acceptance."sv, sessionId );
-				if( se.code() != websocket::error::closed )
+				if( se.code()!=websocket::error::closed )
 					ERR( "Error sending app - {}."sv, se.code().message() );
 			}
 			catch( const std::exception& e )
 			{
-				LOGS( ELogLevel::Error, e.what() );
+				Logging::Log( Logging::Message{ELogLevel::Error, e.what()} );
 			}
 		}
 		if( !_sessions.Find(sessionId) )

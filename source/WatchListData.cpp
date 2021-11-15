@@ -7,7 +7,7 @@
 //#define _socket WebSocket::Instance()
 namespace Jde::Markets::TwsWebSocket
 {
-	extern shared_ptr<Settings::Container> SettingsPtr;
+	extern sp<Settings::Container> SettingsPtr;
 
 	fs::path GetDir()noexcept(false)
 	{

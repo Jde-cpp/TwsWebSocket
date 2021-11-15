@@ -18,7 +18,7 @@ namespace Jde
 	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task2;
 	using Markets::Proto::Results::Tweets; using ProtoTweet=Markets::Proto::Results::Tweet;
 	using Markets::Proto::Results::TweetAuthors; using Markets::Proto::Results::TweetAuthor;
-	static const LogTag& _logLevel = Logging::TagLevel( "tws.tweet" );
+	static const LogTag& _logLevel = Logging::TagLevel( "app.tweet" );
 
 	std::atomic<bool> CanBlock=true;//app may not have permissions
 #define var const auto
@@ -48,7 +48,7 @@ namespace Jde
 				}
 				catch( const nlohmann::json::exception& e )
 				{
-					LOGS( ELogLevel::Warning, e.what() );
+					Logging::Log( Logging::Message(ELogLevel::Warning, e.what()) );
 				}
 			}
 			α CanBlock()const noexcept{ return ApiSecretKey.size() && ApiKey.size() && AccessToken.size() && AccessTokenSecret.size(); }
@@ -236,7 +236,7 @@ namespace Jde
 			}
 			pExisting = pTemp;
 		}
-		multimap<time_t,ProtoTweet*> existing;
+		std::multimap<time_t,ProtoTweet*> existing;
 		for( auto& t : *pExisting->mutable_values() )
 			existing.emplace( t.created_at(), &t );
 

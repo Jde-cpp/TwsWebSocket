@@ -17,8 +17,12 @@ namespace Jde::Markets::TwsWebSocket
 	struct BeastException : public IException
 	{
 		BeastException( sv what, beast::error_code&& ec, ELogLevel level=ELogLevel::Trace, SRCE )noexcept;
+		α Clone()noexcept->sp<IException> override{ return std::make_shared<BeastException>(move(*this)); }
 		Ω IsTruncated( const beast::error_code& ec )noexcept{ return ec == net::ssl::error::stream_truncated; }
 		Ω LogCode( const boost::system::error_code& ec, ELogLevel level, sv what )noexcept->void;
+		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
+		[[noreturn]] α Throw()->void override{ throw *this; }
+
 		beast::error_code ErrorCode;
 	};
 
