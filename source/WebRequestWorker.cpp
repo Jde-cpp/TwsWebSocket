@@ -65,7 +65,7 @@ namespace Jde::Markets::TwsWebSocket
 			auto pMessage = sp<Proto::Requests::RequestUnion>( transmission.mutable_messages()->ReleaseLast() );
 			auto& message = *pMessage;
 			if( message.has_string_request() )
-				Receive( message.string_request().type(), message.string_request().name(), {session, message.string_request().id()} );
+				Receive( message.string_request().type(), move(*message.mutable_string_request()->mutable_name()), {session, message.string_request().id()} );
 			else if( message.has_options() )
 				ReceiveOptions( session, message.options() );
 			else if( message.has_flex_executions() )
@@ -89,7 +89,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α WebRequestWorker::Receive( ERequests type, str name, const ClientKey& arg )noexcept->void
+	α WebRequestWorker::Receive( ERequests type, string&& name, const ClientKey& arg )noexcept->void
 	{
 		if( type==ERequests::Query )
 		{
@@ -189,6 +189,8 @@ namespace Jde::Markets::TwsWebSocket
 			WatchListData::SendList( name, {arg, _pWebSend} );
 		else if( type==ERequests::Tweets )
 			Twitter::Search( name, {arg, _pWebSend} );
+		else if( type==ERequests::RedditBlock )
+			Reddit::Block( move(name), mu<ProcessArg>(arg, _pWebSend) );
 		//else if( type==ERequests::Investors )
 //			EdgarRequests::Investors( name, {arg, _pWebSend} );
 	}

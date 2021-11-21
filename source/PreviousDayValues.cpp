@@ -91,7 +91,7 @@ namespace TwsWebSocket
 							double high=0.0, low = std::numeric_limits<double>::max();
 							for( var& bar : ibTrades )
 							{
-								pBar->set_volume( pBar->volume()+bar.volume );
+								pBar->set_volume( ToDouble(pBar->volume())+ToDouble(bar.volume) );
 								high = std::max( bar.high, high );
 								low = std::min( bar.low, low );
 							}

@@ -192,7 +192,7 @@ namespace Jde
 
 	α Twitter::Search( string symbol, ProcessArg arg )noexcept->Coroutine::Task2
 	{
-		var l = co_await Threading::CoLock( format("Twitter::Search.{}", symbol) );
+		var l = co_await Threading::CoLockKey( format("Twitter::Search.{}", symbol) );
 		set<uint> authors;
 		auto push = [=]( up<Tweets>&& p )
 		{
@@ -211,7 +211,7 @@ namespace Jde
 			pExisting = sp<Tweets>( IO::Proto::TryLoad<Tweets>(existingPath).release() );
 			LOG( "fetched from file {}", pExisting ? pExisting->values_size() : 0 );
 			if( !pExisting )
-				pExisting = make_shared<Tweets>();
+				pExisting = ms<Tweets>();
 		}
 		else if( Clock::from_time_t(pExisting->update_time())>Clock::now()-20min )
 		{
@@ -225,7 +225,7 @@ namespace Jde
 		else
 		{
 			LOG( "{}>{}"sv, ToIsoString(Clock::from_time_t(pExisting->update_time())), ToIsoString(Clock::now()-20min) );
-			auto pTemp = make_shared<Tweets>();
+			auto pTemp = ms<Tweets>();
 			pTemp->set_update_time( pExisting->update_time() );
 			pTemp->set_earliest_time( pExisting->earliest_time() );
 			var earliest = std::time(nullptr)-7*24*60*60;
@@ -244,7 +244,8 @@ namespace Jde
 		var additional = DB::Scaler<string>( "select query from twt_queries where tag=?", {symbol} ).value_or( string{} );
 		var prefix = additional.size() ? format("{}%20{}", Ssl::Encode(symbol), Ssl::Encode(additional) ) : Ssl::Encode( symbol );
 		constexpr sv suffix = "%20-is:retweet%20lang:en"sv;
-		var pExistingIgnoredTags = DB::SelectMap<string,uint>( "select tag, ignored_count from twt_tags order by 1", "twt_tags" ); auto pIgnoredTags = make_shared<flat_map<string,uint>>( *pExistingIgnoredTags );
+		var pExistingIgnoredTags = ( co_await DB::SelectMap<string,uint>("select tag, ignored_count from twt_tags order by 1", "twt_tags") ).Get<flat_map<string,uint>>();
+		auto pIgnoredTags = ms<flat_map<string,uint>>( *pExistingIgnoredTags );
 		flat_multimap<uint,string> ignoredSorted;
 		for_each( pExistingIgnoredTags->begin(), pExistingIgnoredTags->end(), [&ignoredSorted](var& i){ ignoredSorted.emplace(i.second,i.first);} );
 		ostringstream osIgnored; const CIString ciSymbol{ symbol };
@@ -259,7 +260,8 @@ namespace Jde
 		var query = format( "{}{}{}", prefix, osIgnored.str(), suffix );
 
 		LOG( "{} - {}"sv, query, ignoredSorted.size() );
-		var pBlockedUsers = DB::SelectSet<uint>( "select id from twt_handles where blocked=1", "twt_blocks", {} ); set<uint> newBlockedUsers;
+		var pBlockedUsers = ( co_await DB::SelectSet<uint>( "select id from twt_handles where blocked=1", {}, "twt_blocks") ).Get<flat_set<uint>>();
+		set<uint> newBlockedUsers;
 
 		var now = Clock::now();
 		var epoch = now-24h;
@@ -355,7 +357,7 @@ namespace Jde
 
 			if( newBlockedUsers.size() )
 			{
-				auto pCache = make_shared<flat_set<uint>>( *pBlockedUsers );
+				auto pCache = ms<flat_set<uint>>( *pBlockedUsers );
 				for( var id : newBlockedUsers )
 				{
 					if( CanBlock )
@@ -388,27 +390,23 @@ namespace Jde
 		auto pAuthorResults = make_unique<TweetAuthors>(); pAuthorResults->set_request_id( arg.ClientId );
 		if( authors.size() )
 		{
-			var add = [&authors,&pAuthorResults]( var& row ){ auto p = pAuthorResults->add_values(); p->set_id( row.GetUInt(0) ); p->set_screen_name( row.GetString(1) ); p->set_profile_url( row.GetString(2) ); authors.erase(p->id()); };
-			DB::SelectIds( "select id, screen_name, profile_image from twt_handles where id in ", authors, add );
-			for( var id : authors )
+			try
 			{
-				//LOG( "https://api.twitter.com/1.1/users/show.json?user_id={}", id );
-				sp<string> pResult;
-				try
+				var add = [&authors,&pAuthorResults]( var& row ){ auto p = pAuthorResults->add_values(); p->set_id( row.GetUInt(0) ); p->set_screen_name( row.GetString(1) ); p->set_profile_url( row.GetString(2) ); authors.erase(p->id()); };
+				DB::SelectIds( "select id, screen_name, profile_image from twt_handles where id in ", authors, add );
+				for( var id : authors )
 				{
-					pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
+					//LOG( "https://api.twitter.com/1.1/users/show.json?user_id={}", id );
+					auto pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
+					var j = nlohmann::json::parse( *pResult );
+					User user;
+					User::from_json( j, user );
+					LOG( "twt_user_insert({},{},{})"sv, user.Id, user.ScreenName, user.ProfileImageUrl );
+					DB::ExecuteProc( "twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl} );
+					auto p = pAuthorResults->add_values(); p->set_id( id ); p->set_screen_name( user.ScreenName ); p->set_profile_url( user.ProfileImageUrl );
 				}
-				catch( const IException& )
-				{
-					break;
-				}
-				var j = nlohmann::json::parse( *pResult );
-				User user;
-				User::from_json( j, user );
-				LOG( "twt_user_insert({},{},{})"sv, user.Id, user.ScreenName, user.ProfileImageUrl );
-				DB::ExecuteProc( "twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl} );
-				auto p = pAuthorResults->add_values(); p->set_id( id ); p->set_screen_name( user.ScreenName ); p->set_profile_url( user.ProfileImageUrl );
 			}
+			catch( const IException& ){}
 		}
 		MessageType m; m.set_allocated_tweet_authors( pAuthorResults.release() );
 		arg.Push( move(m) );

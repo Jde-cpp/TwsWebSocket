@@ -6,6 +6,7 @@
 		"description":{ "length": 2047 },
 		"path":{ "length": 4095 },
 		"bigId": { "type": "uint64", "sequence": true },
+		"pk": { "type": "uint32", "sequence": true },
 		"id": "uint32",
 		"smallId": "uint16",
 		"tinyId": "uint8",
@@ -132,6 +133,18 @@
 			{ "name": "name", "type": "name" }
 		],
 		"surrogateKey":["id"]
+	},
+	"rdtHandles":
+	{
+		"columns": [
+			{ "name": "id", "type": "pk" },
+			{ "name": "name", "length": 20 },
+			{ "name": "blocked", "type": "bool" },
+			{ "name": "updated", "type": "updated" }
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["name"],
+		"usePrefix": true
 	},
 	"twtBlocks":
 	{

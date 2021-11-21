@@ -110,8 +110,12 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
 		p->set_allocated_order( MyOrder{order}.ToProto().release() );
 		p->set_allocated_state( MyOrder::ToAllocatedProto(state) );
-		_pWebSend->Push( EResults::OpenOrder_, [&p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
-		_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_web_id(id); msg.set_allocated_open_order( p.release() );} );
+		try
+		{
+			_pWebSend->Push( EResults::OpenOrder_, [&p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
+			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_web_id(id); msg.set_allocated_open_order( p.release() );} );
+		}
+		catch( IException& e ){}
 	}
 	α WrapperWeb::openOrderEnd()noexcept->void
 	{
@@ -144,7 +148,7 @@ namespace Jde::Markets::TwsWebSocket
 		var deleted = DB::DefaultSyntax()->DateTimeSelect("deleted");
 		if( !pDataSource->TrySelect( format("select name, description, {}, id from ib_accounts", deleted), [&]( const DB::IRow& row )
 		{
-			var name = row.GetString( 0 ); var description = row.GetString( 1 ); var pDeleted = row.GetDateTimeOpt( 2 );
+			var name = row.GetString( 0 ); var description = row.GetString( 1 ); var pDeleted = row.GetTimePointOpt( 2 );
 			if( pDeleted )
 				_deletedAccounts.emplace( name );
 			else
