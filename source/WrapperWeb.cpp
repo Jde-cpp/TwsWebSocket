@@ -1,30 +1,20 @@
-#include "WrapperWeb.h"
-#include <thread>
-#include <TickAttrib.h>
+﻿#include "WrapperWeb.h"
 #include <CommissionReport.h>
-#include <Execution.h>
-
-#include "EWebReceive.h"
-#include "WebCoSocket.h"
-#include "../../Framework/source/um/UM.h"
-#include "../../Framework/source/Settings.h"
-#include "../../Framework/source/collections/Collections.h"
+#include <jde/markets/types/MyOrder.h>
 #include "../../Framework/source/db/Database.h"
 #include "../../Framework/source/db/GraphQL.h"
 #include "../../Framework/source/db/Syntax.h"
-#include "../../MarketLibrary/source/client/TwsClientSync.h"
-#include <jde/markets/types/Contract.h>
-#include <jde/markets/types/MyOrder.h>
+#include "../../Framework/source/um/UM.h"
 #include "../../MarketLibrary/source/types/OrderEnums.h"
+#include "WebCoSocket.h"
 
 #define var const auto
-
-namespace Jde::Markets::TwsWebSocket
-{
 #define _socket WebSocket::Instance()
 #define _client TwsClientSync::Instance()
 #define _webSend if( _pWebSend ) (*_pWebSend)
 
+namespace Jde::Markets::TwsWebSocket
+{
 	using Proto::Results::EResults;
 	sp<WrapperWeb> WrapperWeb::_pInstance{nullptr};
 
@@ -115,7 +105,7 @@ namespace Jde::Markets::TwsWebSocket
 			_pWebSend->Push( EResults::OpenOrder_, [&p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
 			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_web_id(id); msg.set_allocated_open_order( p.release() );} );
 		}
-		catch( IException& e ){}
+		catch( IException& ){}
 	}
 	α WrapperWeb::openOrderEnd()noexcept->void
 	{

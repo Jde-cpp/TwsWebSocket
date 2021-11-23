@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <boost/container/flat_map.hpp>
 #include <boost/core/noncopyable.hpp>
 #include "../../MarketLibrary/source/client/TwsClientSync.h"

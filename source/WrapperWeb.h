@@ -1,8 +1,8 @@
-#pragma once
+﻿#pragma once
 #include "../../MarketLibrary/source/wrapper/WrapperSync.h"
-#include "../../MarketLibrary/source/types/TwsConnectionSettings.h"
-struct EReaderSignal;
+
 namespace Jde::UM{ enum class EAccess : uint8; }
+
 namespace Jde::Markets::TwsWebSocket
 {
 	struct WebSendGateway;

@@ -19,6 +19,9 @@
     <Filter Include="Header Files\requests">
       <UniqueIdentifier>{4651686e-b8cb-4418-85dc-cf6fb3600470}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\data">
+      <UniqueIdentifier>{9df65c9d-295d-40e6-9646-31ea0ae0554b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WebSocket.h">

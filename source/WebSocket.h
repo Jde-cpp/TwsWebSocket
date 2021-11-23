@@ -1,12 +1,10 @@
-#pragma once
+﻿#pragma once
 #include <boost/asio.hpp>
 #include <boost/beast/websocket.hpp>
 #include "WebRequestWorker.h"
 #include "../../Framework/source/threading/Interrupt.h"
 
 //https://www.boost.org/doc/libs/1_71_0/libs/beast/example/websocket/server/sync/websocket_server_sync.cpp
-
-//------------------------------------------------------------------------------
 namespace boost::asio::ip{ class tcp; }
 namespace Jde::Markets::TwsWebSocket
 {
@@ -25,7 +23,7 @@ namespace Jde::Markets::TwsWebSocket
 		α OnAwake()noexcept->void override{ OnTimeout(); }//unexpected
 
 		α Shutdown()noexcept->void override;
-		sp<WebSendGateway> WebSend()noexcept{ return _pWebSend; }
+		α WebSend()noexcept->sp<WebSendGateway>{ return _pWebSend; }
 
 		α AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept->void;
 		α AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept->void;
@@ -37,7 +35,7 @@ namespace Jde::Markets::TwsWebSocket
 		α Accept()noexcept->void;
 		WebSocket()=delete;
 		WebSocket( const WebSocket& )=delete;
-		WebSocket& operator=( const WebSocket& )=delete;
+		α operator=( const WebSocket& )->WebSocket& = delete;
 		WebSocket( uint16 port, sp<TwsClientSync> pClient )noexcept;
 
 		std::atomic<SessionPK> _sessionId{0};

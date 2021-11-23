@@ -28,16 +28,12 @@ function myFetch
 
 myFetch Framework framework-build.sh
 if [[ -z $sourceBuild ]]; then source jde/Framework/source-build.sh; fi;
-
 if ! windows; then set disable-completion on; fi;
 
-myFetch MarketLibrary market-build.sh
-cd jde/MarketLibrary;
-./market-build.sh $clean $shouldFetch 1; if [ $? -ne 0 ]; then echo market-build.sh failed - $?; exit 1; fi;
-echo market-build complete
-echo scriptDir=$scriptDir;
-includeDir=$scriptDir/jde/Public/jde;
-cd $includeDir/blockly/types/proto;
+$JDE_BASH/Framework/framework-build.sh $clean $shouldFetch $buildBoost; if [ $? -ne 0 ]; then echo framework-build.sh failed - $?; exit 1; fi;
+######################################################
+pushd `pwd`> /dev/null;
+cd $JDE_BASH/Public/jde/blockly/types/proto;
 blocklyProtoDir=`pwd`;
 if [ $clean -eq 1 ]; then
     rm *.pb.h > /dev/null;
@@ -50,6 +46,23 @@ if [ ! -f blockly.pb.h ]; then
 		sed -i 's/PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT FunctionDefaultTypeInternal _Function_default_instance_;/PROTOBUF_ATTRIBUTE_NO_DESTROY FunctionDefaultTypeInternal _Function_default_instance_;/' blockly.pb.cc;
 	fi;
 fi;
+popd> /dev/null;
+######################################################
+if [ $buildPrivate -eq 1 ]; then
+	fetchDefault Blockly;
+	if [ ! -d types/proto ]; then cd types;mkdir proto; cd ..; fi;
+	cd types/proto
+	if [ -f $blocklyProtoDir/blockly.pb.cc ]; then
+		mv $blocklyProtoDir/blockly.pb.cc .;
+		mkklink blockly.pb.h $blocklyProtoDir; 
+	fi;
+	cd ../..;
+    build Blockly;
+fi;
+myFetch MarketLibrary market-build.sh
+cd jde/MarketLibrary;
+$JDE_BASH/MarketLibrary/market-build.sh $clean $shouldFetch 0; if [ $? -ne 0 ]; then echo market-build.sh failed - $?; exit 1; fi;
+echo market-build complete
 
 fetchBuild Ssl;
 fetchBuild Google;
@@ -62,7 +75,7 @@ if [ $buildPrivate -eq 1 ]; then
 		mv $blocklyProtoDir/blockly.pb.cc ./types/proto/blockly.pb.cc;
 		ln -s $blocklyProtoDir/blockly.pb.h ./types/proto/blockly.pb.h;
 	fi;
-    build Blockly;
+    #build Blockly;
     build Blockly.Executor;
     fetchDefault Private;
     cd markets/edgar;
