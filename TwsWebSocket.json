@@ -15,11 +15,10 @@
 		"accessTokenSecret": "jU9wukfQj8QtxdEr9STdZtAYB8YfwuiqLUZlbFMCPm8hY",
 		"bearerToken":  "AAAAAAAAAAAAAAAAAAAAAK4%2BQwEAAAAA1xFHmgX5qvO5p0ibEd8uZf3%2BlJE%3DY8cBxNiF0wa7KrCysQPOs4ArMA8twYQhDUvBU479mgoFxr9Prm",
 		"backupPath": "/mnt/2TB/tweets"
-
 	},
 	"logging":
 	{
-		"tags": [ "_http","_sql", "tws-requests", "tws.webRequests", "mrk.hist", "_tweet" ],
+		"tags": [ "_http","_sql", "tws-requests", "app.webRequests", "_mrk-hist", "_app.tweet" ],
 		"console":{},
 		"file":{ "path": ".." },
 		"server": { "port": 4321, "level": "Debug", "diagnosticsLevel": "Debug", "tags": {"threads":"Debug"} }
@@ -27,7 +26,6 @@
 	"twsWebSocket":
 	{
 		"webSocketPort":  6811,
-		"twsClientId": 8,
 		"flexPath":  "",
 		"watchDir": ""
 	},
@@ -36,7 +34,8 @@
 		"host": "localhost",
 		"options": "",
 		"ports": [7497,7496,4001,4002],
-		"maxHistoricalDataRequest": 40
+		"maxHistoricalDataRequest": 40,
+		"clientId": 8
 	},
 	"um":
 	{
