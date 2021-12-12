@@ -6,6 +6,7 @@
 #include "../../Framework/source/db/Syntax.h"
 #include "../../Framework/source/um/UM.h"
 #include "../../MarketLibrary/source/types/OrderEnums.h"
+#include "../../MarketLibrary/source/data/Accounts.h"
 #include "WebCoSocket.h"
 
 #define var const auto
@@ -16,6 +17,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	using Proto::Results::EResults;
+	using namespace Proto::Results;
 	sp<WrapperWeb> WrapperWeb::_pInstance{nullptr};
 
 	WrapperWeb::WrapperWeb()noexcept
@@ -23,6 +25,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	α WrapperWeb::CreateInstance()noexcept(false)->tuple<sp<TwsClientSync>,sp<WrapperWeb>>
 	{
+		AccountAuthorizer::Initialize();
 		ASSERT( !_pInstance );
 		_pInstance = sp<WrapperWeb>( new WrapperWeb() );
 		auto pClient = _pInstance->CreateClient( Settings::Get<uint>("tws/clientId") );
@@ -38,7 +41,7 @@ namespace Jde::Markets::TwsWebSocket
 		return WrapperSync::CreateClient( twsClientId );
 	}
 
-	α WrapperWeb::TryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept->bool{auto p = _pInstance; return p ? p->tryTestAccess( requested, name, sessionId, allowDeleted ) : false; }
+/*	α WrapperWeb::TryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept->bool{auto p = _pInstance; return p ? p->tryTestAccess( requested, name, sessionId, allowDeleted ) : false; }
 	α WrapperWeb::tryTestAccess( UM::EAccess requested, sv name, SessionPK sessionId, bool allowDeleted )noexcept->bool
 	{
 		var pSocket = WebCoSocket::Instance();
@@ -65,7 +68,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		return haveAccess;
 	}
-
+*/
 	α WrapperWeb::nextValidId( ::OrderId orderId)noexcept->void
 	{
 		WrapperLog::nextValidId( orderId );
@@ -88,29 +91,32 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_client_id( clientId );
 		p->set_why_held( whyHeld );
 		p->set_market_cap_price( mktCapPrice );
-		//could subscribe to all orders or just the one.
-		_pWebSend->Push( EResults::OrderStatus_, [&p](MessageType& msg){msg.set_allocated_order_status(new Proto::Results::OrderStatus{*p});} );
-		_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_id( id ); msg.set_allocated_order_status( p.release() );} );
+		try
+		{
+			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){ p->set_id( id ); msg.set_allocated_order_status( new Proto::Results::OrderStatus{*p});} );
+		}
+		catch( IException& ){}
+		AllOpenOrdersAwait::Push( move(p) );
 	}
 	α WrapperWeb::openOrder( ::OrderId orderId, const ::Contract& contract, const ::Order& order, const ::OrderState& state )noexcept->void
 	{
 		WrapperLog::openOrder( orderId, contract, order, state );
 		if( !_pWebSend ) return;
-		auto p = make_unique<Proto::Results::OpenOrder>();
+		auto p = make_unique<OpenOrder>();
 		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
 		p->set_allocated_order( MyOrder{order}.ToProto().release() );
 		p->set_allocated_state( MyOrder::ToAllocatedProto(state) );
 		try
 		{
-			_pWebSend->Push( EResults::OpenOrder_, [&p](MessageType& msg){msg.set_allocated_open_order(new Proto::Results::OpenOrder{*p});} );
-			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_web_id(id); msg.set_allocated_open_order( p.release() );} );
+			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_web_id(id); msg.set_allocated_open_order( new OpenOrder{*p} );} );
 		}
 		catch( IException& ){}
+		AllOpenOrdersAwait::Push( move(p) );
 	}
 	α WrapperWeb::openOrderEnd()noexcept->void
 	{
 		WrapperLog::openOrderEnd();
-		_webSend.Push( EResults::OpenOrderEnd, [](MessageType& msg){msg.set_type(EResults::OpenOrderEnd);} );
+		AllOpenOrdersAwait::Finish();
 	}
 	α WrapperWeb::positionMulti( int reqId, str account, str modelCode, const ::Contract& contract, ::Decimal pos, double avgCost )noexcept->void
 	{
@@ -129,7 +135,7 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::positionMultiEnd( reqId );
 		_pWebSend->Push( EResults::PositionMultiEnd, reqId );
 	}
-	α WrapperWeb::LoadAccess()noexcept->void
+/*	α WrapperWeb::LoadAccess()noexcept->void
 	{
 		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
 		unique_lock l{ _accountMutex };
@@ -154,6 +160,7 @@ namespace Jde::Markets::TwsWebSocket
 				TRACE( "({}) accountId is deleted", accountId );
 		} );
 	}
+
 	α WrapperWeb::LoadMinimumAccess()noexcept->void
 	{
 		auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
@@ -163,8 +170,8 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			_minimumAccess[(UserPK)row.GetUInt(0)] = (UM::EAccess)row.GetUInt16( 1 );
 		}) ) return;
-
 	}
+*/
 	static bool _setAccounts{false};
 	α WrapperWeb::managedAccounts( str accountsList )noexcept->void
 	{
@@ -173,44 +180,29 @@ namespace Jde::Markets::TwsWebSocket
 		var accounts = Str::Split( accountsList );
 		if( !_setAccounts )
 		{
-			LoadAccess();
-			LoadMinimumAccess();
-			shared_lock l{ _accountMutex };
-			auto pDataSource = DB::DataSource(); RETURN_IF( !pDataSource, "No Datasource" );
 			for( var& name : accounts )
 			{
-				if( !_deletedAccounts.contains(name) && !_accounts.contains(name) && pDataSource->TryExecuteProc("ib_account_insert( ?, 0, ?, null )", {name,name}) )
+				if( !Accounts::Find(name) )
 				{
-					_accounts.emplace( name, Account{name} );
-					INFO( "inserted account '{}'."sv, name );
+					TRY( Accounts::Insert(name) );
 				}
 			}
-			DB::AddMutationListener( "ib", [this](const DB::MutationQL& m, PK /*id*/)
-			{
-				if( m.JsonName.ends_with( "AccountRoles") || m.JsonName.ends_with( "RoleAccounts") )
-					LoadAccess();
-			} );
-			DB::AddMutationListener( "um", [this]( const DB::MutationQL& m, PK /*id*/ )
-			{
-				if( m.JsonName.ends_with( "RolePermissions") || m.JsonName.ends_with( "PermissionRoles") )
-					LoadMinimumAccess();
-			} );
+			_setAccounts = true;
 		}
-		_setAccounts = true;
 		shared_lock l{ _accountMutex };
 		for( var& account : accounts )
 		{
 			(*accountList.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second.Description : account;
 		}
-		_webSend.Push( EResults::ManagedAccounts, [&accountList, this]( auto& m, SessionPK sessionId )
+		_webSend.Push( EResults::ManagedAccounts, [&accountList]( auto& m, SessionPK sessionId )
 		{
 			var pSocket = WebCoSocket::Instance(); if( !pSocket ) return;
 			var userId = pSocket->TryUserId( sessionId );
 			Proto::Results::StringMap userList; userList.set_result( EResults::ManagedAccounts );
-			for( var& [name,description] : accountList.values() )
+			for( var& [ibName,description] : accountList.values() )
 			{
-				if( tryTestAccess(UM::EAccess::Read, userId, name) )
-					(*userList.mutable_values())[name] = description;
+				if( Accounts::CanRead(ibName, userId) )
+					(*userList.mutable_values())[ibName] = description;
 			}
 			m.set_allocated_string_map( new Proto::Results::StringMap{userList} );
 		});
@@ -301,14 +293,14 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α WrapperWeb::commissionReport( const CommissionReport& ib )noexcept->void
+	α WrapperWeb::commissionReport( const ::CommissionReport& ib )noexcept->void
 	{
 		Proto::Results::CommissionReport a; a.set_exec_id( ib.execId ); a.set_commission( ib.commission ); a.set_currency( ib.currency ); a.set_realized_pnl( ib.realizedPNL ); a.set_yield( ib.yield ); a.set_yield_redemption_date( ib.yieldRedemptionDate );
 		_pWebSend->Push( a );
 	}
-	α WrapperWeb::execDetails( int reqId, const ::Contract& contract, const Execution& ib )noexcept->void
+	α WrapperWeb::execDetails( int reqId, const ::Contract& contract, const ::Execution& ib )noexcept->void
 	{
-		auto p = make_unique<Proto::Results::Execution>();
+		auto p = make_unique<Execution>();
 		p->set_exec_id( ib.execId );
 		var time = ib.time;
 		ASSERT( time.size()==18 );

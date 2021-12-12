@@ -13,7 +13,7 @@ namespace Jde::Markets::TwsWebSocket
 		α AddRequestSession()const noexcept{ return WebSendPtr->AddRequestSession( *this ); }
 		β Push( MessageType&& m )const noexcept(false)->void{ WebSendPtr->Push( move(m), SessionId); }
 		//virtual α Push( const IException& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
-		α Push( const std::exception& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
+		β Push( const std::exception& e )const noexcept->void{ TRY(WebSendPtr->Push(e, *this)); }
 		α Push( EResults x )const noexcept{ WebSendPtr->Push(x, *this); }
 		sp<WebSendGateway> WebSendPtr;
 	};

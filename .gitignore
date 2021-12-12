@@ -57,3 +57,4 @@ setup/.vs/*
 .gitignore
 setup/Release/*
 *.aps
+source/meta.json

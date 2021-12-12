@@ -123,7 +123,30 @@ namespace Jde::Markets::TwsWebSocket
 				((TwsClientCache&)*pTws).ReqContractDetails( reqId, *contract.ToTws() );
 		}
 	}
-
+	α TwsSendWorker::RequestAllOpenOrders( ClientKey t )noexcept->Task2
+	{
+		try
+		{
+			var p = ( co_await Tws::RequestAllOpenOrders() ).Get<Proto::Results::Orders>();
+			auto pResults = mu<Proto::Results::Orders>(); pResults->set_request_id( t.ClientId );
+			for( var& order : p->orders() )
+			{
+				//var& o = order.order();
+				//UM::TestAccess( EAccess::Read, client.UserId, sv tableName )noexcept(false)->void; //TODO check permissions
+				*pResults->add_orders() = order;
+			}
+			for( var& s : p->statuses() )
+			{
+				*pResults->add_statuses() = s;
+			}
+			MessageType m; m.set_allocated_orders( pResults.release() );
+			_webSendPtr->Push( move(m), t.SessionId );
+		}
+		catch( IException& e )
+		{
+			_webSendPtr->Push( e, t );
+		}
+	}
 	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData r, SessionKey session )noexcept(false)->Task2
 	{
 		try
@@ -213,12 +236,14 @@ namespace Jde::Markets::TwsWebSocket
 		_tws.reqPositionsMulti( _web.AddRequestSession({{session.SessionId},r.id()}), r.account_number(), r.model_code() );
 	}
 
-	α TwsSendWorker::Request( const Proto::Requests::GenericRequest& r, const SessionKey& key )noexcept->void
+	α TwsSendWorker::Request( const Proto::Requests::GenericRequest& r, const SessionKey& t )noexcept->void
 	{
 		if( r.type()==ERequests::RequestOptionParams )
-			RequestOptionParams( r.id(), (int)r.item_id(), move(key) );
+			RequestOptionParams( r.id(), (int)r.item_id(), move(t) );
+		else if( r.type()==ERequests::RequestAllOpenOrders )
+			RequestAllOpenOrders( {t, r.id()} );
 		else
-			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", key.SessionId, r.id(), r.type() );
+			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", t.SessionId, r.id(), r.type() );
 	}
 
 	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, const SessionKey& session )noexcept
@@ -242,11 +267,6 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			_web.AddRequestSessions( session.SessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
 			_tws.reqOpenOrders();
-		}
-		else if( r.type()==ERequests::RequestAllOpenOrders )
-		{
-			_web.AddRequestSessions( session.SessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );
-			_tws.reqAllOpenOrders();//not a subscription.
 		}
 		else if( r.type()==ERequests::CancelMarketData )
 		{

@@ -16,7 +16,12 @@
 			"showDisplayString": true,
 			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 			"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.31":"/home/duffyj/code/libraries/glibc-2.31" },
-			"preLaunchTask": "build"
+			"preLaunchTask": "build",
+			"logging": {
+				"engineLogging": true,
+				"trace": true,
+				"traceResponse": true
+			}
 		},
 		{
 			"name": "Release",

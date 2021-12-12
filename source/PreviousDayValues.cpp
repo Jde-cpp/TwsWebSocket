@@ -102,13 +102,13 @@ namespace TwsWebSocket
 						if( arg.SessionId )
 							arg.WebSendPtr->Push( move(msg), arg.SessionId );
 					}
+					if( isEnd )
+						arg.WebSendPtr->Push( EResults::MultiEnd, arg );
 				}
 				catch( IException& e )
 				{
 					h.promise().get_return_object().SetResult( e.Clone() );
 				}
-				if( isEnd )
-					arg.WebSendPtr->Push( EResults::MultiEnd, arg );
 				h.resume();
 			});
 		};

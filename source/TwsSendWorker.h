@@ -31,7 +31,7 @@ namespace Jde::Markets::TwsWebSocket
 		α Order( const Proto::Requests::PlaceOrder& order, const SessionKey& key )noexcept->void;
 		α Positions( const Proto::Requests::RequestPositions& request, const SessionKey& key )noexcept->void;
 		α RequestOptionParams( ClientPK reqId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task2;
-
+		α RequestAllOpenOrders( ClientKey client )noexcept->Task2;
 		α GetContract( ContractPK contractId )noexcept(false)->::Contract;
 		α Requests( const Proto::Requests::GenericRequests& request, const SessionKey& key )noexcept->void;
 		α Request( const Proto::Requests::GenericRequest& r, const SessionKey& key )noexcept->void;

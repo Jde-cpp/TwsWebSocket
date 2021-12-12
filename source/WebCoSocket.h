@@ -70,8 +70,8 @@ namespace Jde::Markets::TwsWebSocket
 		void HandleIncoming( WebRequestMessage&& data )noexcept{ _requestWorker.Push(move(data)); }
 		sp<WebSendGateway> WebSend(){ return _pWebSend; }
 		void SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept;
-		α UserId( SessionPK sessionId )noexcept(false)->UserPK;
-		α TryUserId( SessionPK sessionId )noexcept->UserPK;
+		//Ω UserId( SessionPK sessionId )noexcept(false)->UserPK;
+		Ω TryUserId( SessionPK sessionId )noexcept->UserPK;
 
 		Ω SetLevel( ELogLevel l )noexcept->void;
 	private:

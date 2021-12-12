@@ -19,7 +19,7 @@ namespace Jde::Markets::TwsWebSocket
 		α EraseSession( SessionPK id )noexcept->void;
 		α AddExecutionRequest( SessionPK id ){ unique_lock l{_executionRequestMutex}; _executionRequests.emplace( id ); }
 		α AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept->void;
-		α AddAccountSubscription( sv account, SessionPK sessionId )noexcept->bool;
+		α AddAccountSubscription( string ibId, SessionPK sessionId )noexcept->void;
 		α UpdateAccountValue( sv key, sv value, sv currency, sv accountName )noexcept->bool override;
 		α AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept->void;
 		α RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock=false )noexcept->tuple<TickerId,flat_set<Proto::Requests::ETickList>>;
@@ -45,7 +45,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		α Push( EResults eResults, const ClientKey& key )noexcept(false)->void;
 		α Push( EResults eResults, TickerId ibReqId )noexcept->void;
-		α Push( EResults eResults, function<void(MessageType&)> set )noexcept->void;
+		//α Push( EResults eResults, function<void(MessageType&)> set )noexcept->void;
 		α Push( EResults eResults, function<void(MessageType&, SessionPK)> set )noexcept->void;
 
 		α Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false)->bool;

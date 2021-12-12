@@ -121,17 +121,22 @@ namespace Jde::Markets::TwsWebSocket
 		} );
 	}
 
-	α WebCoSocket::UserId( SessionPK sessionId )noexcept(false)->UserPK
+/*	α WebCoSocket::UserId( SessionPK sessionId )noexcept(false)->UserPK
 	{
 		var userPK = TryUserId( sessionId ); THROW_IFL( !userPK, "({})Could not find UserId.", sessionId );
 		return userPK;
 	}
-
+*/
 	α WebCoSocket::TryUserId( SessionPK sessionId )noexcept->UserPK
 	{
-		shared_lock l{ _sessionMutex };
-		var p = _sessions.find( sessionId );
-		return p==_sessions.end() ? 0 : p->second.UserId;
+		UserPK pk{};
+		if( auto pInstance = _pInstance; pInstance )
+		{
+			sl l{ pInstance->_sessionMutex };
+			var p = pInstance->_sessions.find( sessionId );
+			pk = p==pInstance->_sessions.end() ? 0 : p->second.UserId;
+		}
+		return pk;
 	}
 
 	string _host;

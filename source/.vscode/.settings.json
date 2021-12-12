@@ -108,7 +108,8 @@
 		"version": "cpp",
 		"*.def": "cpp",
 		"__availability": "cpp",
-		"__memory": "cpp"
+		"__memory": "cpp",
+		"__bits": "cpp"
 	},
-	"window.title": "TwsWebSocket"
+	"window.title": "Tws"
 }

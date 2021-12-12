@@ -19,7 +19,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		α contractDetails( int reqId, const ContractDetails& contractDetails)noexcept->void override;
 		α contractDetailsEnd( int reqId)noexcept->void override;
-		α commissionReport( const CommissionReport& commissionReport)noexcept->void override;
+		α commissionReport( const ::CommissionReport& commissionReport)noexcept->void override;
 		α execDetails( int reqId, const ::Contract& contract, const Execution& execution)noexcept->void override;
 		α execDetailsEnd( int reqId)noexcept->void override;
 
@@ -40,15 +40,15 @@ namespace Jde::Markets::TwsWebSocket
 		α SetWebSend( sp<WebSendGateway> pWebSend )noexcept{ _pWebSend = pWebSend; }
 		α AddAccountUpdateCallback( string account, function<void(const Proto::Results::AccountUpdate&)> callback )noexcept->void;
 
-		Ω TryTestAccess( UM::EAccess access, sv name, SessionPK sessionId, bool allowDeleted=false )noexcept->bool;
-		Ω TryTestAccess( UM::EAccess access, UserPK userId, sv name, bool allowDeleted=false )noexcept->bool;
-		α tryTestAccess( UM::EAccess access, sv name, SessionPK sessionId, bool allowDeleted=false )noexcept->bool;
-		α tryTestAccess( UM::EAccess access, UserPK userId, sv name, bool allowDeleted=false )noexcept->bool;
+		// Ω TryTestAccess( UM::EAccess access, sv name, SessionPK sessionId, bool allowDeleted=false )noexcept->bool;
+		// Ω TryTestAccess( UM::EAccess access, UserPK userId, sv name, bool allowDeleted=false )noexcept->bool;
+		// α tryTestAccess( UM::EAccess access, sv name, SessionPK sessionId, bool allowDeleted=false )noexcept->bool;
+		// α tryTestAccess( UM::EAccess access, UserPK userId, sv name, bool allowDeleted=false )noexcept->bool;
 	private:
 		WrapperWeb()noexcept;
 
-		α LoadAccess()noexcept->void;
-		α LoadMinimumAccess()noexcept->void;
+		//α LoadAccess()noexcept->void;
+		//α LoadMinimumAccess()noexcept->void;
 		α CreateClient( uint twsClientId )noexcept(false)->sp<TwsClientSync> override;
 		α HandleBadTicker( TickerId ibReqId )noexcept->void;
 

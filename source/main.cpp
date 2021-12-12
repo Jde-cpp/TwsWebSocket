@@ -28,7 +28,7 @@ int main( int argc, char** argv )
 		IApplication::AddThread( std::make_shared<Threading::InterruptibleThread>("Startup", [&](){Markets::TwsWebSocket::Startup();}) );
 
 		IApplication::Pause();
-		IApplication::CleanUp();
+		IApplication::Cleanup();
 		result = 0;
 	}
 	catch( const IException& e )
