@@ -36,7 +36,7 @@ namespace Jde::Markets::TwsWebSocket
 		α TryPush( const std::exception& e, const ClientKey& key )noexcept->void{ TRY(Push(e, key)); }
 		α Push( const std::exception& e, const ClientKey& key )noexcept(false)->void{ PushError( -1, e.what(), key );}
 		α Push( const IBException& e, const ClientKey& key )noexcept(false)->void{ PushError( e.ErrorCode, e.what(), key );}
-		α PushError( int errorCode, sv errorString, TickerId id )noexcept->void;
+		α PushError( int errorCode, string errorString, TickerId id )noexcept->void;
 		α PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false)->void;
 
 		α Push( MessageType&& pUnion, SessionPK id )noexcept(false)->void;

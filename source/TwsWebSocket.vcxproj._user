@@ -5,11 +5,17 @@
     <LibraryPath>C:\Program Files\OpenSSL-Win64\lib;$(BOOST_DIR)\stage\lib;$(REPO_DIR)\IntelRDFPMathLib20U2\LIBRARY;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <LocalDebuggerCommandArguments>-c</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-c xxxx</LocalDebuggerCommandArguments>
     <LibraryPath>$(REPO_DIR)\protobuf\cmake\build\sln\debug;$(REPO_DIR)\vcpkg\installed\x64-windows\debug\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <LocalDebuggerCommandArguments>-c</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-c xxxx</LocalDebuggerCommandArguments>
     <LibraryPath>$(REPO_DIR)\protobuf\cmake\build\sln\release;$(REPO_DIR)\vcpkg\installed\x64-windows\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

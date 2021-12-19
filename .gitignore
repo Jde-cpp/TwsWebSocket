@@ -58,3 +58,4 @@ setup/.vs/*
 setup/Release/*
 *.aps
 source/meta.json
+TwsWebSocket.json

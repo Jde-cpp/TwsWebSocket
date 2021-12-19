@@ -232,13 +232,13 @@ namespace Jde::Markets::TwsWebSocket
 			THROW( "Could not find any market subscriptions." );
 	}
 
-	α WebSendGateway::PushError( int errorCode, sv errorString, TickerId id )noexcept->void
+	α WebSendGateway::PushError( int errorCode, string errorString, TickerId id )noexcept->void
 	{
 		if( id>0 )
 		{
 			var key = GetClientRequest( id );
 			if( key.SessionId )
-				Push( IBException{errorString, errorCode, -1}, key );
+				Push( IBException{move(errorString), errorCode, -1}, key );
 			else
 				DBG( "Could not find session for error req:  '{}'."sv, id );
 		}
