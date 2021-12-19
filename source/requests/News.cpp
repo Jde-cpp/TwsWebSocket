@@ -37,7 +37,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const IException& e )
 		{
-			arg.Push( e );
+			arg.Push( "Requesting providers failed", e );
 		}
 	}
 
@@ -59,9 +59,9 @@ namespace Jde::Markets::TwsWebSocket
 			MessageType type; type.set_allocated_news( move(pResults.release()) );
 			arg.Push( move(type) );
 		}
-		catch( const std::exception& e )
+		catch( IException& e )
 		{
-			arg.Push( e );
+			arg.Push( "requesting historical failed", e );
 		}
 	}
 

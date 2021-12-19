@@ -172,34 +172,28 @@ namespace Jde::Markets::TwsWebSocket
 		}) ) return;
 	}
 */
-	static bool _setAccounts{false};
-	α WrapperWeb::managedAccounts( str accountsList )noexcept->void
+/*	α WrapperWeb::managedAccounts(str x)noexcept->void
 	{
-		WrapperLog::managedAccounts( accountsList );
-		Proto::Results::StringMap accountList;
-		var accounts = Str::Split( accountsList );
-		if( !_setAccounts )
+		WrapperLog::managedAccounts( x );
+		Proto::Results::StringMap accounts;
+		for( auto&& ibName : Str::Split(x) )
 		{
-			for( var& name : accounts )
-			{
-				if( !Accounts::Find(name) )
-				{
-					TRY( Accounts::Insert(name) );
-				}
-			}
-			_setAccounts = true;
+			auto p = Accounts::Find( ibName );
+			auto&& account = p.value_or( Accounts::TryInsert(ibName).value_or(Account{}) );
+			if( account.Id )
+				(*accounts.mutable_values())[move(ibName)] = move( account.Description );
 		}
-		shared_lock l{ _accountMutex };
+/*		shared_lock l{_accountMutex};
 		for( var& account : accounts )
 		{
-			(*accountList.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second.Description : account;
-		}
-		_webSend.Push( EResults::ManagedAccounts, [&accountList]( auto& m, SessionPK sessionId )
+			(*accounts.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second.Description : account;
+		}* /
+		_webSend.Push( EResults::ManagedAccounts, [&accounts]( auto& m, SessionPK sessionId )
 		{
 			var pSocket = WebCoSocket::Instance(); if( !pSocket ) return;
 			var userId = pSocket->TryUserId( sessionId );
 			Proto::Results::StringMap userList; userList.set_result( EResults::ManagedAccounts );
-			for( var& [ibName,description] : accountList.values() )
+			for( var& [ibName,description] : accounts.values() )
 			{
 				if( Accounts::CanRead(ibName, userId) )
 					(*userList.mutable_values())[ibName] = description;
@@ -207,6 +201,7 @@ namespace Jde::Markets::TwsWebSocket
 			m.set_allocated_string_map( new Proto::Results::StringMap{userList} );
 		});
 	}
+*/
 	α WrapperWeb::accountUpdateMulti( int reqId, str accountName, str modelCode, str key, str value, str currency )noexcept->void
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
@@ -238,8 +233,8 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				ASSERT(false);// not sure of use case _pWebSend->Push( reqId, [](MessageType& msg, ClientPK id){ auto p=new Proto::Results::HistoricalData{}; p->set_request_id(id); msg.set_allocated_historical_data(p); } );
 			}
-			else if( reqId>0 )
-				_pWebSend->PushError( errorCode, errorString, reqId );
+			//else if( reqId>0 )  Obsolete?
+			//	_pWebSend->PushError( errorString, reqId, errorCode );
 		}
 	}
 

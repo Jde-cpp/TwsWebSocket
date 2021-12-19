@@ -12,8 +12,8 @@ namespace Jde::Markets::TwsWebSocket
 		ProcessArg()=default;
 		α AddRequestSession()const noexcept{ return WebSendPtr->AddRequestSession( *this ); }
 		β Push( MessageType&& m )const noexcept(false)->void{ WebSendPtr->Push( move(m), SessionId); }
-		//virtual α Push( const IException& e )const noexcept{ TRY(WebSendPtr->Push(e, *this)); }
-		β Push( const std::exception& e )const noexcept->void{ TRY(WebSendPtr->Push(e, *this)); }
+		α Push( string m, const IException& e )const noexcept{ WebSendPtr->Push( move(m), e, *this ); }
+		β PushError( string m )const noexcept->void{ WebSendPtr->PushError( move(m), *this ); }
 		α Push( EResults x )const noexcept{ WebSendPtr->Push(x, *this); }
 		sp<WebSendGateway> WebSendPtr;
 	};

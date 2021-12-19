@@ -9,7 +9,7 @@
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
-	static const LogTag& _logLevel = Logging::TagLevel( "app.toWeb" );
+	static const LogTag& _logLevel = Logging::TagLevel( "app-toWeb" );
 
 
 	using Proto::Results::MessageUnion;
@@ -124,7 +124,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}
 		else
-			PushError( -6, format("No access to {}.", move(ibId)), {{sessionId}} );
+			Push( format("No access to {}.", move(ibId)), Exception{SRCE_CUR, _logLevel.Level, "No access to {}.", move(ibId)}, {{sessionId}} );
 	}
 	α WebSendGateway::CancelAccountSubscription( sv account, SessionPK sessionId )noexcept->void
 	{
@@ -232,7 +232,7 @@ namespace Jde::Markets::TwsWebSocket
 			THROW( "Could not find any market subscriptions." );
 	}
 
-	α WebSendGateway::PushError( int errorCode, string errorString, TickerId id )noexcept->void
+/*	α WebSendGateway::PushError( int errorCode, string errorString, TickerId id )noexcept->void
 	{
 		if( id>0 )
 		{
@@ -259,11 +259,17 @@ namespace Jde::Markets::TwsWebSocket
 			for_each( lostIds.begin(), lostIds.end(), [&](auto id){_requestSession.erase(id);} );
 		}
 	}
-	α WebSendGateway::PushError( int errorCode, str errorString, const ClientKey& key )noexcept(false)->void
+*/
+	α WebSendGateway::PushError( string errorString, const ClientKey& key, int errorCode )noexcept->void
 	{
-		auto pError = make_unique<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code(errorCode); pError->set_message(errorString);
+		auto pError = make_unique<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code( errorCode==0 ? Calc32RunTime(errorString) : errorCode ); pError->set_message( move(errorString) );
 		MessageUnion msg; msg.set_allocated_error( pError.release() );
-		Push( move(msg), key.SessionId );
+		try
+		{
+			Push( move(msg), key.SessionId );
+		}
+		catch( IException& )
+		{}
 	}
 
 	α WebSendGateway::AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept->void

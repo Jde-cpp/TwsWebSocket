@@ -54,7 +54,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const IException& e )
 		{
-			_pWebSend->Push( e, {msg, 0} );
+			_pWebSend->Push( "Request Failed", e, {msg, 0} );
 		}
 	}
 #pragma warning(disable:4456)
@@ -110,11 +110,11 @@ namespace Jde::Markets::TwsWebSocket
 			catch( const json::exception& e )
 			{
 				Logging::Log( Logging::Message(ELogLevel::Debug, e.what()) );
-				_pWebSend->TryPush( Exception("could not parse query"), arg );
+				_pWebSend->PushError( "Could not parse query", arg );
 			}
 			catch( const IException& e )
 			{
-				_pWebSend->TryPush( e, arg );
+				_pWebSend->Push( "Query failed", e, arg );
 			}
 		}
 		else if( type==ERequests::GoogleLogin )//https://ncona.com/2015/02/consuming-a-google-id-token-from-a-server/
@@ -178,7 +178,7 @@ namespace Jde::Markets::TwsWebSocket
 			catch( const std::exception& e )
 			{
 				Logging::Log( Logging::Message(ELogLevel::Warning, e.what()) );
-				_pWebSend->Push( e, arg );
+				_pWebSend->PushError( "Authorization failed", arg );
 			}
 		}
 		else if( type==ERequests::WatchList )
@@ -224,7 +224,7 @@ namespace Jde::Markets::TwsWebSocket
 		else if( request.type()==ERequests::Filings || request.type()==ERequests::Investors )
 		{
 			if( request.ids().size()!=1 )
-				_pWebSend->Push( Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, request.ids().size()}, {{session}, request.id()} );
+				_pWebSend->Push( "Error in request", Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, request.ids().size()}, {{session}, request.id()} );
 			else
 			{
 				var contractId = request.ids()[0];
@@ -260,7 +260,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( IException& e )
 		{
-			inputArg.Push( move(e) );
+			inputArg.Push( "Calculation failed", move(e) );
 		}
 	}
 
@@ -338,10 +338,10 @@ namespace Jde::Markets::TwsWebSocket
 							{
 								pResults->set_day( fetch(expiration) );//sets day multiple times...
 							}
-							catch( const IBException& e )
+							catch( IBException& e )
 							{
-								if( e.ErrorCode!=200 )//No security definition has been found for the request
-									throw e;
+								if( e.Code!=200 )//No security definition has been found for the request
+									throw move(e);
 							}
 						}
 					}
@@ -357,10 +357,10 @@ namespace Jde::Markets::TwsWebSocket
 					web.Push( move(msg)  );
 				}
 				else
-					web.WebSendPtr->Push( IBException{"No previous dates found", -2, -1}, {{web.SessionId}, underlyingId} );
+					web.WebSendPtr->PushError( "No previous dates found", {{web.SessionId}, underlyingId} );
 			}
-			catch( const IBException& e ){ web.Push( e ); }
-			catch( const IException& e ){ web.Push( e ); }
+			catch( const IBException& e ){ web.Push("Retreive Options failed", e); }
+			catch( const IException& e ){ web.Push("Retreive Options failed", e); }
 		} ).detach();
 	}
 
@@ -385,8 +385,7 @@ namespace Jde::Markets::TwsWebSocket
 				}
 				catch( const IException& e )
 				{
-					web.Push( e );
-					return;
+					return web.Push( "Request fundamentals failed", e );
 				}
 			}
 			web.Push( EResults::MultiEnd );

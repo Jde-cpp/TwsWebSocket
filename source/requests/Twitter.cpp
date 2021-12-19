@@ -184,9 +184,9 @@ namespace Jde
 			auto result = ( co_await Block2( userId, settings) ).Get<string>();
 			arg.Push( EResults::Success );
 		}
-		catch( const IException& e )
+		catch( IException& e )
 		{
-			arg.Push( e );
+			arg.Push( "Blocking user failed", e );
 		}
 	}
 
@@ -202,7 +202,7 @@ namespace Jde
 			arg.Push( move(m) );
 		};
 		var time = std::time( nullptr );
-		TwitterSettings settings; if( !settings.BearerToken.size() ) co_return arg.Push( Exception("twitter\bearerToken not found in settings.") );
+		TwitterSettings settings; if( !settings.BearerToken.size() ) co_return arg.PushError( "twitter credentials not set on server" );
 
 		auto pExisting = Cache::Get<Tweets>( format("Tweets.{}", symbol) );
 		var existingPath = IApplication::ApplicationDataFolder()/"tweets"/( symbol+".dat" );
@@ -335,9 +335,9 @@ namespace Jde
 			earliest = epoch;
 			LOG( "earliest={}, lastChecked={}"sv, ToIsoString(earliest), ToIsoString(lastChecked) );
 		}
-		catch( const IException& e )
+		catch( IException& e )
 		{
-			arg.Push( e );
+			arg.Push( "Fetching tweets failed", e );
 		}
 		try
 		{
@@ -374,14 +374,14 @@ namespace Jde
 			Cache::Set<Tweets>( format("Tweets.{}", symbol), pExisting );
 			SendAuthors( authors, arg, settings.BearerToken );
 		}
-		catch( const IException& e )
+		catch( IException& e )
 		{
-			arg.Push( e );
+			arg.Push( "author implementation failed", e );
 		}
 		catch( const std::exception& e )
 		{
 			ERR( "exception:  {}"sv, e.what() );
-			arg.Push( e );
+			arg.PushError( "author implementation failed" );
 		}
 	}
 #pragma region Other

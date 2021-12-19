@@ -90,7 +90,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const IException& e )
 		{
-			_webSendPtr->Push( e, move(x) );
+			_webSendPtr->Push( "Blockly request failed", e, x );
 		}
 	}
 }

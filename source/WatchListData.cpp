@@ -48,7 +48,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( const IException& e )
 			{
-				arg.Push( e );
+				arg.Push( "Could not load watch lists ", e );
 			}
 		}).detach();
 	}
@@ -74,9 +74,9 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg; msg.set_allocated_watch_list( pWatchList );
 				arg.Push( move(msg) );
 			}
-			catch( const IException& e )
+			catch( IException& e )
 			{
-				arg.Push( e );
+				arg.Push( "Could not load watch list", e );
 			}
 		}).detach();
 	}
@@ -113,9 +113,9 @@ namespace Jde::Markets::TwsWebSocket
 				fs::remove( path );
 				arg.Push( EResults::Accept );
 			}
-			catch( const IException& e )
+			catch( IException& e )
 			{
-				arg.Push( e );
+				arg.Push( "could not delete watchlist", e );
 			}
 		}).detach();
 	}
@@ -133,9 +133,9 @@ namespace Jde::Markets::TwsWebSocket
 				IO::Proto::Save( file, path );
 				arg.Push( EResults::Accept );
 			}
-			catch( const IException& e )
+			catch( IException& e )
 			{
-				arg.Push( e );
+				arg.Push( "could not edit watchlist", e );
 			}
 		}).detach();
 	}

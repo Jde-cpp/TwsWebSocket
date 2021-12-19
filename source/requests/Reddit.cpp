@@ -48,7 +48,7 @@ namespace Jde
 		}
 		catch( const IException& e )
 		{
-			arg->Push( e );
+			arg->Push( "Reddit search failed", e );
 		}
 	}
 	α Reddit::Block( string&& user, up<Markets::TwsWebSocket::ProcessArg> pArg )noexcept->Coroutine::Task2
@@ -60,7 +60,7 @@ namespace Jde
 		}
 		catch( IException& e )
 		{
-			pArg->Push( move(e) );
+			pArg->Push( "Blocking user failed", move(e) );
 		}
 	}
 }

@@ -22,7 +22,7 @@ namespace Jde::Markets::TwsWebSocket
 	static const LogTag& _logLevel = Logging::TagLevel( "app.web" );
 
 	BeastException::BeastException( sv what, beast::error_code&& ec, ELogLevel level, const source_location& sl )noexcept:
-		IException{ {std::to_string(ec.value()), ec.message()}, format("{} returned ({{}}){{}}", what), sl, level },
+		IException{ {std::to_string(ec.value()), ec.message()}, format("{} returned ({{}}){{}}", what), sl, ec.value(), level },
 		ErrorCode{ move(ec) }
 	{}
 

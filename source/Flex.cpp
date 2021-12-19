@@ -56,7 +56,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const IException& e )
 		{
-			web.Push( e );
+			web.Push( "Send trades failed", e );
 		}
 	}
 	α ToTimeT( str date )noexcept->time_t

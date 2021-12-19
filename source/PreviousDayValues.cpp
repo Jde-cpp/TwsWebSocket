@@ -1,6 +1,8 @@
 ﻿#include "PreviousDayValues.h"
 #include "WebSocket.h"
 #include "WebRequestWorker.h"
+#include "../../Framework/source/math/MathUtilities.h"
+#include "../../MarketLibrary/source/types/Exchanges.h"
 #define _sync TwsClientSync::Instance()
 #define _socket TwsWebSocket::WebSocket::Instance()
 #define var const auto
@@ -91,7 +93,7 @@ namespace TwsWebSocket
 							double high=0.0, low = std::numeric_limits<double>::max();
 							for( var& bar : ibTrades )
 							{
-								pBar->set_volume( ToDouble(pBar->volume())+ToDouble(bar.volume) );
+								pBar->set_volume( Round(ToDouble(pBar->volume())+ToDouble(bar.volume)) );
 								high = std::max( bar.high, high );
 								low = std::min( bar.low, low );
 							}

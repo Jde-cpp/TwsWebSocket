@@ -20,8 +20,8 @@ namespace Jde::Markets::TwsWebSocket
 		α Clone()noexcept->sp<IException> override{ return std::make_shared<BeastException>(move(*this)); }
 		Ω IsTruncated( const beast::error_code& ec )noexcept{ return ec == net::ssl::error::stream_truncated; }
 		Ω LogCode( const boost::system::error_code& ec, ELogLevel level, sv what )noexcept->void;
-		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
-		[[noreturn]] α Throw()->void override{ throw *this; }
+		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(move(*this)); }
+		[[noreturn]] α Throw()->void override{ throw move(*this); }
 
 		beast::error_code ErrorCode;
 	};
@@ -68,9 +68,8 @@ namespace Jde::Markets::TwsWebSocket
 		void RemoveConnection( SessionPK sessionId )noexcept;
 
 		void HandleIncoming( WebRequestMessage&& data )noexcept{ _requestWorker.Push(move(data)); }
-		sp<WebSendGateway> WebSend(){ return _pWebSend; }
+		sp<WebSendGateway> WebSend()noexcept{ return _pWebSend; }
 		void SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept;
-		//Ω UserId( SessionPK sessionId )noexcept(false)->UserPK;
 		Ω TryUserId( SessionPK sessionId )noexcept->UserPK;
 
 		Ω SetLevel( ELogLevel l )noexcept->void;

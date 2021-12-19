@@ -14,9 +14,9 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg; msg.set_allocated_filings( p.release() );
 				arg.Push( move(msg) );
 			}
-			catch( const IException& e )
+			catch( IException& e )
 			{
-				arg.Push( e );
+				arg.Push( "could not retreive filings", e );
 			}
 		}).detach();
 	}
@@ -31,9 +31,9 @@ namespace Jde::Markets::TwsWebSocket
 				MessageType msg; msg.set_allocated_investors( p.release() );
 				arg.Push( move(msg) );
 			}
-			catch( const IException& e )
+			catch( IException& e )
 			{
-				arg.Push( e );
+				arg.Push( "Could not load investors", e );
 			}
 		}).detach();
 	}

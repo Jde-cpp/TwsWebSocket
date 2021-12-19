@@ -1,22 +1,28 @@
 ﻿#include "TwsSendWorker.h"
-#include "requests/News.h"
-#include "WebRequestWorker.h"
 #include <jde/markets/types/MyOrder.h>
-#include "../../MarketLibrary/source/TickManager.h"
 #include <jde/blockly/BlocklyLibrary.h>
 #include <jde/blockly/IBlockly.h>
 #include "../../Framework/source/io/ProtoUtilities.h"
+#include "../../Framework/source/Cache.h"
+#include "../../MarketLibrary/source/TickManager.h"
+#include "../../MarketLibrary/source/types/Exchanges.h"
+#include "WebCoSocket.h"
+#include "WebRequestWorker.h"
+#include "requests/News.h"
+
 
 #define var const auto
 #define _tws (*_twsPtr)
-#define _web (*_webSendPtr)
+//#define _web (*_webSendPtr)
+#define _web ( *WebCoSocket::Instance()->WebSend() )
 #define _cache (*static_pointer_cast<TwsClientCache>(_twsPtr))
 
-#define TwsPtr(sessionId, clientId) auto pTws = static_pointer_cast<TwsClientCache>(_twsPtr); if( !pTws ) return _web.PushError( -5, "Server not connected to TWS.", {{sessionId}, clientId} )
+#define TwsPtr(sessionId, clientId) auto pTws = static_pointer_cast<TwsClientCache>(_twsPtr); if( !pTws ) return _web.PushError( "Server not connected to TWS.", {{sessionId}, clientId} )
 
 namespace Jde::Markets::TwsWebSocket
 {
 	static const LogTag& _logLevel = Logging::TagLevel( "app.webRequests" );
+	α ManagedAccounts( sp<WebSendGateway> pWebClient, SessionKey key )noexcept->Task2;
 
 	TwsSendWorker::TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept:
 		_webSendPtr{ webSendPtr },
@@ -76,11 +82,11 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const IBException& e )
 		{
-			_webSendPtr->Push( e, {sessionKey, clientId} );
+			_webSendPtr->Push( "Request failed", e, {sessionKey, clientId} );
 		}
 		catch( const IException& e )
 		{
-			_webSendPtr->Push( e, {sessionKey, clientId} );
+			_webSendPtr->Push( "Request failed", e, {sessionKey, clientId} );
 		}
 	}
 
@@ -144,9 +150,46 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( IException& e )
 		{
-			_webSendPtr->Push( e, t );
+			_webSendPtr->Push( "Request failed", e, t );
 		}
 	}
+
+	α AverageVolume( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey c )noexcept->Task2
+	{
+		LOG( "({})AverageVolume( '{}' )", c.SessionId, contractIds.size()<5 ? Str::AddCommas(contractIds) : std::to_string(contractIds.size()) );
+		try
+		{
+			for( var id : contractIds )
+			{
+				var pContract = ( co_await Tws::ContractDetails(id) ).Get<Contract>();
+				auto cacheId = format( "AverageVolume.{}", pContract->Symbol );
+				auto average = Cache::Double( cacheId );
+				if( isnan(average)  )
+				{
+					var current = CurrentTradingDay( *pContract ); var prev = PreviousTradingDay( current );
+					var pBars = ( co_await Tws::HistoricalData(pContract, prev, 65, EBarSize::Day, EDisplay::Trades, false) ).Get<vector<::Bar>>();
+					double sum{0};
+					for_each( pBars->begin(), pBars->end(), [&](var& bar){ sum+=ToDouble(bar.volume); } );
+					average = sum*100/pBars->size();
+					Cache::SetDouble( move(cacheId), average, ExtendedBegin(*pContract, NextTradingDay(current)) );
+				}
+				auto p = mu<Proto::Results::ContractValue>(); p->set_type( EResults::AverageVolume ); p->set_request_id( c.ClientId ); p->set_value( average ); p->set_contract_id( id );
+				MessageType msg; msg.set_allocated_contract_value( p.release() );
+				_web.Push( move(msg), c.SessionId );
+			}
+			if( contractIds.size()>1 )
+			{
+				auto p = mu<Proto::Results::ContractValue>(); p->set_type( EResults::AverageVolume ); p->set_request_id( c.ClientId ); p->set_contract_id( 0 );
+				MessageType msg; 	msg.set_allocated_contract_value( p.release() );
+				_web.Push( move(msg), c.SessionId );
+			}
+		}
+		catch( IException& e )
+		{
+			_web.Push( "Request failed", move(e), c );
+		}
+	}
+
 	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData r, SessionKey session )noexcept(false)->Task2
 	{
 		try
@@ -205,7 +248,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			catch( const IException& e )
 			{
-				_webSendPtr->Push( e, {{session.SessionId}, r.id()} );
+				_webSendPtr->Push( "Place order failed", move(e), {{session.SessionId}, r.id()} );
 			}
 			//todo allow cancel
 /*			std::thread{ [ pBlockly=*p ]()
@@ -236,36 +279,33 @@ namespace Jde::Markets::TwsWebSocket
 		_tws.reqPositionsMulti( _web.AddRequestSession({{session.SessionId},r.id()}), r.account_number(), r.model_code() );
 	}
 
-	α TwsSendWorker::Request( const Proto::Requests::GenericRequest& r, const SessionKey& t )noexcept->void
+	α TwsSendWorker::Request( const Proto::Requests::GenericRequest& r, const SessionKey& s )noexcept->void
 	{
 		if( r.type()==ERequests::RequestOptionParams )
-			RequestOptionParams( r.id(), (int)r.item_id(), move(t) );
+			RequestOptionParams( r.id(), (int)r.item_id(), move(s) );
 		else if( r.type()==ERequests::RequestAllOpenOrders )
-			RequestAllOpenOrders( {t, r.id()} );
+			RequestAllOpenOrders( {s, r.id()} );
 		else
-			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", t.SessionId, r.id(), r.type() );
+			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", s.SessionId, r.id(), r.type() );
 	}
 
-	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, const SessionKey& session )noexcept
+	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, const SessionKey& s )noexcept
 	{
 		if( !_twsPtr )
-			return _web.PushError( -1, "Not connected to Tws.", {{session.SessionId}, r.id()} );
+			return _web.PushError( "Not connected to Tws.", {{s.SessionId}, r.id()} );
 		if( r.type()==ERequests::Positions )
 		{
-			_web.AddRequestSessions( session.SessionId, {EResults::PositionEnd, EResults::PositionData} );
+			_web.AddRequestSessions( s.SessionId, {EResults::PositionEnd, EResults::PositionData} );
 			//if( _web.Add(ERequests::Positions) ) TODO test how this works with multiple calls.  and if canceled appropriately.
 				//_tws.reqPositions();
 			ERR( "reqPositions not implemented."sv );
-			_web.PushError( -1, "reqPositions not implemented.", {{session.SessionId}, r.id()} );
+			_web.PushError( "reqPositions not implemented.", {{s.SessionId}, r.id()} );
 		}
 		else if( r.type()==ERequests::ManagedAccounts )
-		{
-			_web.AddRequestSessions( session.SessionId, {EResults::ManagedAccounts} );
-			_tws.reqManagedAccts();
-		}
+			ManagedAccounts( _webSendPtr, s );
 		else if( r.type()==ERequests::RequestOpenOrders )
 		{
-			_web.AddRequestSessions( session.SessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
+			_web.AddRequestSessions( s.SessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
 			_tws.reqOpenOrders();
 		}
 		else if( r.type()==ERequests::CancelMarketData )
@@ -273,21 +313,21 @@ namespace Jde::Markets::TwsWebSocket
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
 				var contractId = r.ids( i );
-				TickManager::CancelProto( session.SessionId , 0, contractId );
+				TickManager::CancelProto( s.SessionId , 0, contractId );
 			}
 		}
 		else if( r.type()==ERequests::CancelPositionsMulti )
 		{
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
-				var ibId = _web.RequestFind( {{session.SessionId}, (ClientPK)r.ids(i)} );
+				var ibId = _web.RequestFind( {{s.SessionId}, (ClientPK)r.ids(i)} );
 				if( ibId )
 				{
 					_tws.cancelPositionsMulti( ibId );
 					_web.RequestErase( ibId );
 				}
 				else
-					WARN( "({})Could not find MktData clientID='{}'"sv, session.SessionId, r.ids(i) );
+					WARN( "({})Could not find MktData clientID='{}'"sv, s.SessionId, r.ids(i) );
 			}
 		}
 		else if( r.type()==ERequests::CancelOrder )
@@ -295,14 +335,16 @@ namespace Jde::Markets::TwsWebSocket
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
 				var orderId = r.ids(i);
-				_web.AddOrderSubscription( orderId, session.SessionId );
+				_web.AddOrderSubscription( orderId, s.SessionId );
 				_tws.cancelOrder( orderId );
 			}
 		}
 		else if( r.type()==ERequests::ReqNewsProviders )
-			News::RequestProviders( ProcessArg{session, r.id(), _webSendPtr} );
+			News::RequestProviders( ProcessArg{s, r.id(), _webSendPtr} );
+		else if( r.type()==ERequests::AverageVolume )
+			AverageVolume( r.ids(), {s, r.id()} );
 		else
-			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, r.type(), session.SessionId );
+			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, r.type(), s.SessionId );
 	}
 
 	void TwsSendWorker::AccountUpdates( const Proto::Requests::RequestAccountUpdates& accountUpdates, const SessionKey& session )noexcept
@@ -342,7 +384,20 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( const IException& e )
 		{
-			_web.Push( e, ClientKey{key,clientId} );
+			_web.Push( "RequestOptionParams failed.", e, ClientKey{key,clientId} );
 		}
+	}
+
+	α ManagedAccounts( sp<WebSendGateway> pWebClient, SessionKey key )noexcept->Task2
+	{
+		var p = ( co_await Tws::ReqManagedAccts() ).Get<vector<Account>>();
+		auto accounts = mu<Proto::Results::StringMap>(); accounts->set_result(EResults::ManagedAccounts);
+		for( var& account : *p )
+		{
+			if( Accounts::CanRead(account.IbName, key.UserId) )
+				(*accounts->mutable_values())[account.IbName] = account.Display;
+		}
+		MessageType m; m.set_allocated_string_map( accounts.release() );
+		pWebClient->Push( move(m), key.SessionId );
 	}
 }
