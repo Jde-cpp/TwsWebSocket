@@ -17,12 +17,14 @@ namespace Jde::Markets::TwsWebSocket
 	struct BeastException : public IException
 	{
 		BeastException( sv what, beast::error_code&& ec, ELogLevel level=ELogLevel::Trace, SRCE )noexcept;
-		α Clone()noexcept->sp<IException> override{ return std::make_shared<BeastException>(move(*this)); }
 		Ω IsTruncated( const beast::error_code& ec )noexcept{ return ec == net::ssl::error::stream_truncated; }
 		Ω LogCode( const boost::system::error_code& ec, ELogLevel level, sv what )noexcept->void;
-		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(move(*this)); }
-		[[noreturn]] α Throw()->void override{ throw move(*this); }
 
+		using T=BeastException;
+		α Clone()noexcept->sp<IException> override{ return ms<T>(move(*this)); }\
+		α Move()noexcept->up<IException> override{ return mu<T>(move(*this)); }\
+		α Ptr()->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }\
+		[[noreturn]] α Throw()->void override{ throw move(*this); }
 		beast::error_code ErrorCode;
 	};
 
@@ -43,40 +45,40 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		~SessionInfo();
 		sp<SocketStream> StreamPtr;
-		sp<std::atomic_flag> WriteLockPtr;
+		SessionPK SessionId;
 		EAuthType AuthType{EAuthType::None};
+		sp<std::atomic_flag> WriteLockPtr{ ms<std::atomic_flag>() };
 		string Email;
 		bool EmailVerified{false};
 		string Name;
 		string PictureUrl;
 		TimePoint Expiration;
-		SessionPK SessionId;
 		UserPK UserId;
 	};
 
 	struct WebCoSocket final
 	{
-		Ω Create( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept->sp<WebCoSocket>;
+		Ω Create( sp<TwsClientSync> pClient, uint16_t port, uint8 threadCount )noexcept->sp<WebCoSocket>;
 		Ω Instance()noexcept->sp<WebCoSocket>{ return _pInstance; }
 
-		void AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false);
-		void AddOutgoing( MessageTypePtr pUnion, SessionPK id )noexcept;
-		void AddOutgoing( const vector<MessageTypePtr>& messages, SessionPK id )noexcept;
-		void AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false);
+		Ω ForEachSession( function<void( const SessionInfo& x )> f )noexcept->void;
+		α AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false)->void;
+		Ω Send( MessageType&& msg, SessionPK id )noexcept->void;
+		α AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false)->void;
 
-		SessionPK AddConnection( sp<SocketStream> stream )noexcept;
-		void RemoveConnection( SessionPK sessionId )noexcept;
+		α AddConnection( sp<SocketStream> stream )noexcept->SessionPK;
+		α RemoveConnection( SessionPK sessionId )noexcept->void;
 
-		void HandleIncoming( WebRequestMessage&& data )noexcept{ _requestWorker.Push(move(data)); }
-		sp<WebSendGateway> WebSend()noexcept{ return _pWebSend; }
-		void SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept;
+		α HandleIncoming( WebRequestMessage&& data )noexcept{ _requestWorker.Push(move(data)); }
+		α WebSend()noexcept->sp<WebSendGateway>{ return _pWebSend; }
+		α SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept->void;;
 		Ω TryUserId( SessionPK sessionId )noexcept->UserPK;
 
 		Ω SetLevel( ELogLevel l )noexcept->void;
 	private:
-		WebCoSocket( const Settings::Container& settings, sp<TwsClientSync> pClient )noexcept;
+		WebCoSocket( sp<TwsClientSync> pClient, uint16_t port, uint8 threadCount )noexcept;
 
-		void Run()noexcept;
+		α Run()noexcept->void;
 		uint8 _threadCount;
 		uint16_t _port;
 		sp<TwsClientSync> _pClient;

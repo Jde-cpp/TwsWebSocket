@@ -22,7 +22,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	static const LogTag& _logLevel = Logging::TagLevel( "app.webRequests" );
-	α ManagedAccounts( sp<WebSendGateway> pWebClient, SessionKey key )noexcept->Task2;
+	α ManagedAccounts( sp<WebSendGateway> pWebClient, SessionKey key )noexcept->Task;
 
 	TwsSendWorker::TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept:
 		_webSendPtr{ webSendPtr },
@@ -42,6 +42,7 @@ namespace Jde::Markets::TwsWebSocket
 				HandleRequest( get<1>(*p), get<0>(*p) );
 		}
 	}
+	α ContractDetails( Proto::Requests::RequestContractDetails r, SessionKey s )noexcept->Task;
 
 	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionKey )noexcept
 	{
@@ -60,7 +61,7 @@ namespace Jde::Markets::TwsWebSocket
 			else if( m.has_market_data_smart() )
 				MarketDataSmart( m.market_data_smart(), sessionKey );
 			else if( m.has_contract_details() )
-				ContractDetails( m.contract_details(), sessionKey );
+				ContractDetails( move(m.contract_details()), move(sessionKey) );
 			else if( m.has_historical_data() )
 				HistoricalData( move(*m.mutable_historical_data()), sessionKey );
 			else if( m.has_place_order() )
@@ -90,11 +91,10 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	::Contract TwsSendWorker::GetContract( ContractPK contractId )noexcept(false)
+	α TwsSendWorker::GetContract( ContractPK contractId )noexcept(false)->const ::Contract&
 	{
-		var pDetails = _tws.ReqContractDetails( contractId ).get();
-		THROW_IF( pDetails->size()!=1, "contractId={} returned {} records"sv, contractId, pDetails->size() );
-		return pDetails->front().contract;
+		var pDetails =  SFuture<::ContractDetails>( Tws::ContractDetail(contractId) ).get();
+		return pDetails->contract;
 	}
 
 	void TwsSendWorker::CalculateImpliedVolatility( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedVolatility>& requests, const ClientKey& client )noexcept(false)
@@ -109,31 +109,49 @@ namespace Jde::Markets::TwsWebSocket
 			TickManager::CalculateOptionPrice( client.SessionId, client.ClientId, GetContract(r.contract_id()), r.volatility(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
-	void TwsSendWorker::ContractDetails( const Proto::Requests::RequestContractDetails& r, const SessionKey& key )noexcept
+	α ContractDetails( Proto::Requests::RequestContractDetails r, SessionKey s )noexcept->Task
 	{
-		var clientRequestId = r.id();
-		TwsPtr( key.SessionId, clientRequestId );
-		flat_set<TickerId> requestIds;
+		//up<Proto::Results::ContractDetailsResult> pResult;
+		//auto result = [&pResult](){ if( !pResult ){ pResult = mu<Proto::Results::ContractDetailsResult>(); pResult->set_request_id( r.id() ); } return pResult.get(); }
+		auto threadId = std::this_thread::get_id();
+		vector<MessageType> messages; messages.reserve( r.contracts_size()+1 );
 		for( int i=0; i<r.contracts_size(); ++i )
-			requestIds.emplace( pTws->RequestId() );
-		_web.AddMultiRequest( requestIds, {{key.SessionId}, clientRequestId} );
-		int i=0;
-		for( var reqId : requestIds )
 		{
-			const Contract contract{ r.contracts(i++) };//
-			TRACE( "({}.{})ContractDetails( contract='{}' )"sv, key.SessionId, reqId, contract.Symbol );
+			auto pResult = mu<Proto::Results::ContractDetailsResult>(); pResult->set_request_id( r.id() );
+			const Contract contract{ r.contracts(i) };//303019419
+			try
+			{
+				var pDetails = !contract.Id && contract.SecType==SecurityType::Option
+					? ( co_await Tws::ContractDetail(TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right)) ).SP<::ContractDetails>()
+					: ( co_await Tws::ContractDetail(*contract.ToTws()) ).SP<::ContractDetails>();
 
-			if( !contract.Id && contract.SecType==SecurityType::Option )
-				((TwsClientCache&)*pTws).ReqContractDetails( reqId, TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right) );
-			else
-				((TwsClientCache&)*pTws).ReqContractDetails( reqId, *contract.ToTws() );
+				*pResult->add_details() = ToProto( *pDetails );
+			}
+			catch( IException& e )
+			{
+				pResult->add_details()->set_allocated_contract( contract.ToProto().release() );
+			}
+			messages.emplace_back();
+			messages.back().set_allocated_contract_details( pResult.release() );
+			if( i==r.contracts_size()-1 || threadId!=std::this_thread::get_id() )
+			{
+				if( r.contracts_size()!=1 && i==r.contracts_size()-1 )
+				{
+					auto pMessage = mu<Proto::Results::MessageValue>(); pMessage->set_int_value( r.id() ); pMessage->set_type( EResults::MultiEnd );
+					messages.emplace_back(); messages.back().set_allocated_message( pMessage.release() );
+				}
+				else
+					threadId = std::this_thread::get_id();
+				_web.TryPush( move(messages), s.SessionId );
+				messages.clear();
+			}
 		}
 	}
-	α TwsSendWorker::RequestAllOpenOrders( ClientKey t )noexcept->Task2
+	α TwsSendWorker::RequestAllOpenOrders( ClientKey t )noexcept->Task
 	{
 		try
 		{
-			var p = ( co_await Tws::RequestAllOpenOrders() ).Get<Proto::Results::Orders>();
+			var p = ( co_await Tws::RequestAllOpenOrders() ).UP<Proto::Results::Orders>();
 			auto pResults = mu<Proto::Results::Orders>(); pResults->set_request_id( t.ClientId );
 			for( var& order : p->orders() )
 			{
@@ -154,20 +172,21 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α AverageVolume( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey c )noexcept->Task2
+	α AverageVolume( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey c )noexcept->Task
 	{
 		LOG( "({})AverageVolume( '{}' )", c.SessionId, contractIds.size()<5 ? Str::AddCommas(contractIds) : std::to_string(contractIds.size()) );
 		try
 		{
 			for( var id : contractIds )
 			{
-				var pContract = ( co_await Tws::ContractDetails(id) ).Get<Contract>();
+				var pDetails = ( co_await Tws::ContractDetail(id) ).SP<::ContractDetails>();
+				auto pContract = ms<Contract>( *pDetails );
 				auto cacheId = format( "AverageVolume.{}", pContract->Symbol );
 				auto average = Cache::Double( cacheId );
 				if( isnan(average)  )
 				{
 					var current = CurrentTradingDay( *pContract ); var prev = PreviousTradingDay( current );
-					var pBars = ( co_await Tws::HistoricalData(pContract, prev, 65, EBarSize::Day, EDisplay::Trades, false) ).Get<vector<::Bar>>();
+					var pBars = ( co_await Tws::HistoricalData(pContract, prev, 65, EBarSize::Day, EDisplay::Trades, false) ).SP<vector<::Bar>>();
 					double sum{0};
 					for_each( pBars->begin(), pBars->end(), [&](var& bar){ sum+=ToDouble(bar.volume); } );
 					average = sum*100/pBars->size();
@@ -190,14 +209,14 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData r, SessionKey session )noexcept(false)->Task2
+	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData r, SessionKey session )noexcept(false)->Task
 	{
 		try
 		{
-			var pContract = ( co_await Tws::ContractDetails(r.contract().id()) ).Get<Contract>();
+			var pDetails = ( co_await Tws::ContractDetail(r.contract().id()) ).SP<::ContractDetails>();
 			var endDate = Chrono::ToDays( Clock::from_time_t(r.date()) );
-			LOG( "({})HistoricalData( '{}', '{}', {}, '{}', '{}', {} )", session.SessionId, pContract->Symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
-			var pBars = ( co_await Tws::HistoricalData(pContract, endDate, r.days(), r.bar_size(), r.display(), r.use_rth()) ).Get<vector<::Bar>>();
+			LOG( "({})HistoricalData( '{}', '{}', {}, '{}', '{}', {} )", session.SessionId, pDetails->contract.symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
+			var pBars = ( co_await Tws::HistoricalData(ms<Contract>(*pDetails), endDate, r.days(), r.bar_size(), r.display(), r.use_rth()) ).SP<vector<::Bar>>();
 			auto p = mu<Proto::Results::HistoricalData>(); p->set_request_id( r.id() );
 			for( var& bar : *pBars )
 			{
@@ -281,10 +300,28 @@ namespace Jde::Markets::TwsWebSocket
 
 	α TwsSendWorker::Request( const Proto::Requests::GenericRequest& r, const SessionKey& s )noexcept->void
 	{
-		if( r.type()==ERequests::RequestOptionParams )
+		var t = r.type();
+		if( t==ERequests::RequestOptionParams )
 			RequestOptionParams( r.id(), (int)r.item_id(), move(s) );
-		else if( r.type()==ERequests::RequestAllOpenOrders )
+		else if( t==ERequests::RequestAllOpenOrders )
 			RequestAllOpenOrders( {s, r.id()} );
+		else if( t==ERequests::Order )
+		{
+			if( var p = OrderManager::GetLatest( r.item_id() ); p )
+			{
+				ASSERT( p->ContractPtr && p->OrderPtr && p->StatePtr );
+				auto o = mu<Proto::Results::OpenOrder>();
+				o->set_request_id( r.id() );
+				o->set_allocated_contract( p->ContractPtr->ToProto().release() );
+				o->set_allocated_order( p->OrderPtr->ToProto().release() );
+				o->set_allocated_state( ToProto(*p->StatePtr).release() );
+				Proto::Results::MessageUnion m; m.set_allocated_open_order( o.release() );
+				_web.Push( move(m), s.SessionId );
+			}
+			else
+				WARN( "({})Could not find order.", r.item_id() );
+
+		}
 		else
 			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", s.SessionId, r.id(), r.type() );
 	}
@@ -373,11 +410,11 @@ namespace Jde::Markets::TwsWebSocket
 		TickManager::Subscribe( session.SessionId, 0, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
-	α TwsSendWorker::RequestOptionParams( ClientPK clientId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task2
+	α TwsSendWorker::RequestOptionParams( ClientPK clientId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task
 	{
 		try
 		{
-			auto p = ( co_await Tws::SecDefOptParams(underlyingId) ).Get<Proto::Results::OptionExchanges>();
+			auto p = ( co_await Tws::SecDefOptParams(underlyingId) ).SP<Proto::Results::OptionExchanges>();
 			p->set_request_id( clientId );
 			MessageType m; m.set_allocated_option_exchanges( new Proto::Results::OptionExchanges(*p) );
 			_web.Push( move(m), key.SessionId );
@@ -388,9 +425,9 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α ManagedAccounts( sp<WebSendGateway> pWebClient, SessionKey key )noexcept->Task2
+	α ManagedAccounts( sp<WebSendGateway> pWebClient, SessionKey key )noexcept->Task
 	{
-		var p = ( co_await Tws::ReqManagedAccts() ).Get<vector<Account>>();
+		var p = ( co_await Tws::ReqManagedAccts() ).SP<vector<Account>>();
 		auto accounts = mu<Proto::Results::StringMap>(); accounts->set_result(EResults::ManagedAccounts);
 		for( var& account : *p )
 		{

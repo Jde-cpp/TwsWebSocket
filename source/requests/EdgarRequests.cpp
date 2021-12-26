@@ -42,8 +42,9 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		return Investors2( [contractId]()
 		{
-			auto pDetails = TwsClientSync::ReqContractDetails( contractId ).get(); CHECK( (pDetails->size()==1) );
-			return Edgar::Form13F::LoadInvestors( pDetails->front().longName );
+			auto pDetails = SFuture<::ContractDetails>( Tws::ContractDetail(contractId) ).get();
+			//TwsClientSync::ReqContractDetails( contractId ).get(); CHECK( (pDetails->size()==1) );
+			return Edgar::Form13F::LoadInvestors( pDetails->longName );
 		}, move(arg) );
 	}
 }

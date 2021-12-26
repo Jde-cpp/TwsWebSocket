@@ -4,6 +4,7 @@
 #include "../../Framework/source/um/UM.h"
 #include "../../MarketLibrary/source/TickManager.h"
 #include "../../MarketLibrary/source/data/Accounts.h"
+#include "../../MarketLibrary/source/OrderManager.h"
 
 #define var const auto
 #define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
@@ -18,6 +19,24 @@ namespace Jde::Markets::TwsWebSocket
 		_webSocket{ webSocketParent },
 		_pClientSync{ pClientSync }
 	{}
+
+	α WebSendGateway::OnOrderChange( sp<const MyOrder> pOrder, sp<const Markets::Contract> pContract, sp<const OrderStatus> pStatus, sp<const OrderState> pState )noexcept->void
+	{
+		WebCoSocket::ForEachSession( [=]( const SessionInfo& x )
+		{
+			if( !Accounts::CanRead(pOrder->account, x.UserId) )
+				return;
+
+			auto pUpdate = mu<Proto::Results::OrderUpdate>();
+			if( pStatus )
+				pUpdate->set_allocated_status( pStatus->ToProto().release() );
+			if( pState )
+				pUpdate->set_allocated_state( ToProto(*pState).release() );
+			Proto::Results::MessageUnion m; m.set_allocated_order_update( pUpdate.release() );
+			WebCoSocket::Send( move(m), x.SessionId );
+		} );
+	}
+
 	α WebSendGateway::EraseRequestSession( SessionPK sessionId )noexcept->void
 	{
 		LOG( "({})EraseRequestSession()"sv, sessionId );
@@ -181,7 +200,7 @@ namespace Jde::Markets::TwsWebSocket
 		for_each( orphans.begin(), orphans.end(), [this](auto id){ EraseRequestSession( id ); } );
 	}
 */
-	α WebSendGateway::Push( Proto::Results::EResults messageId, TickerId ibReqId )noexcept->void
+	α WebSendGateway::Push( EResults messageId, TickerId ibReqId )noexcept->void
 	{
 		var clientKey = GetClientRequest( ibReqId );
 		if( clientKey.SessionId )
@@ -320,7 +339,7 @@ namespace Jde::Markets::TwsWebSocket
 				if( reqIds.size()==0 )
 				{
 					_multiRequests.erase( pMultiRequests );
-					auto pMessage = new MessageValue(); pMessage->set_type( Proto::Results::EResults::MultiEnd ); pMessage->set_int_value( clientKey.ClientId );
+					auto pMessage = new MessageValue(); pMessage->set_type( EResults::MultiEnd ); pMessage->set_int_value( clientKey.ClientId );
 					pComplete = MessageType{};  pComplete->set_allocated_message( pMessage );
 				}
 			}
@@ -367,7 +386,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	α WebSendGateway::AccountDownloadEnd( sv accountNumber )noexcept->void
 	{
-		MessageValue value; value.set_type( Proto::Results::EResults::AccountDownloadEnd ); value.set_string_value( string{accountNumber} );
+		MessageValue value; value.set_type( EResults::AccountDownloadEnd ); value.set_string_value( string{accountNumber} );
 		AccountRequest( string{accountNumber}, [&value](MessageType& msg)mutable{msg.set_allocated_message( new MessageValue{value});} );
 	}
 
@@ -377,11 +396,11 @@ namespace Jde::Markets::TwsWebSocket
 		for( var sessionId : _executionRequests )
 		{
 			MessageType msg; msg.set_allocated_commission_report( new Proto::Results::CommissionReport{report} );
-			Push( move(msg), sessionId );
+			TryPush( move(msg), sessionId );
 		}
 	}
 
-	α WebSendGateway::Push( Proto::Results::EResults messageId, const ClientKey& key )noexcept(false)->void
+	α WebSendGateway::Push( EResults messageId, const ClientKey& key )noexcept(false)->void
 	{
 		auto pMessage = new MessageValue(); pMessage->set_int_value( key.ClientId ); pMessage->set_type( messageId );
 		MessageType msg; msg.set_allocated_message( pMessage );

@@ -3,9 +3,9 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	struct ProcessArg;
-	struct Flex /*: IShutdown*/
+	namespace Flex
 	{
-		static void SendTrades( str accountNumber, TimePoint start, TimePoint end, const ProcessArg& web  )noexcept;
+		α SendTrades( str accountNumber, TimePoint start, TimePoint end, ProcessArg web  )noexcept->Task;
 
 	};
 }

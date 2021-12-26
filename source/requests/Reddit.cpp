@@ -12,16 +12,16 @@ namespace Jde
 	using Markets::Proto::Results::RedditEntries;
 #define var const auto
 #pragma endregion
-	α Reddit::Search( string&& symbol, string&& sort, up<Markets::TwsWebSocket::ProcessArg> arg )noexcept->Coroutine::Task2
+	α Reddit::Search( string&& symbol, string&& sort, up<Markets::TwsWebSocket::ProcessArg> arg )noexcept->Coroutine::Task
 	{
 		try
 		{
-			var pXml = ( co_await Ssl::SslCo::Get("www.reddit.com", format("/r/wallstreetbets/search.xml?q=${}&restrict_sr=on&limit=100&sort={}", symbol, sort.size() ? sort : "hot")) ).Get<string>();//TODOExample: User-Agent: android:com.example.myredditapp:v1.2.3 (by /u/kemitche)
+			var pXml = ( co_await Ssl::SslCo::Get("www.reddit.com", format("/r/wallstreetbets/search.xml?q=${}&restrict_sr=on&limit=100&sort={}", symbol, sort.size() ? sort : "hot")) ).UP<string>();//TODOExample: User-Agent: android:com.example.myredditapp:v1.2.3 (by /u/kemitche)
 			auto pResults = make_unique<RedditEntries>(); pResults->set_request_id( arg->ClientId );
 
 			tinyxml2::XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "feed" ); CHECK( pRoot );
 			TRY( pResults->set_update_time((uint32)DateTime{pRoot->TryChildText("updated")}.TimeT()) );
-			var pBlockedUsers = ( co_await DB::SelectSet<string>("select name from rdt_handles where blocked=1", {}, "rdt_blocked") ).Get<flat_set<string>>();
+			var pBlockedUsers = ( co_await DB::SelectSet<string>("select name from rdt_handles where blocked=1", {}, "rdt_blocked") ).SP<flat_set<string>>();
 
 			for( auto pItem=pRoot->FirstChildElement("entry"); pItem; pItem = pItem->NextSiblingElement("entry") )
 			{
@@ -51,11 +51,11 @@ namespace Jde
 			arg->Push( "Reddit search failed", e );
 		}
 	}
-	α Reddit::Block( string&& user, up<Markets::TwsWebSocket::ProcessArg> pArg )noexcept->Coroutine::Task2
+	α Reddit::Block( string&& user, up<Markets::TwsWebSocket::ProcessArg> pArg )noexcept->Coroutine::Task
 	{
 		try
 		{
-			(co_await *DB::ExecuteProcCo("rdt_handle_block(?)", {user}) ).Get<uint>();
+			( co_await *DB::ExecuteProcCo("rdt_handle_block(?)", {user}) ).CheckError();
 			pArg->Push( EResults::Success );
 		}
 		catch( IException& e )

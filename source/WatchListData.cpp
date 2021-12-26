@@ -1,5 +1,5 @@
 #include "WatchListData.h"
-#include "WebSocket.h"
+//#include "WebSocket.h"
 #include "../../Framework/source/io/ProtoUtilities.h"
 #include <jde/Str.h>
 
@@ -7,11 +7,9 @@
 //#define _socket WebSocket::Instance()
 namespace Jde::Markets::TwsWebSocket
 {
-	extern sp<Settings::Container> SettingsPtr;
-
 	fs::path GetDir()noexcept(false)
 	{
-		var dir = SettingsPtr->TryGet<fs::path>( "watchDir" ).value_or( IApplication::Instance().ApplicationDataFolder()/"watches" ); THROW_IF( dir.empty(), "WatchDir not set" ); CHECK_PATH( dir );
+		var dir = Settings::TryGet<fs::path>( "twsWebSocket/watchDir" ).value_or( IApplication::Instance().ApplicationDataFolder()/"watches" ); THROW_IF( dir.empty(), "WatchDir not set" ); CHECK_PATH( dir );
 		return dir;
 	}
 	vector<string> WatchListData::Names( optional<bool> portfolio )noexcept(false)//IOException - watch list dir may not exist.

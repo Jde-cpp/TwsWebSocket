@@ -103,12 +103,12 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::openOrder( orderId, contract, order, state );
 		if( !_pWebSend ) return;
 		auto p = make_unique<OpenOrder>();
-		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
+		p->set_allocated_contract( Contract{contract}.ToProto().release() );
 		p->set_allocated_order( MyOrder{order}.ToProto().release() );
-		p->set_allocated_state( MyOrder::ToAllocatedProto(state) );
+		p->set_allocated_state( ToProto(state).release() );
 		try
 		{
-			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_web_id(id); msg.set_allocated_open_order( new OpenOrder{*p} );} );
+			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){p->set_request_id(id); msg.set_allocated_open_order( new OpenOrder{*p} );} );
 		}
 		catch( IException& ){}
 		AllOpenOrdersAwait::Push( move(p) );
@@ -123,7 +123,7 @@ namespace Jde::Markets::TwsWebSocket
 		WrapperLog::positionMulti( reqId, account, modelCode, contract, pos, avgCost );
 		auto pUpdate = make_unique<Proto::Results::PositionMulti>();
 		pUpdate->set_account( account );
-		pUpdate->set_allocated_contract( Contract{contract}.ToProto(true).get() );
+		pUpdate->set_allocated_contract( Contract{contract}.ToProto().release() );
 		pUpdate->set_position( ToDouble(pos) );
 		pUpdate->set_avgerage_cost( avgCost );
 		pUpdate->set_model_code( modelCode );
@@ -183,7 +183,7 @@ namespace Jde::Markets::TwsWebSocket
 			if( account.Id )
 				(*accounts.mutable_values())[move(ibName)] = move( account.Description );
 		}
-/*		shared_lock l{_accountMutex};
+/ *		shared_lock l{_accountMutex};
 		for( var& account : accounts )
 		{
 			(*accounts.mutable_values())[account] = _accounts.find(account)!=_accounts.end() ? _accounts.find(account)->second.Description : account;
@@ -260,25 +260,25 @@ namespace Jde::Markets::TwsWebSocket
 
 	α WrapperWeb::contractDetails( int reqId, const ::ContractDetails& contractDetails )noexcept->void
 	{
-		if( WrapperCo::_contractSingleHandles.Has(reqId) )
+		if( WrapperCo::_contractHandles.Has(reqId) )
 			WrapperCo::contractDetails( reqId, contractDetails );
-		else if( _detailsData.Contains(reqId) )
-			WrapperSync::contractDetails( reqId, contractDetails );
+//		else if( _detailsData.Contains(reqId) )
+//			WrapperSync::contractDetails( reqId, contractDetails );
 		else
 		{
 			WrapperLog::contractDetails( reqId, contractDetails );
 			auto pReqDetails = _contractDetails.find( reqId );
 			if( ; pReqDetails==_contractDetails.end() )
 				pReqDetails = _contractDetails.emplace( reqId, make_unique<Proto::Results::ContractDetailsResult>() ).first;
-			ToProto( contractDetails, *pReqDetails->second->add_details() );
+			*pReqDetails->second->add_details() = ToProto( contractDetails );
 		}
 	}
 	α WrapperWeb::contractDetailsEnd( int reqId )noexcept->void
 	{
-		if( WrapperCo::_contractSingleHandles.Has(reqId) )
+		if( WrapperCo::_contractHandles.Has(reqId) )
 			WrapperCo::contractDetailsEnd( reqId );
-		else if( _detailsData.Contains(reqId) )
-			WrapperSync::contractDetailsEnd( reqId );
+		//else if( _detailsData.Contains(reqId) )
+//			WrapperSync::contractDetailsEnd( reqId );
 		else
 		{
 			WrapperLog::contractDetailsEnd( reqId );
@@ -317,7 +317,7 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_ev_multiplier( ib.evMultiplier );
 		p->set_model_code( ib.modelCode );
 		p->set_last_liquidity( ib.lastLiquidity );
-		p->set_allocated_contract( Contract{contract}.ToProto(true).get() );
+		p->set_allocated_contract( Contract{contract}.ToProto().release() );
 		_pWebSend->Push( reqId, [&p](MessageType& msg, ClientPK id){ p->set_id( id ); msg.set_allocated_execution( p.release() );} );
 
 	}

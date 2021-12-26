@@ -15,7 +15,7 @@ namespace Jde
 #pragma region Defines
 	using namespace Markets::TwsWebSocket;
 	using namespace Coroutine;
-	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task2;
+	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task;
 	using Markets::Proto::Results::Tweets; using ProtoTweet=Markets::Proto::Results::Tweet;
 	using Markets::Proto::Results::TweetAuthors; using Markets::Proto::Results::TweetAuthor;
 	static const LogTag& _logLevel = Logging::TagLevel( "app-tweet" );
@@ -23,7 +23,7 @@ namespace Jde
 	std::atomic<bool> CanBlock=true;//app may not have permissions
 #define var const auto
 #define FROM_JSON( memberString, member ) if( var p=j.find(memberString); p!=j.end() ) p->get_to( o.member )
-#define FROM_JSON64( memberString, member ) if( var p=j.find(memberString); p!=j.end() ){ string s; p->get_to( s ); o.member=Str::To<uint>(s); }
+#define FROM_JSON64( memberString, member ) if( var p=j.find(memberString); p!=j.end() ){ string s; p->get_to( s ); o.member=Toε<uint>(s); }
 	namespace Twitter
 	{
 		struct TwitterSettings
@@ -148,7 +148,7 @@ namespace Jde
 		Meta MetaData;
 	};
 #pragma endregion
-	α Block2( uint userId, const Twitter::TwitterSettings& settings )noexcept{ return Coroutine::FunctionAwaitable{ [=](auto h)->Task2
+	α Block2( uint userId, const Twitter::TwitterSettings& settings )noexcept{ return Coroutine::FunctionAwait{ [=](auto h)->Task
 	{
 		var once = std::to_string( userId );
 		var url = "https://api.twitter.com/1.1/blocks/create.json"sv;
@@ -176,12 +176,12 @@ namespace Jde
 		h.promise().get_return_object().SetResult( co_await Ssl::SslCo::SendEmpty("api.twitter.com", fmt::vformat(string(url.substr(23))+string("?user_id={}&skip_status=1"), fmt::make_format_args(userId)), osAuth.str()) );
 		h.resume();
 	}};}
-	α Twitter::Block( uint userId, ProcessArg arg )noexcept->Coroutine::Task2
+	α Twitter::Block( uint userId, ProcessArg arg )noexcept->Coroutine::Task
 	{
 		try
 		{
 			TwitterSettings settings; THROW_IF( !settings.CanBlock(), "Must specify in settings:  ApiSecretKey, ApiKey, AccessToken, AccessTokenSecret" );
-			auto result = ( co_await Block2( userId, settings) ).Get<string>();
+			( co_await Block2( userId, settings) ).CheckError();
 			arg.Push( EResults::Success );
 		}
 		catch( IException& e )
@@ -190,7 +190,7 @@ namespace Jde
 		}
 	}
 
-	α Twitter::Search( string symbol, ProcessArg arg )noexcept->Coroutine::Task2
+	α Twitter::Search( string symbol, ProcessArg arg )noexcept->Coroutine::Task
 	{
 		var l = co_await Threading::CoLockKey( format("Twitter::Search.{}", symbol) );
 		set<uint> authors;
@@ -244,7 +244,7 @@ namespace Jde
 		var additional = DB::Scaler<string>( "select query from twt_queries where tag=?", {symbol} ).value_or( string{} );
 		var prefix = additional.size() ? format("{}%20{}", Ssl::Encode(symbol), Ssl::Encode(additional) ) : Ssl::Encode( symbol );
 		constexpr sv suffix = "%20-is:retweet%20lang:en"sv;
-		var pExistingIgnoredTags = ( co_await DB::SelectMap<string,uint>("select tag, ignored_count from twt_tags order by 1", "twt_tags") ).Get<flat_map<string,uint>>();
+		var pExistingIgnoredTags = ( co_await DB::SelectMap<string,uint>("select tag, ignored_count from twt_tags order by 1", "twt_tags") ).SP<flat_map<string,uint>>();
 		auto pIgnoredTags = ms<flat_map<string,uint>>( *pExistingIgnoredTags );
 		flat_multimap<uint,string> ignoredSorted;
 		for_each( pExistingIgnoredTags->begin(), pExistingIgnoredTags->end(), [&ignoredSorted](var& i){ ignoredSorted.emplace(i.second,i.first);} );
@@ -260,7 +260,7 @@ namespace Jde
 		var query = format( "{}{}{}", prefix, osIgnored.str(), suffix );
 
 		LOG( "{} - {}"sv, query, ignoredSorted.size() );
-		var pBlockedUsers = ( co_await DB::SelectSet<uint>( "select id from twt_handles where blocked=1", {}, "twt_blocks") ).Get<flat_set<uint>>();
+		var pBlockedUsers = ( co_await DB::SelectSet<uint>( "select id from twt_handles where blocked=1", {}, "twt_blocks") ).SP<flat_set<uint>>();
 		set<uint> newBlockedUsers;
 
 		var now = Clock::now();
@@ -278,8 +278,8 @@ namespace Jde
 		{
 			do
 			{
-				Coroutine::TaskResult result2 = co_await Ssl::SslCo::Get( "api.twitter.com", format("/2/tweets/search/recent?query={}&tweet.fields=public_metrics,author_id,created_at{}{}", query, startTimeUrl, nextToken), format("Bearer {}", settings.BearerToken) );
-				var pResult = result2.Get<string>();
+				Coroutine::AwaitResult result2 = co_await Ssl::SslCo::Get( "api.twitter.com", format("/2/tweets/search/recent?query={}&tweet.fields=public_metrics,author_id,created_at{}{}", query, startTimeUrl, nextToken), format("Bearer {}", settings.BearerToken) );
+				var pResult = result2.UP<string>();
 				var j = nlohmann::json::parse( *pResult );
 				Recent recent;
 				Recent::from_json( j, recent );
@@ -385,7 +385,7 @@ namespace Jde
 		}
 	}
 #pragma region Other
-	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task2
+	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task
 	{
 		auto pAuthorResults = make_unique<TweetAuthors>(); pAuthorResults->set_request_id( arg.ClientId );
 		if( authors.size() )
@@ -397,7 +397,7 @@ namespace Jde
 				for( var id : authors )
 				{
 					//LOG( "https://api.twitter.com/1.1/users/show.json?user_id={}", id );
-					auto pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).Get<string>();
+					auto pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).UP<string>();
 					var j = nlohmann::json::parse( *pResult );
 					User user;
 					User::from_json( j, user );

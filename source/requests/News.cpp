@@ -14,19 +14,19 @@ namespace Jde::Markets::TwsWebSocket
 {
 	using namespace tinyxml2;
 
-	α News::RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task2
+	α News::RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task
 	{
-		auto p = ( co_await Tws::NewsArticle(providerCode, articleId) ).Get<Proto::Results::NewsArticle>();
+		auto p = ( co_await Tws::NewsArticle(providerCode, articleId) ).UP<Proto::Results::NewsArticle>();
 		p->set_request_id( arg.ClientId );
 		MessageType m; m.set_allocated_news_article( new Proto::Results::NewsArticle(*p) );
 		arg.Push( move(m) );
 	}
 
-	α News::RequestProviders( ProcessArg arg )noexcept->Task2
+	α News::RequestProviders( ProcessArg arg )noexcept->Task
 	{
 		try
 		{
-			auto pProviders = (co_await Tws::NewsProviders()).Get<map<string,string>>();
+			auto pProviders = (co_await Tws::NewsProviders()).SP<map<string,string>>();
 			auto pMap = make_unique<Proto::Results::StringMap>();
 			pMap->set_result( EResults::NewsProviders );
 			for( var& [code,name] : *pProviders )
@@ -45,11 +45,11 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		try
 		{
-			var pContract = (co_await Tws::ContractDetails( contractId )).Get<Contract>();// if( variant.index()==1 ) std::rethrow_exception( get<1>(variant) ); var pContract = move( get<0>(variant) );
-
-			auto pWait = Tws::HistoricalNews( pContract->Id, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
-			auto pGoogle = (co_await Google( pContract->Symbol) ).Get<vector<sp<Proto::Results::GoogleNews>>>();
-			auto pHistorical = (co_await pWait).Get<Proto::Results::NewsCollection>();
+			var pDetails = (co_await Tws::ContractDetail( contractId )).SP<::ContractDetails>();// if( variant.index()==1 ) std::rethrow_exception( get<1>(variant) ); var pContract = move( get<0>(variant) );
+			var& c{ pDetails->contract };
+			auto pWait = Tws::HistoricalNews( c.conId, IO::Proto::ToVector(providerCodes), limit, Clock::from_time_t(start), Clock::from_time_t(end) );
+			auto pGoogle = (co_await Google( c.symbol) ).UP<vector<sp<Proto::Results::GoogleNews>>>();
+			auto pHistorical = (co_await pWait).UP<Proto::Results::NewsCollection>();
 
 			auto pResults = make_unique<Proto::Results::NewsCollection>( *pHistorical );
 			pResults->set_request_id( arg.ClientId );
@@ -74,10 +74,10 @@ namespace Jde::Markets::TwsWebSocket
 				query = "topics/CAAqJAgKIh5DQkFTRUFvS0wyMHZNSE4zYm5OMGNCSUNaVzRvQUFQAQ?hl=en-US&gl=US&ceid=US:en";
 			else if( symbol=="TSLA" )
 				query = "topics/CAAqIggKIhxDQkFTRHdvSkwyMHZNR1J5T1RCa0VnSmxiaWdBUAE?hl=en-US&gl=US&ceid=US%3Aen";
-			TaskResult xml = co_await Ssl::SslCo::Get( "news.google.com", format("/rss/{}", query) );
-			sp<string> pXml = xml.Get<string>();
+			AwaitResult xml = co_await Ssl::SslCo::Get( "news.google.com", format("/rss/{}", query) );
+			auto pXml = xml.UP<string>();
 
-			TGoogleResult results = make_shared<vector<sp<Proto::Results::GoogleNews>>>();
+			auto results = mu<vector<sp<Proto::Results::GoogleNews>>>();
 			tinyxml2::XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "rss" ); CHECK( pRoot ); var pChannel = pRoot->FirstChildElement( "channel" ); CHECK( pChannel );
 			for( auto pItem=pChannel->FirstChildElement("item"); pItem; pItem = pItem->NextSiblingElement("item") )
 			{
@@ -88,12 +88,12 @@ namespace Jde::Markets::TwsWebSocket
 				try
 				{
 					CHECK( (pubDateString.size()==29) ); CHECK( (pubDateString.substr(26)=="GMT") );
-					var day = Str::To<uint8>( pubDateString.substr(5,2) );
+					var day = Toε<uint8>( pubDateString.substr(5,2) );
 					var month = DateTime::ParseMonth( pubDateString.substr(8,3) );
-					var year = Str::To<uint16>( pubDateString.substr(12,4) );
-					var hour = Str::To<uint8>( pubDateString.substr(17,2) );
-					var minute = Str::To<uint8>( pubDateString.substr(20,2) );
-					var second = Str::To<uint8>( pubDateString.substr(23,2) );
+					var year = Toε<uint16>( pubDateString.substr(12,4) );
+					var hour = Toε<uint8>( pubDateString.substr(17,2) );
+					var minute = Toε<uint8>( pubDateString.substr(20,2) );
+					var second = Toε<uint8>( pubDateString.substr(23,2) );
 					p->set_publication_date( (uint32)DateTime{year, month, day, hour, minute, second}.TimeT() );
 				}
 				catch( const IException& e )
@@ -105,16 +105,16 @@ namespace Jde::Markets::TwsWebSocket
 				p->set_description( string{pItem->TryChildText("description")} );
 				if( auto pSource=pItem->FirstChildElement("source"); pSource )
 				{
-					p->set_source_url( string{pSource->AttributeValue("url")} );
+					p->set_source_url( string{pSource->Attr("url")} );
 					p->set_source( pSource->GetText() );
 				}
 				results->push_back( move(p) );
 			}
-			h.promise().get_return_object().SetResult( results );
+			h.promise().get_return_object().SetResult( results.release() );
 		}
 		catch( IException& e )
 		{
-			h.promise().get_return_object().SetResult( e.Clone() );
+			h.promise().get_return_object().SetResult( move(e) );
 		}
 		h.resume();
 	}};}

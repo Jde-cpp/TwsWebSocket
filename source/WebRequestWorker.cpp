@@ -210,28 +210,29 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}*/
 
-	bool WebRequestWorker::ReceiveRequests( const SessionKey& session, const Proto::Requests::GenericRequests& request )noexcept
+	bool WebRequestWorker::ReceiveRequests( const SessionKey& session, const Proto::Requests::GenericRequests& r )noexcept
 	{
 		bool handled = true;
-		if( request.type()==ERequests::RequsetPrevOptionValues )
-			PreviousDayValues( request.ids(), ARG(request.id()) );
-		else if( request.type()==ERequests::RequestFundamentalData )
-			RequestFundamentalData( request.ids(), {session, request.id()} );
-		else if( request.type()==ERequests::Portfolios )
-			WatchListData::SendLists( true, ARG(request.id()) );
-		else if( request.type()==ERequests::WatchLists )
-			WatchListData::SendLists( false, ARG(request.id()) );
-		else if( request.type()==ERequests::Filings || request.type()==ERequests::Investors )
+		var t = r.type();
+		if( t==ERequests::RequsetPrevOptionValues )
+			PreviousDayValues( r.ids(), ARG(r.id()) );
+		else if( t==ERequests::RequestFundamentalData )
+			RequestFundamentalData( r.ids(), {session, r.id()} );
+		else if( t==ERequests::Portfolios )
+			WatchListData::SendLists( true, ARG(r.id()) );
+		else if( t==ERequests::WatchLists )
+			WatchListData::SendLists( false, ARG(r.id()) );
+		else if( t==ERequests::Filings || t==ERequests::Investors )
 		{
-			if( request.ids().size()!=1 )
-				_pWebSend->Push( "Error in request", Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, request.ids().size()}, {{session}, request.id()} );
+			if( r.ids().size()!=1 )
+				_pWebSend->Push( "Error in request", Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, r.ids().size()}, {{session}, r.id()} );
 			else
 			{
-				var contractId = request.ids()[0];
-				if( request.type()==ERequests::Filings )
-					EdgarRequests::Filings( request.ids()[0], ARG(request.id()) );
-				else if( request.type()==ERequests::Investors )
-					EdgarRequests::Investors( contractId, ARG(request.id()) );
+				var contractId = r.ids()[0];
+				if( t==ERequests::Filings )
+					EdgarRequests::Filings( r.ids()[0], ARG(r.id()) );
+				else if( t==ERequests::Investors )
+					EdgarRequests::Investors( contractId, ARG(r.id()) );
 			}
 		}
 		else
@@ -242,18 +243,16 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		var start = Chrono::BeginningOfDay( Clock::from_time_t(req.start()) );
 		var end = Chrono::EndOfDay( Clock::from_time_t(req.end()) );
-		std::thread( [web=ProcessArg ARG(req.id()), start, end, accountNumber=req.account_number(), pWebSend=_pWebSend]()
-		{
-			Flex::SendTrades( accountNumber, start, end, web );
-		}).detach();
+
+		Flex::SendTrades( req.account_number(), start, end, ProcessArg ARG(req.id()) );
 	}
 
-	α WebRequestWorker::ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )noexcept->Task2
+	α WebRequestWorker::ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )noexcept->Task
 	{
 		try
 		{
-			var pContract = ( co_await Tws::ContractDetails(contractId) ).Get<const Contract>();
-			var pStats = ( co_await ReqStats(pContract, days, start) ).Get<StatCount>();
+			var pDetails = ( co_await Tws::ContractDetail(contractId) ).SP<::ContractDetails>();
+			var pStats = ( co_await ReqStats(ms<Contract>(*pDetails), days, start) ).SP<StatCount>();
 			auto p = new Proto::Results::Statistics(); p->set_request_id(inputArg.ClientId); p->set_count(static_cast<uint32>(pStats->Count)); p->set_average(pStats->Average);p->set_variance(pStats->Variance);p->set_min(pStats->Min); p->set_max(pStats->Max);
 			MessageType msg; msg.set_allocated_statistics( p );
 			inputArg.Push( move(msg) );
@@ -275,8 +274,9 @@ namespace Jde::Markets::TwsWebSocket
 				//TODO see if I have, if not download it, else try getting from tws. (make sure have date.)
 				if( underlyingId==0 )
 					THROW( "({}.{}) did not pass a contract id.", web.SessionId, web.ClientId );
-				var pDetails = _sync.ReqContractDetails( underlyingId ).get(); THROW_IF( pDetails->size()!=1 , "({}.{}) '{}' had '{}' contracts", web.SessionId, web.ClientId, underlyingId, pDetails->size() );
-				var contract = Contract{ pDetails->front() };
+
+				var pDetail = SFuture<::ContractDetails>( Tws::ContractDetail(underlyingId) ).get(); //THROW_IF( pDetails->size()!=1 , "({}.{}) '{}' had '{}' contracts", web.SessionId, web.ClientId, underlyingId, pDetails->size() );
+				var contract = Contract{ *pDetail };
 				if( contract.SecType==SecurityType::Option )
 					THROW( "({}.{})Passed in option contract ({})'{}', expected underlying", web.SessionId, web.ClientId, underlyingId, contract.LocalSymbol );
 
@@ -291,24 +291,24 @@ namespace Jde::Markets::TwsWebSocket
 					auto fetch = [&]( DayIndex expiration )noexcept(false)
 					{
 						var ibContract = TwsClientCache::ToContract( contract.Symbol, expiration, right, params.start_srike() && params.start_srike()==params.end_strike() ? params.start_srike() : 0 );
-						auto pContracts = _sync.ReqContractDetails( ibContract ).get(); THROW_IF( pContracts->size()<1, "'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size() );
+						auto pContracts = Future<vector<sp<::ContractDetails>>>( Tws::ContractDetails(ibContract) ).get(); THROW_IF( pContracts->size()<1, "'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size() );
 						var start = params.start_srike(); var end = params.end_strike();
 						if( !ibContract.strike && (start!=0 || end!=0) )//remove contracts outside bounds?
 						{
-							auto pContracts2 = make_shared<vector<ContractDetails>>();
+							auto pContracts2 = mu<vector<sp<ContractDetails>>>();
 							for( var& details : *pContracts )
 							{
-								if( (start==0 || start<=details.contract.strike) && (end==0 || end>=details.contract.strike) )
+								if( (start==0 || start<=details->contract.strike) && (end==0 || end>=details->contract.strike) )
 									pContracts2->push_back( details );
 							}
-							pContracts = pContracts2;
+							pContracts = move( pContracts2 );
 						}
 						var valueDay = OptionData::LoadDiff( contract, *pContracts, *pResults );
 						if( !valueDay )
 						{
 							flat_map<double,ContractPK> sorted;
-							for( var& details : *pContracts )
-								sorted.emplace( details.contract.strike, details.contract.conId );
+							for( var p : *pContracts )
+								sorted.emplace( p->contract.strike, p->contract.conId );
 
 							auto pExpiration = pResults->add_option_days();
 							pExpiration->set_is_call( right==SecurityRight::Call );
@@ -328,7 +328,7 @@ namespace Jde::Markets::TwsWebSocket
 					else
 					{
 						if( !pOptionParams )
-							pOptionParams = Future<Proto::Results::ExchangeContracts>( Tws::SecDefOptParams(underlyingId,true) ).get();
+							pOptionParams = SFuture<Proto::Results::ExchangeContracts>( Tws::SecDefOptParams(underlyingId,true) ).get();
 						var end = params.end_expiration() ? params.end_expiration() : std::numeric_limits<DayIndex>::max();
 						for( var expiration : pOptionParams->expirations() )
 						{

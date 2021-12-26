@@ -1,5 +1,5 @@
 ﻿#include "PreviousDayValues.h"
-#include "WebSocket.h"
+//#include "WebSocket.h"
 #include "WebRequestWorker.h"
 #include "../../Framework/source/math/MathUtilities.h"
 #include "../../MarketLibrary/source/types/Exchanges.h"
@@ -11,23 +11,32 @@ namespace Jde::Markets
 {
 namespace TwsWebSocket
 {
-	α Previous( int32 contractId, Markets::TwsWebSocket::ProcessArg arg, bool sendMultiEnd )noexcept->Coroutine::Task2
+	α Previous( int32 contractId, Markets::TwsWebSocket::ProcessArg arg, bool sendMultiEnd )noexcept->Coroutine::Task
 	{
 		//TODO wrap in Try.
-		var pContract = ( co_await Tws::ContractDetails( contractId ) ).Get<Contract>(); var& contract = *pContract;
-		var current = CurrentTradingDay( contract );
-		var isOption = contract.SecType==SecurityType::Option;
-		var isPreMarket = IsPreMarket( contract.SecType );
+		sp<::ContractDetails> pDetails;
+		try
+		{
+			pDetails = ( co_await Tws::ContractDetail(contractId) ).SP<::ContractDetails>();
+		}
+		catch( IException& e )
+		{
+			co_return arg.Push( format("Could not load contract {}", contractId), e );
+		}
+		auto pContract = ms<Contract>( *pDetails );
+		var current = CurrentTradingDay( *pContract );
+		var isOption = pContract->SecType==SecurityType::Option;
+		var isPreMarket = IsPreMarket( pContract->SecType );
 		auto pBars = make_shared<flat_map<DayIndex,up<Proto::Results::DaySummary>>>();
-		var count = (isOption && IsOpen(SecurityType::Stock)) || (IsOpen(contract.SecType) && !isPreMarket) ? 1u : 2u;
+		var count = (isOption && IsOpen(SecurityType::Stock)) || (IsOpen(pContract->SecType) && !isPreMarket) ? 1u : 2u;
 		for( auto day=current; pBars->size()<count; day = PreviousTradingDay(day) )
 		{
 			auto pBar1 = make_unique<Proto::Results::DaySummary>(); pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
 			pBars->emplace( day, move(pBar1) );
 		}
-		auto load = [isOption,count,current,arg,contract,pBars,pContract,isPreMarket]( bool useRth, DayIndex endDate, bool isEnd )->AWrapper
+		auto load = [isOption,count,current,arg,pContract,pBars,isPreMarket]( bool useRth, DayIndex endDate, bool isEnd )->AWrapper
 		{
-			return AWrapper( [=]( HCoroutine h )->Task2
+			return AWrapper( [=]( HCoroutine h )->Task
 			{
 				try
 				{
@@ -56,8 +65,8 @@ namespace TwsWebSocket
 					var barSize = isOption ? Proto::Requests::BarSize::Hour : Proto::Requests::BarSize::Day;
 					var previous = endDate<current;
 					var dayCount = !useRth ? 1 : useRth && previous ? std::max( (unsigned long)1u, (unsigned long)(count-1) ) : count;
-#define FETCH(x) ( co_await Tws::HistoricalData(pContract, endDate, dayCount, barSize, x, useRth) ).Get<vector<::Bar>>()
-					if( !IsOpen(contract) )
+#define FETCH(x) ( co_await Tws::HistoricalData(pContract, endDate, dayCount, barSize, x, useRth) ).SP<vector<::Bar>>()
+					if( !IsOpen(*pContract) )
 					{
 						var pAsks = FETCH( TwsDisplay::Enum::Ask );
 						set( *pAsks, []( Proto::Results::DaySummary& summary, double close ){ summary.set_ask( close ); } );
@@ -82,7 +91,7 @@ namespace TwsWebSocket
 						{
 							if( !useRth && !isPreMarket )
 							{
-								var pRth = ( co_await Tws::HistoricalData(pContract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true) ).Get<vector<::Bar>>();
+								var pRth = ( co_await Tws::HistoricalData(pContract, endDate, dayCount, barSize, TwsDisplay::Enum::Trades, true) ).SP<vector<::Bar>>();
 								var trades2 = groupByDay( *pRth );
 								if( auto pIbBar2 = trades2.find(day); pIbBar2!=trades2.end() )
 									ibTrades = pIbBar2->second;
@@ -105,7 +114,7 @@ namespace TwsWebSocket
 							arg.WebSendPtr->Push( move(msg), arg.SessionId );
 					}
 					if( isEnd )
-						arg.WebSendPtr->Push( EResults::MultiEnd, arg );
+						arg.Push( EResults::MultiEnd );
 				}
 				catch( IException& e )
 				{

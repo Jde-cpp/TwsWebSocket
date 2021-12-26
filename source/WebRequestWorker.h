@@ -35,7 +35,7 @@ namespace Jde::Markets::TwsWebSocket
 		α HandleRequest( QueueType&& msg )noexcept->void;
 		α HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& session )noexcept->void;
 		α ReceiveRequests( const SessionKey& session, const Proto::Requests::GenericRequests& request )noexcept->bool;
-		α ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )noexcept->Task2;
+		α ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )noexcept->Task;
 		α Receive( Proto::Requests::ERequests type, string&& name, const ClientKey& arg )noexcept->void;
 		α ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept->void;
 		α ReceiveOptions( const SessionKey& session, const Proto::Requests::RequestOptions& request )noexcept->void;

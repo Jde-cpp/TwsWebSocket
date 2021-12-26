@@ -8,13 +8,13 @@ namespace Jde::Markets::TwsWebSocket{ struct ProcessArg;}
 namespace Jde::Markets::TwsWebSocket::News
 {
 	using namespace Jde::Coroutine;
-	α RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task2;
+	α RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task;
 
-	α RequestProviders( ProcessArg arg )noexcept->Task2;
+	α RequestProviders( ProcessArg arg )noexcept->Task;
 
-	using THistoricalResult=Task2;
+	using THistoricalResult=Task;
 	α  RequestHistorical( ContractPK contractId, google::protobuf::RepeatedPtrField<string> providerCodes, uint limit, time_t start, time_t end, ProcessArg arg )noexcept->THistoricalResult;
 
-	using TGoogleResult=VectorPtr<sp<Proto::Results::GoogleNews>>; using TGoogleAsync=Task2; using TGoogleCoResult=FunctionAwaitable;
+	using TGoogleResult=VectorPtr<sp<Proto::Results::GoogleNews>>; using TGoogleAsync=Task; using TGoogleCoResult=FunctionAwait;
 	α Google( const CIString& symbol )noexcept->TGoogleCoResult;
 }

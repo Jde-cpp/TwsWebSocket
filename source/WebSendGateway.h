@@ -2,6 +2,7 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/core/noncopyable.hpp>
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
+#include "../../MarketLibrary/source/OrderManager.h"
 #include "../../MarketLibrary/source/wrapper/WrapperLog.h"
 #include "../../MarketLibrary/source/types/IBException.h"
 
@@ -9,7 +10,7 @@ namespace Jde::Markets{ struct IBException;}
 namespace Jde::Markets::TwsWebSocket
 {
 	struct WebCoSocket;
-	struct WebSendGateway final: std::enable_shared_from_this<WebSendGateway>, boost::noncopyable, IAccountUpdateHandler //TODO not a worker, WebSendGateway
+	struct WebSendGateway final: std::enable_shared_from_this<WebSendGateway>, boost::noncopyable, IAccountUpdateHandler, OrderManager::IListener //TODO not a worker, WebSendGateway
 	{
 		typedef tuple<SessionPK,MessageTypePtr> TQueue;
 		WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
@@ -40,8 +41,10 @@ namespace Jde::Markets::TwsWebSocket
 		//α Push( string message, IException& e, const ClientKey& key )noexcept(false)->void{ PushError( e.MessageId, move(message), key );}
 		//α PushError( int errorCode, string errorString, TickerId id )noexcept->void;
 
-		α Push( MessageType&& pUnion, SessionPK id )noexcept(false)->void;
-		α Push( vector<MessageType>&& pUnion, SessionPK id )noexcept(false)->void;
+		α Push( MessageType&& m, SessionPK id )noexcept(false)->void;
+		α TryPush( MessageType&& m, SessionPK id )noexcept(false)->void{ TRY( Push(move(m), id) ); }
+		α Push( vector<MessageType>&& m, SessionPK id )noexcept(false)->void;
+		α TryPush( vector<MessageType>&& m, SessionPK id )noexcept(false)->void{ Push( move(m), id); }
 		α PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false)->void;
 
 		α Push( EResults eResults, const ClientKey& key )noexcept(false)->void;
@@ -60,6 +63,10 @@ namespace Jde::Markets::TwsWebSocket
 		α AddRequestSessions( SessionPK id, const vector<Proto::Results::EResults>& webSendMessages )noexcept->void;
 
 		α SetClientSync( sp<TwsClientSync> pClient )noexcept->void{ DBG( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
+
+		α OnOrderChange( sp<const MyOrder> OrderPtr, sp<const Markets::Contract> ContractPtr, sp<const OrderStatus> StatusPtr, sp<const OrderState> StatePtr )noexcept->void;
+		α OnState( sp<const OrderState> p, sp<const MyOrder> pOrder )noexcept->void;
+
 	private:
 		α Push( string&& data, SessionPK sessionId )noexcept->void;
 		α GetClientRequest( TickerId ibReqId )noexcept{return _requestSession.Find( ibReqId ).value_or( ClientKey{} ); }

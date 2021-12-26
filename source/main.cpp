@@ -14,7 +14,6 @@ namespace Jde{  string OSApp::CompanyName()noexcept{ return "Jde-Cpp"; } }
 #endif
 namespace Jde::Markets::TwsWebSocket
 {
-	sp<Settings::Container> SettingsPtr;
 	void Startup( bool initialCall=true )noexcept;
 }
 
@@ -60,8 +59,7 @@ namespace Jde::Markets
 		sp<TwsClientSync> pClient;
 		sp<WrapperWeb> pWrapper;
 		TRY( auto p = TwsWebSocket::WrapperWeb::CreateInstance(); pClient = get<0>( p ); pWrapper = get<1>( p );  );
-		auto pSettings = TwsWebSocket::SettingsPtr = Jde::Settings::Global().SubContainer( "twsWebSocket" );
-		auto pSocket = TwsWebSocket::WebCoSocket::Create( *pSettings, pClient );
+		auto pSocket = TwsWebSocket::WebCoSocket::Create( pClient, Settings::TryGet<uint16>("twsWebSocket/port").value_or(6812), Settings::TryGet<uint8>("twsWebSocket/threadCount").value_or(1) );
 		if( pWrapper )
 		{
 			pWrapper->SetWebSend( pSocket->WebSend() );
@@ -72,7 +70,7 @@ namespace Jde::Markets
 					std::this_thread::yield();
 			}
 		}
-		if( pSettings->TryGet<bool>("loadOnStartup").value_or(false) )
+		if( Settings::TryGet<bool>("twsWebSocket/loadOnStartup").value_or(false) )
 		{
 			try
 			{
