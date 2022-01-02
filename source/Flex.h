@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 namespace Jde::Markets::TwsWebSocket
 {
@@ -6,6 +6,5 @@ namespace Jde::Markets::TwsWebSocket
 	namespace Flex
 	{
 		α SendTrades( str accountNumber, TimePoint start, TimePoint end, ProcessArg web  )noexcept->Task;
-
 	};
 }

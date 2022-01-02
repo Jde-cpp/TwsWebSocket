@@ -9,7 +9,7 @@ namespace Jde::Markets::TwsWebSocket
 {
 	fs::path GetDir()noexcept(false)
 	{
-		var dir = Settings::TryGet<fs::path>( "twsWebSocket/watchDir" ).value_or( IApplication::Instance().ApplicationDataFolder()/"watches" ); THROW_IF( dir.empty(), "WatchDir not set" ); CHECK_PATH( dir );
+		var dir = Settings::Get<fs::path>( "twsWebSocket/watchDir" ).value_or( IApplication::Instance().ApplicationDataFolder()/"watches" ); THROW_IF( dir.empty(), "WatchDir not set" ); CHECK_PATH( dir );
 		return dir;
 	}
 	vector<string> WatchListData::Names( optional<bool> portfolio )noexcept(false)//IOException - watch list dir may not exist.
@@ -34,7 +34,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	void WatchListData::SendLists( bool portfolio, const ProcessArg& inputArg )noexcept
 	{
-		std::thread( [arg=inputArg, portfolio]
+		std::thread( [arg=inputArg, portfolio]//todo remove thread.
 		{
 			try
 			{

@@ -1,7 +1,6 @@
 ﻿#include "TwsSendWorker.h"
 #include <jde/markets/types/MyOrder.h>
-#include <jde/blockly/BlocklyLibrary.h>
-#include <jde/blockly/IBlockly.h>
+#include <jde/markets/types/proto/ResultsMessage.h>
 #include "../../Framework/source/io/ProtoUtilities.h"
 #include "../../Framework/source/Cache.h"
 #include "../../MarketLibrary/source/TickManager.h"
@@ -44,6 +43,24 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	α ContractDetails( Proto::Requests::RequestContractDetails r, SessionKey s )noexcept->Task;
 
+	α Order( const Proto::Requests::PlaceOrder r, SessionKey s )noexcept->Task
+	{
+		var pIbContract = Contract{ r.contract() }.ToTws();
+		MyOrder o{ Tws::RequestId(), r.order() };
+		WebSendGateway::AddOrder( o.orderId, s.SessionId );
+		try
+		{
+			auto p = ( co_await Tws::PlaceOrder(pIbContract, move(o), r.block_id()) ).SP<Proto::Results::OpenOrder>();
+			p->set_request_id( r.id() );
+			WebSendGateway::PushS( ToMessage(new Proto::Results::OpenOrder{*p}), s.SessionId );
+		}
+		catch( IException& e )
+		{
+			string message = e.Code==451 ? e.What() : "Place order failed";
+			WebSendGateway::PushS( message, e, {{s.SessionId}, r.id()} );
+		}
+	}
+
 	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionKey )noexcept
 	{
 		ClientPK clientId{0};
@@ -65,7 +82,7 @@ namespace Jde::Markets::TwsWebSocket
 			else if( m.has_historical_data() )
 				HistoricalData( move(*m.mutable_historical_data()), sessionKey );
 			else if( m.has_place_order() )
-				Order( m.place_order(), sessionKey );
+				Order( move(m.place_order()), move(sessionKey) );
 			else if( m.has_request_positions() )
 				Positions( m.request_positions(), sessionKey );
 			else if( m.has_request_executions() )
@@ -111,8 +128,6 @@ namespace Jde::Markets::TwsWebSocket
 
 	α ContractDetails( Proto::Requests::RequestContractDetails r, SessionKey s )noexcept->Task
 	{
-		//up<Proto::Results::ContractDetailsResult> pResult;
-		//auto result = [&pResult](){ if( !pResult ){ pResult = mu<Proto::Results::ContractDetailsResult>(); pResult->set_request_id( r.id() ); } return pResult.get(); }
 		auto threadId = std::this_thread::get_id();
 		vector<MessageType> messages; messages.reserve( r.contracts_size()+1 );
 		for( int i=0; i<r.contracts_size(); ++i )
@@ -122,23 +137,23 @@ namespace Jde::Markets::TwsWebSocket
 			try
 			{
 				var pDetails = !contract.Id && contract.SecType==SecurityType::Option
-					? ( co_await Tws::ContractDetail(TwsClientCache::ToContract(contract.Symbol, contract.Expiration, contract.Right)) ).SP<::ContractDetails>()
+					? ( co_await Tws::ContractDetail(ToIb(contract.Symbol, contract.Expiration, contract.Right)) ).SP<::ContractDetails>()
 					: ( co_await Tws::ContractDetail(*contract.ToTws()) ).SP<::ContractDetails>();
 
 				*pResult->add_details() = ToProto( *pDetails );
 			}
-			catch( IException& e )
+			catch( IException& )
 			{
 				pResult->add_details()->set_allocated_contract( contract.ToProto().release() );
 			}
-			messages.emplace_back();
-			messages.back().set_allocated_contract_details( pResult.release() );
+
+			messages.emplace_back().set_allocated_contract_details( pResult.release() );
 			if( i==r.contracts_size()-1 || threadId!=std::this_thread::get_id() )
 			{
-				if( r.contracts_size()!=1 && i==r.contracts_size()-1 )
+				if( i==r.contracts_size()-1 )
 				{
 					auto pMessage = mu<Proto::Results::MessageValue>(); pMessage->set_int_value( r.id() ); pMessage->set_type( EResults::MultiEnd );
-					messages.emplace_back(); messages.back().set_allocated_message( pMessage.release() );
+					messages.emplace_back().set_allocated_message( pMessage.release() );
 				}
 				else
 					threadId = std::this_thread::get_id();
@@ -154,11 +169,7 @@ namespace Jde::Markets::TwsWebSocket
 			var p = ( co_await Tws::RequestAllOpenOrders() ).UP<Proto::Results::Orders>();
 			auto pResults = mu<Proto::Results::Orders>(); pResults->set_request_id( t.ClientId );
 			for( var& order : p->orders() )
-			{
-				//var& o = order.order();
-				//UM::TestAccess( EAccess::Read, client.UserId, sv tableName )noexcept(false)->void; //TODO check permissions
 				*pResults->add_orders() = order;
-			}
 			for( var& s : p->statuses() )
 			{
 				*pResults->add_statuses() = s;
@@ -209,13 +220,13 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData r, SessionKey session )noexcept(false)->Task
+	α TwsSendWorker::HistoricalData( Proto::Requests::RequestHistoricalData r, SessionKey s )noexcept(false)->Task
 	{
 		try
 		{
 			var pDetails = ( co_await Tws::ContractDetail(r.contract().id()) ).SP<::ContractDetails>();
 			var endDate = Chrono::ToDays( Clock::from_time_t(r.date()) );
-			LOG( "({})HistoricalData( '{}', '{}', {}, '{}', '{}', {} )", session.SessionId, pDetails->contract.symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
+			LOG( "({})HistoricalData( '{}', '{}', {}, '{}', '{}', {} )", s.SessionId, pDetails->contract.symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
 			var pBars = ( co_await Tws::HistoricalData(ms<Contract>(*pDetails), endDate, r.days(), r.bar_size(), r.display(), r.use_rth()) ).SP<vector<::Bar>>();
 			auto p = mu<Proto::Results::HistoricalData>(); p->set_request_id( r.id() );
 			for( var& bar : *pBars )
@@ -233,10 +244,12 @@ namespace Jde::Markets::TwsWebSocket
 				proto.set_count( bar.count );
 			}
 			MessageType msg; 	msg.set_allocated_historical_data( p.release() );
-			_web.Push( move(msg), session.SessionId );
+			_web.Push( move(msg), s.SessionId );
 		}
-		catch( const IException& )
-		{}
+		catch( IException& e )
+		{
+			_web.Push( "Could not load historical data", e, {{s.SessionId}, r.id()} );
+		}
 	}
 
 	α TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, const SessionKey& session )noexcept->void
@@ -249,55 +262,27 @@ namespace Jde::Markets::TwsWebSocket
 		_tws.reqExecutions( _web.AddRequestSession({{session.SessionId},r.id()}), filter );
 	}
 
-	α TwsSendWorker::Order( const Proto::Requests::PlaceOrder& r, const SessionKey& session )noexcept->void
-	{
-		var reqId = _web.AddRequestSession( {{session.SessionId},r.id()}, r.order().id() );
-		const Jde::Markets::Contract contract{ r.contract() };
-		var pIbContract = contract.ToTws();
-		const MyOrder order{ reqId, r.order() };
-		DBG( "({})receiveOrder( '{}', contract='{}' {}x{} )"sv, reqId, session.SessionId, pIbContract->symbol, order.lmtPrice, order.totalQuantity );
-		_tws.placeOrder( *pIbContract, order );
-		if( r.block_id().size() )
-		{
-			try
-			{
-				auto pp = up<sp<Markets::MBlockly::IBlockly>>( Blockly::CreateAllocatedExecutor(r.block_id(), order.orderId, contract.Id) );
-				auto p = *pp;
-				p->Run();
-			}
-			catch( const IException& e )
-			{
-				_webSendPtr->Push( "Place order failed", move(e), {{session.SessionId}, r.id()} );
-			}
-			//todo allow cancel
-/*			std::thread{ [ pBlockly=*p ]()
-			{
-				pBlockly->Run();
-				while( pBlockly->Running() )
-					std::this_thread::sleep_for( 5s );
-			}}.detach();
-*/
-		}
-/*		if( !order.whatIf && r.stop()>0 )
-		{
-			var parentId = _tws.RequestId();
-			_requestSession.emplace( parentId, make_tuple(sessionId, r.id()) );
-			Jde::Markets::MyOrder parent{ parentId, r.order() };
-			parent.IsBuy( !order.IsBuy() );
-			parent.OrderType( r::EOrderType::StopLimit );
-			parent.totalQuantity = order.totalQuantity;
-			parent.auxPrice = r.stop();
-			parent.lmtPrice = r.stop_limit();
-			parent.parentId = reqId;
-			_tws.placeOrder( *pIbContract, parent );
-		}*/
-	}
-
-	void TwsSendWorker::Positions( const Proto::Requests::RequestPositions& r, const SessionKey& session )noexcept
+	α TwsSendWorker::Positions( const Proto::Requests::RequestPositions& r, const SessionKey& session )noexcept->void
 	{
 		_tws.reqPositionsMulti( _web.AddRequestSession({{session.SessionId},r.id()}), r.account_number(), r.model_code() );
 	}
-
+	α LatestOrder( ::OrderId id, SessionPK s )noexcept->Task
+	{
+		var p = ( co_await OrderManager::Latest(id) ).UP<OrderManager::Cache>();
+		if( !p )
+			_web.PushError( "Order not found", {{s}, (ClientPK)id}, -1 );
+		else
+		{
+			ASSERT( p->ContractPtr && p->OrderPtr && p->StatePtr );
+			auto o = mu<Proto::Results::OpenOrder>();
+			o->set_request_id( id );
+			o->set_allocated_contract( p->ContractPtr->ToProto().release() );
+			o->set_allocated_order( p->OrderPtr->ToProto().release() );
+			o->set_allocated_state( ToProto(*p->StatePtr).release() );
+			Proto::Results::MessageUnion m; m.set_allocated_open_order( o.release() );
+			_web.Push( move(m), s );
+		}
+	}
 	α TwsSendWorker::Request( const Proto::Requests::GenericRequest& r, const SessionKey& s )noexcept->void
 	{
 		var t = r.type();
@@ -306,22 +291,7 @@ namespace Jde::Markets::TwsWebSocket
 		else if( t==ERequests::RequestAllOpenOrders )
 			RequestAllOpenOrders( {s, r.id()} );
 		else if( t==ERequests::Order )
-		{
-			if( var p = OrderManager::GetLatest( r.item_id() ); p )
-			{
-				ASSERT( p->ContractPtr && p->OrderPtr && p->StatePtr );
-				auto o = mu<Proto::Results::OpenOrder>();
-				o->set_request_id( r.id() );
-				o->set_allocated_contract( p->ContractPtr->ToProto().release() );
-				o->set_allocated_order( p->OrderPtr->ToProto().release() );
-				o->set_allocated_state( ToProto(*p->StatePtr).release() );
-				Proto::Results::MessageUnion m; m.set_allocated_open_order( o.release() );
-				_web.Push( move(m), s.SessionId );
-			}
-			else
-				WARN( "({})Could not find order.", r.item_id() );
-
-		}
+			LatestOrder( (::OrderId)r.item_id(), s.SessionId );
 		else
 			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", s.SessionId, r.id(), r.type() );
 	}

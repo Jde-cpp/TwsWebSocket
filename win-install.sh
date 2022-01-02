@@ -1,9 +1,9 @@
 #!/bin/bash
 #should be run from scriptDir?
 source ../Framework/common.sh;
-cd $REPO_BASH/jde/TwsWebSocket;#pwd?
-blocklyDir=$REPO_BASH/jde/Blockly;
-publicDir=$REPO_BASH/jde/Public;
+cd $JDE_BASH/TwsWebSocket;#pwd?
+blocklyDir=$JDE_BASH/Blockly;
+publicDir=$JDE_BASH/Public;
 blocklyInstallDir=`pwd`/install/ProgramData/jde-cpp/TwsWebSocket/blockly;
 moveToDir install;
 moveToDir ProgramData;moveToDir jde-cpp;moveToDir TwsWebSocket;moveToDir blockly;moveToDir build;moveToDir include;
@@ -16,8 +16,6 @@ function linkDir
 	moveToDir $destination;
 	for file in "${_files[@]}"; do
 		if [[ $file != *.* ]]; then file=$file.h; fi;
-		#echo `pwd`;
-		#echo mklink $file $source;
 		if [ ! -f $file ]; then mklink $file $source; fi;
 	done
 }
@@ -32,12 +30,8 @@ function linkRecursive
 		#echo $filename;
 		if [ -d $filename ]; then
 			echo linkRecursive $base $source;
-			#_source=$source; #only 1 level...
 			linkRecursive $base $source;
-			#source=_source;
-			#echo pwd=`pwd`;
 		else
-			#echo mklink $base $source;
 			mklink $base $source;
 		fi;
 	done;
@@ -70,6 +64,3 @@ mklink TradeOption.proto $blocklyDir/examples;
 cd $publicDir/stage/release
 mklink libssl-1_1-x64.dll /c/"Program Files"/OpenSSL-Win64/bin
 mklink libcrypto-1_1-x64.dll /c/"Program Files"/OpenSSL-Win64/bin
-
-
-

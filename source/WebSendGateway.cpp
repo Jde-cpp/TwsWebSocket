@@ -1,18 +1,18 @@
 ﻿#include "WebSendGateway.h"
 #include "WebCoSocket.h"
 #include "WrapperWeb.h"
+#include <jde/markets/types/proto/ResultsMessage.h>
 #include "../../Framework/source/um/UM.h"
 #include "../../MarketLibrary/source/TickManager.h"
 #include "../../MarketLibrary/source/data/Accounts.h"
 #include "../../MarketLibrary/source/OrderManager.h"
 
 #define var const auto
-#define _client dynamic_cast<TwsClientCache&>(TwsClientSync::Instance())
+#define _client dynamic_cast<TwsClient&>(TwsClientSync::Instance())
 namespace Jde::Markets::TwsWebSocket
 {
 	static const LogTag& _logLevel = Logging::TagLevel( "app-toWeb" );
-
-
+	α Instance()noexcept->WebSendGateway&{ return *WebCoSocket::Instance()->WebSend(); }
 	using Proto::Results::MessageUnion;
 	using Proto::Results::MessageValue;
 	WebSendGateway::WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept:
@@ -20,20 +20,41 @@ namespace Jde::Markets::TwsWebSocket
 		_pClientSync{ pClientSync }
 	{}
 
-	α WebSendGateway::OnOrderChange( sp<const MyOrder> pOrder, sp<const Markets::Contract> pContract, sp<const OrderStatus> pStatus, sp<const OrderState> pState )noexcept->void
+	flat_map<SessionPK,flat_set<::OrderId>> _sessionOrders; std::mutex _sessionOrderMutex;
+	α WebSendGateway::AddOrder( ::OrderId id, SessionPK s )noexcept->void
 	{
-		WebCoSocket::ForEachSession( [=]( const SessionInfo& x )
+		lock_guard _{ _sessionOrderMutex };
+		_sessionOrders.try_emplace( s ).first->second.emplace( id );
+	}
+	α CheckPlaceOrderResult( SessionPK s, ::OrderId orderId )->bool//if order created by client, just send notification on placeOrder result.
+	{
+		bool result = true;
+		lock_guard _{ _sessionOrderMutex };
+		if( auto p = _sessionOrders.find(s); p!=_sessionOrders.end() && p->second.find(orderId)!=p->second.end() )
 		{
-			if( !Accounts::CanRead(pOrder->account, x.UserId) )
-				return;
+			p->second.erase( orderId );
+			if( p->second.empty() )
+				_sessionOrders.erase( p );
+		}
+		else
+			result = false;
 
-			auto pUpdate = mu<Proto::Results::OrderUpdate>();
-			if( pStatus )
-				pUpdate->set_allocated_status( pStatus->ToProto().release() );
-			if( pState )
-				pUpdate->set_allocated_state( ToProto(*pState).release() );
-			Proto::Results::MessageUnion m; m.set_allocated_order_update( pUpdate.release() );
-			WebCoSocket::Send( move(m), x.SessionId );
+		return result;
+	}
+	α WebSendGateway::OnOrderException( string account_, sp<const IBException> e_ )noexcept->Task
+	{
+		co_await WebCoSocket::CoForEachSession( [a=move(account_), e=e_ ]( const SessionInfo& x )
+		{
+			if( Accounts::CanRead(a, x.UserId) && !CheckPlaceOrderResult(x.SessionId, e->RequestId) )
+				WebCoSocket::Send( ToMessage(e->What(), e->RequestId, (int)e->Code), x.SessionId );
+		} );
+	}
+	α WebSendGateway::OnOrderChange( sp<const MyOrder> pOrder, sp<const Markets::Contract> pContract, sp<const OrderStatus> pStatus, sp<const OrderState> pState )noexcept->Task
+	{
+		co_await WebCoSocket::CoForEachSession( [=]( const SessionInfo& x )
+		{
+			if( Accounts::CanRead(pOrder->account, x.UserId) && !CheckPlaceOrderResult(x.SessionId, pOrder->orderId) )
+				WebCoSocket::Send( ToMessage(pOrder->orderId, pStatus, pState), x.SessionId );
 		} );
 	}
 
@@ -178,28 +199,7 @@ namespace Jde::Markets::TwsWebSocket
 		});
 		for_each( orphans.begin(), orphans.end(), [this](auto id){ EraseRequestSession( id ); } );
 	}
-/*	α WebSendGateway::Push( EResults type, function<void(MessageType&)> set )noexcept->void
-	{
-		vector<SessionPK> orphans;
-		_requestSessions.Where( type, [&]( const auto& sessionIds )
-		{
-			sessionIds.ForEach( [&]( const SessionPK& sessionId )
-			{
-				MessageType msg;
-				set( msg ); ASSERT( msg.Value_case()!=MessageType::ValueCase::VALUE_NOT_SET );
-				try
-				{
-					Push( move(msg), sessionId );
-				}
-				catch( const IException& )
-				{
-					orphans.emplace_back( sessionId );
-				}
-			});
-		});
-		for_each( orphans.begin(), orphans.end(), [this](auto id){ EraseRequestSession( id ); } );
-	}
-*/
+
 	α WebSendGateway::Push( EResults messageId, TickerId ibReqId )noexcept->void
 	{
 		var clientKey = GetClientRequest( ibReqId );
@@ -251,34 +251,15 @@ namespace Jde::Markets::TwsWebSocket
 			THROW( "Could not find any market subscriptions." );
 	}
 
-/*	α WebSendGateway::PushError( int errorCode, string errorString, TickerId id )noexcept->void
+	α WebSendGateway::PushS( MessageType&& m, SessionPK id )noexcept->void
 	{
-		if( id>0 )
-		{
-			var key = GetClientRequest( id );
-			if( key.SessionId )
-				Push( IBException{move(errorString), errorCode, -1}, key );
-			else
-				DBG( "Could not find session for error req:  '{}'."sv, id );
-		}
-		else if( errorCode==504 )
-		{
-			vector<TickerId> lostIds;
-			_requestSession.ForEach( [errorCode, &errorString, pThis=shared_from_this(),&lostIds](auto tickerId, const auto& key)
-			{
-				try
-				{
-					pThis->Push( IBException{errorString, errorCode, -1}, key );
-				}
-				catch( const IException& )
-				{
-					lostIds.push_back( tickerId );
-				}
-			});
-			for_each( lostIds.begin(), lostIds.end(), [&](auto id){_requestSession.erase(id);} );
-		}
+		Instance().Push( move(m), id );
 	}
-*/
+	α WebSendGateway::PushErrorS( string errorString, const ClientKey& key, int errorCode )noexcept->void
+	{
+		Instance().PushError( move(errorString), key, errorCode );
+	}
+
 	α WebSendGateway::PushError( string errorString, const ClientKey& key, int errorCode )noexcept->void
 	{
 		auto pError = make_unique<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code( errorCode==0 ? Calc32RunTime(errorString) : errorCode ); pError->set_message( move(errorString) );

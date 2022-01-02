@@ -1,4 +1,5 @@
 ﻿#include "WebRequestWorker.h"
+#include <jde/markets/types/proto/ResultsMessage.h>
 #include "./BlocklyWorker.h"
 #include "./Flex.h"
 #include "requests/News.h"
@@ -57,6 +58,7 @@ namespace Jde::Markets::TwsWebSocket
 			_pWebSend->Push( "Request Failed", e, {msg, 0} );
 		}
 	}
+	α ReceiveOptions( SessionKey s, Proto::Requests::RequestOptions o )noexcept->Task;
 #pragma warning(disable:4456)
 	α WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& session )noexcept->void
 	{
@@ -161,14 +163,14 @@ namespace Jde::Markets::TwsWebSocket
 
 		var header = JSON.parse(headerBuf.toString());
 		var body = JSON.parse(bodyBuf.toString());*/
-				if( auto pEmail = Settings::TryGet<string>("um/user.email"); pEmail )
+				if( auto pEmail = Settings::Get<string>("um/user.email"); pEmail )
 				{
-					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, *pEmail, true, Settings::TryGet<string>("um/user.name").value_or(""), "", Clock::now()+std::chrono::hours(100 * 24), "key" );
+					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, *pEmail, true, Settings::Get<string>("um/user.name").value_or(""), "", Clock::now()+std::chrono::hours(100 * 24), "key" );
 				}
 				else
 				{
 					var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
-					THROW_IF( token.Aud!=Settings::TryGet<string>("GoogleAuthClientId"), "Invalid client id" );
+					THROW_IF( token.Aud!=Settings::Get<string>("GoogleAuthClientId"), "Invalid client id" );
 					THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", "Invalid iss" );
 					var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), "token expired" );
 					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
@@ -263,105 +265,32 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α WebRequestWorker::ReceiveOptions( const SessionKey& session, const Proto::Requests::RequestOptions& params )noexcept->void
+	α ReceiveOptions( SessionKey s, Proto::Requests::RequestOptions o )noexcept->Task
 	{
-		std::thread( [params, web=ProcessArg ARG(params.id())]()
+		var underlyingId = o.contract_id(); var clientId = o.id();
+		ClientKey client{ {s.SessionId}, underlyingId };
+		auto pResults = new Proto::Results::OptionValues{}; pResults->set_id( clientId );
+		try
 		{
-			Threading::SetThreadDscrptn( "ReceiveOptions" );
-			var underlyingId = params.contract_id();
-			try
-			{
-				//TODO see if I have, if not download it, else try getting from tws. (make sure have date.)
-				if( underlyingId==0 )
-					THROW( "({}.{}) did not pass a contract id.", web.SessionId, web.ClientId );
+			//TODO see if I have, if not download it, else try getting from tws. (make sure have date.)
+			THROW_IF( underlyingId==0, "({}.{}) did not pass a contract id.", s.SessionId, clientId );
 
-				var pDetail = SFuture<::ContractDetails>( Tws::ContractDetail(underlyingId) ).get(); //THROW_IF( pDetails->size()!=1 , "({}.{}) '{}' had '{}' contracts", web.SessionId, web.ClientId, underlyingId, pDetails->size() );
-				var contract = Contract{ *pDetail };
-				if( contract.SecType==SecurityType::Option )
-					THROW( "({}.{})Passed in option contract ({})'{}', expected underlying", web.SessionId, web.ClientId, underlyingId, contract.LocalSymbol );
+			var pDetail = ( co_await Tws::ContractDetail(underlyingId) ).SP<::ContractDetails>();
+			var contract = Contract{ *pDetail }; THROW_IF( contract.SecType==SecurityType::Option, "({}.{})Passed in option contract ({})'{}', expected underlying", s.SessionId, clientId, underlyingId, contract.LocalSymbol );
 
-				const std::array<sv,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" };
-				if( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !params.start_expiration() )
-					THROW( "({}.{})ReceiveOptions request for '{}' specified no date.", web.SessionId, web.ClientId, contract.Symbol );
+			constexpr std::array<sv,4> longOptions{ "TSLA", "GLD", "SPY", "QQQ" }; THROW_IF( std::find(longOptions.begin(), longOptions.end(), contract.Symbol)!=longOptions.end() && !o.start_expiration(), "({}.{})ReceiveOptions request for '{}' specified no date.", s.SessionId, clientId, contract.Symbol );
 
-				auto pResults = make_unique<Proto::Results::OptionValues>(); pResults->set_id( params.id() );
-				sp<Proto::Results::ExchangeContracts> pOptionParams;
-				auto loadRight = [&]( SecurityRight right )
-				{
-					auto fetch = [&]( DayIndex expiration )noexcept(false)
-					{
-						var ibContract = TwsClientCache::ToContract( contract.Symbol, expiration, right, params.start_srike() && params.start_srike()==params.end_strike() ? params.start_srike() : 0 );
-						auto pContracts = Future<vector<sp<::ContractDetails>>>( Tws::ContractDetails(ibContract) ).get(); THROW_IF( pContracts->size()<1, "'{}' - '{}' {} has {} contracts", contract.Symbol, DateTime{Chrono::FromDays(expiration)}.DateDisplay(), ToString(right), pContracts->size() );
-						var start = params.start_srike(); var end = params.end_strike();
-						if( !ibContract.strike && (start!=0 || end!=0) )//remove contracts outside bounds?
-						{
-							auto pContracts2 = mu<vector<sp<ContractDetails>>>();
-							for( var& details : *pContracts )
-							{
-								if( (start==0 || start<=details->contract.strike) && (end==0 || end>=details->contract.strike) )
-									pContracts2->push_back( details );
-							}
-							pContracts = move( pContracts2 );
-						}
-						var valueDay = OptionData::LoadDiff( contract, *pContracts, *pResults );
-						if( !valueDay )
-						{
-							flat_map<double,ContractPK> sorted;
-							for( var p : *pContracts )
-								sorted.emplace( p->contract.strike, p->contract.conId );
+			if( (o.security_type() & SecurityRight::Call) )
+				( co_await OptionData::Load(pDetail, o.start_expiration(), o.end_expiration(), SecurityRight::Call, o.start_srike(), o.end_strike(), pResults) ).CheckError();
+			if( (o.security_type() & SecurityRight::Put) )
+				( co_await OptionData::Load(pDetail, o.start_expiration(), o.end_expiration(), SecurityRight::Put, o.start_srike(), o.end_strike(), pResults) ).CheckError();
 
-							auto pExpiration = pResults->add_option_days();
-							pExpiration->set_is_call( right==SecurityRight::Call );
-							pExpiration->set_expiration_days( expiration );
-							for( var& [strike,contractId] : sorted )
-							{
-								auto pValue = pExpiration->add_values();
-								pValue->set_id( contractId );
-								//DBG( "strike = '{}'"sv, details.contract.strike );
-								pValue->set_strike( static_cast<float>(strike) );
-							}
-						}
-						return valueDay;
-					};
-					if( params.start_expiration()==params.end_expiration() )
-						pResults->set_day( fetch(params.start_expiration()) );
-					else
-					{
-						if( !pOptionParams )
-							pOptionParams = SFuture<Proto::Results::ExchangeContracts>( Tws::SecDefOptParams(underlyingId,true) ).get();
-						var end = params.end_expiration() ? params.end_expiration() : std::numeric_limits<DayIndex>::max();
-						for( var expiration : pOptionParams->expirations() )
-						{
-							if( expiration<params.start_expiration() || expiration>end )
-								continue;
-							try
-							{
-								pResults->set_day( fetch(expiration) );//sets day multiple times...
-							}
-							catch( IBException& e )
-							{
-								if( e.Code!=200 )//No security definition has been found for the request
-									throw move(e);
-							}
-						}
-					}
-				};
-				if( (params.security_type() & SecurityRight::Call) )
-					loadRight( SecurityRight::Call );
-				if( (params.security_type() & SecurityRight::Put) )
-					loadRight( SecurityRight::Put );
-
-				if( pResults->option_days_size() )
-				{
-					MessageType msg; msg.set_allocated_options( pResults.release() );
-					web.Push( move(msg)  );
-				}
-				else
-					web.WebSendPtr->PushError( "No previous dates found", {{web.SessionId}, underlyingId} );
-			}
-			catch( const IBException& e ){ web.Push("Retreive Options failed", e); }
-			catch( const IException& e ){ web.Push("Retreive Options failed", e); }
-		} ).detach();
+			if( pResults->option_days_size() )
+				WebSendGateway::PushS( ToMessage(pResults), s.SessionId );
+			else
+				WebSendGateway::PushErrorS( "No previous dates found", {{s.SessionId}, underlyingId} );
+		}
+		catch( const IException& e ){ delete pResults; WebSendGateway::PushS("Retreive Options failed", e, client); }
 	}
 
 	α WebRequestWorker::RequestFundamentalData( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ClientKey& key )noexcept->void

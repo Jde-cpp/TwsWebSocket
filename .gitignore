@@ -59,3 +59,4 @@ setup/Release/*
 *.aps
 source/meta.json
 TwsWebSocket.json
+source/enc_temp_folder/*

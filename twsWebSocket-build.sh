@@ -54,11 +54,14 @@ if [ $buildPrivate -eq 1 ]; then
 	cd types/proto
 	if [ -f $blocklyProtoDir/blockly.pb.cc ]; then
 		mv $blocklyProtoDir/blockly.pb.cc .;
-		mkklink blockly.pb.h $blocklyProtoDir; 
+		mkklink blockly.pb.h $blocklyProtoDir;
 	fi;
 	cd ../..;
     build Blockly;
 fi;
+cd $JDE_BASH/..
+echo `pwd`
+echo myFetch MarketLibrary market-build.sh
 myFetch MarketLibrary market-build.sh
 cd jde/MarketLibrary;
 $JDE_BASH/MarketLibrary/market-build.sh $clean $shouldFetch 0; if [ $? -ne 0 ]; then echo market-build.sh failed - $?; exit 1; fi;
@@ -93,13 +96,16 @@ moveToDir web;
 fetch TwsWebsite;
 cd ..;
 echo --------------------------------------------------------------Start Setup--------------------------------------------------------------;
-./setup.sh $clean $shouldFetch $buildPrivate;
+./setup.sh $clean $shouldFetch $buildPrivate; if [ $? -ne 0 ]; then echo setup.sh failed - $?; exit 1; fi;
 cd $scriptDir/jde/TwsWebSocket;
-./win-install.sh
+./win-install.sh if [ $? -ne 0 ]; then echo win-install.sh failed - $?; exit 1; fi;
 cd $scriptDir;
 echo ---------------------------------------------------------------End Setup---------------------------------------------------------------;
-if ! $(findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/BuildTools/Common7/IDE' 0 ); then findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/Enterprise/Common7/IDE'; fi;
+#if ! $(findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/BuildTools/Common7/IDE' 0 ); then findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/Enterprise/Common7/IDE'; fi;
+findExecutable devenv.exe '/c/Program\ Files/Microsoft\ Visual\ Studio/2022/BuildTools/Common7/IDE' 0
+findExecutable devenv.exe '/c/Program\ Files/Microsoft\ Visual\ Studio/2022/Enterprise/Common7/IDE'
+
 echo -------------------------------------------------------------Start Install-------------------------------------------------------------;
-devenv jde/TwsWebSocket/setup/Setup.vdproj //build release;
+devenv.exe jde/TwsWebSocket/setup/Setup.vdproj //build release;
 echo --------------------------------------------------------------End Install--------------------------------------------------------------;
 if [ ! -f jde/TwsWebSocket/setup/Release/Setup.msi ]; then echo Setup Failed; else echo success; fi;

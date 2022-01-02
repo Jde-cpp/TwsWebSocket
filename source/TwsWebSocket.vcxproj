@@ -154,11 +154,9 @@
     <ClInclude Include="WebRequestWorker.h" />
     <ClInclude Include="WebSendGateway.h" />
     <ClInclude Include="WrapperWeb.h" />
-    <ClInclude Include="WebSocket.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="WebSocket.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />

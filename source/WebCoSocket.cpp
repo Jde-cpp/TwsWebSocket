@@ -42,12 +42,12 @@ namespace Jde::Markets::TwsWebSocket
 	sp<WebCoSocket> WebCoSocket::_pInstance;
 	flat_map<SessionPK,SessionInfo> WebCoSocket::_sessions; shared_mutex WebCoSocket::_sessionMutex;
 	SessionPK WebCoSocket::_sessionId{0};
-	α WebCoSocket::Create( sp<TwsClientSync> pClient, uint16_t port, uint8 threadCount )noexcept->sp<WebCoSocket>
+	α WebCoSocket::Create( sp<TwsClientSync> pClient, uint16 port, uint8 threadCount )noexcept->sp<WebCoSocket>
 	{
 		ASSERT( !_pInstance );
 		return _pInstance = sp<WebCoSocket>( new WebCoSocket{pClient, port, threadCount} );
 	}
-	WebCoSocket::WebCoSocket( sp<TwsClientSync> pClient, uint16_t port, uint8 threadCount )noexcept:
+	WebCoSocket::WebCoSocket( sp<TwsClientSync> pClient, uint16 port, uint8 threadCount )noexcept:
 		_threadCount{ threadCount },
 		_port{ port },
 		_pWebSend{ make_shared<WebSendGateway>(*this, pClient) },
@@ -71,6 +71,17 @@ namespace Jde::Markets::TwsWebSocket
 		l.unlock();
 		for( var& s : sessions )
 			f( s );
+	}
+	α WebCoSocket::CoForEachSession( function<void( const SessionInfo& x )> f )noexcept->PoolAwait
+	{
+		return PoolAwait( [f]()
+		{
+			shared_lock l{ _sessionMutex };
+			var sessions = Collections::Values( _sessions );
+			l.unlock();
+			for( var& s : sessions )
+				f( s );
+		});
 	}
 	α WebCoSocket::RemoveConnection( SessionPK sessionId )noexcept->void
 	{
@@ -131,12 +142,6 @@ namespace Jde::Markets::TwsWebSocket
 		} );
 	}
 
-/*	α WebCoSocket::UserId( SessionPK sessionId )noexcept(false)->UserPK
-	{
-		var userPK = TryUserId( sessionId ); THROW_IFL( !userPK, "({})Could not find UserId.", sessionId );
-		return userPK;
-	}
-*/
 	α WebCoSocket::TryUserId( SessionPK sessionId )noexcept->UserPK
 	{
 		UserPK pk{};
@@ -234,7 +239,7 @@ namespace Jde::Markets::TwsWebSocket
 		load_server_certificate( ctx );// TODO: settings
 		boost::asio::spawn( ioc, std::bind(&Listen1, std::ref(ioc), std::ref(ctx), tcp::endpoint{address, _port}, std::placeholders::_1) );// Spawn a listening port
 #else
-		boost::asio::spawn( ioc, std::bind(&Listen1, std::ref(ioc), tcp::endpoint{address, _port}, std::placeholders::_1) );// Spawn a listening port
+		boost::asio::spawn( ioc, std::bind(&Listen1, std::ref(ioc), tcp::endpoint{address, (uint16_t)_port}, std::placeholders::_1) );// Spawn a listening port
 #endif
 		std::vector<std::thread> v; v.reserve( _threadCount - 1 );
 		for( uint i = _threadCount - 1; i > 0; --i )

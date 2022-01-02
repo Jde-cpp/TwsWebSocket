@@ -51,11 +51,15 @@ namespace Jde
 			arg->Push( "Reddit search failed", e );
 		}
 	}
-	α Reddit::Block( string&& user, up<Markets::TwsWebSocket::ProcessArg> pArg )noexcept->Coroutine::Task
+	α Reddit::Block( string user, up<Markets::TwsWebSocket::ProcessArg> pArg )noexcept->Coroutine::Task
 	{
 		try
 		{
-			( co_await *DB::ExecuteProcCo("rdt_handle_block(?)", {user}) ).CheckError();
+			auto pId = ( co_await DB::ScalerCo<PK>("select id from rdt_handles where name=?", {user}) ).UP<PK>();//todo create transaction
+			if( pId && *pId )
+				DB::Execute( "update rdt_handles set blocked=1 where id=?", {*pId} );
+			else
+				DB::Execute( "insert into rdt_handles(name,blocked) values( ?, 1 )", {move(user)} );
 			pArg->Push( EResults::Success );
 		}
 		catch( IException& e )

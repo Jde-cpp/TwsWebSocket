@@ -58,10 +58,11 @@ namespace Jde::Markets::TwsWebSocket
 
 	struct WebCoSocket final
 	{
-		Ω Create( sp<TwsClientSync> pClient, uint16_t port, uint8 threadCount )noexcept->sp<WebCoSocket>;
+		Ω Create( sp<TwsClientSync> pClient, uint16 port, uint8 threadCount )noexcept->sp<WebCoSocket>;
 		Ω Instance()noexcept->sp<WebCoSocket>{ return _pInstance; }
 
 		Ω ForEachSession( function<void( const SessionInfo& x )> f )noexcept->void;
+		Ω CoForEachSession( function<void( const SessionInfo& x )> f )noexcept->PoolAwait;
 		α AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false)->void;
 		Ω Send( MessageType&& msg, SessionPK id )noexcept->void;
 		α AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false)->void;
@@ -76,11 +77,11 @@ namespace Jde::Markets::TwsWebSocket
 
 		Ω SetLevel( ELogLevel l )noexcept->void;
 	private:
-		WebCoSocket( sp<TwsClientSync> pClient, uint16_t port, uint8 threadCount )noexcept;
+		WebCoSocket( sp<TwsClientSync> pClient, uint16 port, uint8 threadCount )noexcept;
 
 		α Run()noexcept->void;
 		uint8 _threadCount;
-		uint16_t _port;
+		uint16 _port;
 		sp<TwsClientSync> _pClient;
 		sp<Threading::InterruptibleThread> _pThread;
 		static sp<WebCoSocket> _pInstance;

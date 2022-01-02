@@ -14,6 +14,8 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		typedef tuple<SessionPK,MessageTypePtr> TQueue;
 		WebSendGateway( WebCoSocket& webSocketParent, sp<TwsClientSync> pClientSync )noexcept;
+		Ω AddOrder( ::OrderId id, SessionPK s )noexcept->void;
+
 		α Shutdown()noexcept{ _pThread->Interrupt(); _pThread->Join(); }
 		α EraseRequestSession( SessionPK id )noexcept->void;
 		α EraseAccountSubscription( SessionPK id, sv account={}, Handle handle=0 )noexcept->void;
@@ -26,7 +28,6 @@ namespace Jde::Markets::TwsWebSocket
 		α RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock=false )noexcept->tuple<TickerId,flat_set<Proto::Requests::ETickList>>;
 		α CancelAccountSubscription( sv account, SessionPK sessionId )noexcept->void;
 		α AddMultiRequest( const flat_set<TickerId>& ids, const ClientKey& key )->void;
-
 		α AddRequestSession( const ClientKey& key )noexcept{ const auto ib = _pClientSync->RequestId(); _requestSession.emplace(ib, key); return ib; }
 		α AddRequestSession( const ClientKey& key, TickerId ib )noexcept{ auto value = ib; if( value ) _requestSession.emplace(ib, key); else value = AddRequestSession(key); return value; }
 		α RequestFind( const ClientKey& key )const noexcept->TickerId;
@@ -34,13 +35,13 @@ namespace Jde::Markets::TwsWebSocket
 
 		α HasHistoricalRequest( TickerId id )const noexcept{ return _historicalCrcs.Has(id); }
 
-		α Push( string message, const IException& e, const ClientKey& key )noexcept->void{ PushError( move(message), key, e.Code ); }
-//		α Push( const IException& e, const ClientKey& key )noexcept->void{ PushError( e.What(), key, e.Id() );}
+		α Push( string message, const IException& e, const ClientKey& key )noexcept->void{ PushError( move(message), key, (int)e.Code ); }
+		Ω PushS( string message, const IException& e, const ClientKey& key )noexcept->void{ PushErrorS( move(message), key, (int)e.Code ); }
+
 		α PushError( string errorString, const ClientKey& key, int errorCode=0 )noexcept->void;
+		Ω PushErrorS( string errorString, const ClientKey& key, int errorCode=0 )noexcept->void;
 
-		//α Push( string message, IException& e, const ClientKey& key )noexcept(false)->void{ PushError( e.MessageId, move(message), key );}
-		//α PushError( int errorCode, string errorString, TickerId id )noexcept->void;
-
+		Ω PushS( MessageType&& m, SessionPK id )noexcept->void;
 		α Push( MessageType&& m, SessionPK id )noexcept(false)->void;
 		α TryPush( MessageType&& m, SessionPK id )noexcept(false)->void{ TRY( Push(move(m), id) ); }
 		α Push( vector<MessageType>&& m, SessionPK id )noexcept(false)->void;
@@ -49,7 +50,6 @@ namespace Jde::Markets::TwsWebSocket
 
 		α Push( EResults eResults, const ClientKey& key )noexcept(false)->void;
 		α Push( EResults eResults, TickerId ibReqId )noexcept->void;
-		//α Push( EResults eResults, function<void(MessageType&)> set )noexcept->void;
 		α Push( EResults eResults, function<void(MessageType&, SessionPK)> set )noexcept->void;
 
 		α Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false)->bool;
@@ -64,7 +64,8 @@ namespace Jde::Markets::TwsWebSocket
 
 		α SetClientSync( sp<TwsClientSync> pClient )noexcept->void{ DBG( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
 
-		α OnOrderChange( sp<const MyOrder> OrderPtr, sp<const Markets::Contract> ContractPtr, sp<const OrderStatus> StatusPtr, sp<const OrderState> StatePtr )noexcept->void;
+		α OnOrderChange( sp<const MyOrder> OrderPtr, sp<const Markets::Contract> ContractPtr, sp<const OrderStatus> StatusPtr, sp<const OrderState> StatePtr )noexcept->Task;
+		α OnOrderException( string account, sp<const IBException> e )noexcept->Task;
 		α OnState( sp<const OrderState> p, sp<const MyOrder> pOrder )noexcept->void;
 
 	private:

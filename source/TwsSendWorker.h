@@ -2,7 +2,6 @@
 #include <jde/coroutine/Task.h>
 #include "../../Framework/source/threading/InterruptibleThread.h"
 
-
 namespace Jde::Markets{ struct TwsClientSync; }
 namespace Jde::Markets::TwsWebSocket
 {
@@ -27,7 +26,6 @@ namespace Jde::Markets::TwsWebSocket
 		α HistoricalData( Proto::Requests::RequestHistoricalData req, SessionKey key )noexcept(false)->Task;
 		α MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& request, const SessionKey& key )noexcept->void;
 		α OptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept->void;
-		α Order( const Proto::Requests::PlaceOrder& order, const SessionKey& key )noexcept->void;
 		α Positions( const Proto::Requests::RequestPositions& request, const SessionKey& key )noexcept->void;
 		α RequestOptionParams( ClientPK reqId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task;
 		α RequestAllOpenOrders( ClientKey client )noexcept->Task;

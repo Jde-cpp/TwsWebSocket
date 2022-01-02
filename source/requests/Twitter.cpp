@@ -28,29 +28,16 @@ namespace Jde
 	{
 		struct TwitterSettings
 		{
-			TwitterSettings()noexcept
-			{
-				auto pSettings = Settings::Global().TrySubContainer( "twitter" );
-				if( pSettings )
-					from_json( pSettings->Json(), *this );
-			}
-			Ω from_json( const nlohmann::json& j, TwitterSettings& o )noexcept->void
-			{
-				try
-				{
-					FROM_JSON( "apiSecretKey", ApiSecretKey );
-					FROM_JSON( "apiKey", ApiKey );
-					FROM_JSON( "bearerToken", BearerToken );
-					FROM_JSON( "accessToken", AccessToken );
-					FROM_JSON( "accessTokenSecret", AccessTokenSecret );
-
-					if( var p=j.find("minimumLikes"); p!=j.end() ) p->get_to( o.MinimumLikes );
-				}
-				catch( const nlohmann::json::exception& e )
-				{
-					Logging::Log( Logging::Message(ELogLevel::Warning, e.what()) );
-				}
-			}
+#define $(x) Settings::Env(string{base}+x)
+			TwitterSettings()noexcept:
+				ApiSecretKey{ $("apiSecretKey") },
+				ApiKey{ $("apiKey") },
+				BearerToken{ $("bearerToken") },
+				AccessToken{ $("accessToken") },
+				AccessTokenSecret{ $("accessTokenSecret") },
+				MinimumLikes{ Settings::Get<uint8>(string{base}+"minimumLikes").value_or(0) }
+			{}
+#undef $
 			α CanBlock()const noexcept{ return ApiSecretKey.size() && ApiKey.size() && AccessToken.size() && AccessTokenSecret.size(); }
 			string ApiSecretKey;
 			string ApiKey;
@@ -58,6 +45,9 @@ namespace Jde
 			string AccessTokenSecret;
 			string BearerToken;
 			uint8 MinimumLikes{10};
+		private:
+			constexpr static const sv base = "twitter/";
+
 		};
 	}
 #pragma endregion
@@ -110,6 +100,7 @@ namespace Jde
 			if( var p=j.find("public_metrics"); p!=j.end() )
 				PublicMetrics::from_json( *p, o.Metrics );
 		}
+		static bool isDigit( char c )noexcept{ return c>='0' && c<='9'; }//microsoft asserts if less than zero.
 		vector<sv> Tags( const CIString& excluded )const noexcept
 		{
 			vector<sv> results; results.reserve( 8 );
@@ -117,7 +108,7 @@ namespace Jde
 			for( uint i=0; i<Text.size(); i+=w.size() )
 			{
 				w = Str::NextWord( sv{Text.data()+i,Text.size()-i} );
-				if( w.size()>1 && ((w[0]=='$' && !isdigit(w[1])) || w[0]=='#') && CIString{w}.find(excluded)==string::npos )
+				if( w.size()>1 && ((w[0]=='$' && !isDigit(w[1])) || w[0]=='#') && CIString{w}.find(excluded)==string::npos )
 				{
 					if( w.ends_with(',') )
 						w = sv{w.data(), w.size()-1};
@@ -192,7 +183,7 @@ namespace Jde
 
 	α Twitter::Search( string symbol, ProcessArg arg )noexcept->Coroutine::Task
 	{
-		var l = co_await Threading::CoLockKey( format("Twitter::Search.{}", symbol) );
+		var _ = ( co_await CoLockKey( format("Twitter::Search.{}", symbol), true) ).UP<CoLockGuard>();
 		set<uint> authors;
 		auto push = [=]( up<Tweets>&& p )
 		{
@@ -211,7 +202,11 @@ namespace Jde
 			pExisting = sp<Tweets>( IO::Proto::TryLoad<Tweets>(existingPath).release() );
 			LOG( "fetched from file {}", pExisting ? pExisting->values_size() : 0 );
 			if( !pExisting )
+			{
 				pExisting = ms<Tweets>();
+				if( !fs::exists(existingPath.parent_path()) )
+					fs::create_directory( existingPath.parent_path() );
+			}
 		}
 		else if( Clock::from_time_t(pExisting->update_time())>Clock::now()-20min )
 		{

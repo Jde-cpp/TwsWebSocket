@@ -4,7 +4,6 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-//	struct WebSendGateway;
 	struct ProcessArg /*final*/: ClientKey
 	{
 		ProcessArg( const ClientKey& key, sp<WebSendGateway> webSendPtr ): ClientKey{ key }, WebSendPtr{ webSendPtr } {}
@@ -38,7 +37,6 @@ namespace Jde::Markets::TwsWebSocket
 		α ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )noexcept->Task;
 		α Receive( Proto::Requests::ERequests type, string&& name, const ClientKey& arg )noexcept->void;
 		α ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept->void;
-		α ReceiveOptions( const SessionKey& session, const Proto::Requests::RequestOptions& request )noexcept->void;
 		α RequestFundamentalData( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const ClientKey& key )noexcept->void;
 		α ReceiveRest( const ClientKey& arg, Proto::Requests::ERequests type, sv url, sv item )noexcept->void;
 		sp<Threading::InterruptibleThread> _pThread;
