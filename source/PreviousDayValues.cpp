@@ -66,7 +66,7 @@ namespace TwsWebSocket
 					var previous = endDate<current;
 					var dayCount = !useRth ? 1 : useRth && previous ? std::max( (unsigned long)1u, (unsigned long)(count-1) ) : count;
 #define FETCH(x) ( co_await Tws::HistoricalData(pContract, endDate, dayCount, barSize, x, useRth) ).SP<vector<::Bar>>()
-					if( !IsOpen(*pContract) )
+					if( !IsOpen(*pContract) && (!previous || !isOption) )//don't need bid/ask for previous day (at least options, not sure why for stocks.).
 					{
 						var pAsks = FETCH( TwsDisplay::Enum::Ask );
 						set( *pAsks, []( Proto::Results::DaySummary& summary, double close ){ summary.set_ask( close ); } );
@@ -74,9 +74,12 @@ namespace TwsWebSocket
 						var pBids = FETCH( TwsDisplay::Enum::Bid );
 						set( *pBids, []( Proto::Results::DaySummary& summary, double close ){ summary.set_bid( close ); } );
 					}
-
-					var pTrades = FETCH( TwsDisplay::Enum::Trades );
-					auto trades = groupByDay( *pTrades );//options are by hour
+					map<DayIndex,vector<::Bar>> trades;
+					if( !previous || !isOption )
+					{
+						var pTrades = FETCH( TwsDisplay::Enum::Trades );
+						trades = groupByDay( *pTrades );//options are by hour
+					}
 					bool loaded;
 					for( auto pDayBar = pBars->begin(); pDayBar!=pBars->end(); pDayBar = loaded ? pBars->erase(pDayBar) : std::next(pDayBar) )
 					{

@@ -32,9 +32,9 @@ namespace Jde
 			TwitterSettings()noexcept:
 				ApiSecretKey{ $("apiSecretKey") },
 				ApiKey{ $("apiKey") },
-				BearerToken{ $("bearerToken") },
 				AccessToken{ $("accessToken") },
 				AccessTokenSecret{ $("accessTokenSecret") },
+				BearerToken{ $("bearerToken") },
 				MinimumLikes{ Settings::Get<uint8>(string{base}+"minimumLikes").value_or(0) }
 			{}
 #undef $
@@ -268,14 +268,23 @@ namespace Jde
 		var startTimeUrl = format( "&start_time={}&max_results=100", ToIsoString(startTime) );
 		var require$Hash = ciSymbol=="SPY";
 		set<uint> sent;
-		uint count=0;
 		try
 		{
-			do
+			for( uint i=0; i<10; i = nextToken.size() ? i+1 : 10 )
 			{
 				Coroutine::AwaitResult result2 = co_await Ssl::SslCo::Get( "api.twitter.com", format("/2/tweets/search/recent?query={}&tweet.fields=public_metrics,author_id,created_at{}{}", query, startTimeUrl, nextToken), format("Bearer {}", settings.BearerToken) );
-				var pResult = result2.UP<string>();
-				var j = nlohmann::json::parse( *pResult );
+				var pResult = result2.SP<string>();
+				json j;
+				try
+				{
+					j = nlohmann::json::parse( *pResult );
+				}
+				catch( const nlohmann::json::exception& e )
+				{
+					DBG( "json exception - {}\n{}"sv, e.what(), *pResult );
+					continue;
+				}
+
 				Recent recent;
 				Recent::from_json( j, recent );
 				vector<ProtoTweet*> toSend;
@@ -325,7 +334,7 @@ namespace Jde
 					push( move(pTweets) );
 				}
 				nextToken = recent.MetaData.NextToken.size() ? format( "&next_token={}", recent.MetaData.NextToken ) : string{};
-			} while ( count++<10 && nextToken.size() );
+			}
 			lastChecked = now;
 			earliest = epoch;
 			LOG( "earliest={}, lastChecked={}"sv, ToIsoString(earliest), ToIsoString(lastChecked) );

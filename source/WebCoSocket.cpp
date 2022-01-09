@@ -105,7 +105,7 @@ namespace Jde::Markets::TwsWebSocket
 		{}
 	}
 
-	α WebCoSocket::AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept(false)->void
+	α WebCoSocket::AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept->void
 	{
 		Proto::Results::Transmission transmission;
 		for( auto&& msg : messages )
@@ -117,7 +117,7 @@ namespace Jde::Markets::TwsWebSocket
 		sp<SocketStream> pStream; sp<std::atomic_flag> pMutex;
 		{
 			shared_lock l{ _sessionMutex };
-			var p = _sessions.find( id ); THROW_IFL( p==_sessions.end(), "({})Could not find session for outgoing transmission.", id );
+			var p = _sessions.find( id ); RETURN_IF( p==_sessions.end(), "({})Could not find session for outgoing transmission.", id );
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}

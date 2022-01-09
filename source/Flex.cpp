@@ -24,7 +24,7 @@ namespace Jde::Markets::TwsWebSocket
 		std::variant<sp<CacheType>,sp<IException>> _result;
 		fs::path _root;
 		uint32_t _crc;
-		α await_ready()noexcept->bool
+		α await_ready()noexcept->bool override
 		{
 			if( !fs::exists(_root) )
 				_result = IOException{ _root, "path does not exist" }.Clone();
@@ -129,7 +129,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 			h.resume();
 		}
-		α await_suspend( HCoroutine h )noexcept->void
+		α await_suspend( HCoroutine h )noexcept->void  override
 		{
 			IAwait::await_suspend( h );
 			string d = Threading::GetThreadDescription();
@@ -182,7 +182,7 @@ namespace Jde::Markets::TwsWebSocket
 			for( int i=0; i< flex.trades_size(); ++i )
 				*pResults->add_trades() = flex.trades( i );
 		}
-		DBG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, web.SessionId, DateDisplay(startDay), DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
+		LOG( "({})Flex '{}'-'{}' orders='{}' trades='{}'"sv, web.SessionId, DateDisplay(startDay), DateDisplay(endDay), pResults->orders_size(), pResults->trades_size() );
 		Proto::Results::MessageUnion msg; msg.set_allocated_flex( pResults );
 		//Make _webSend global instance.tw
 		web.Push( move(msg) );

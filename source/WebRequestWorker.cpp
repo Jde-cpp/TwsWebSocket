@@ -22,7 +22,7 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	static const LogTag& _logLevel = Logging::TagLevel( "app.webRequests" );
+	static const LogTag& _logLevel = Logging::TagLevel( "app-webRequests" );
 	WebRequestWorker::WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept:
 		_pTwsSend{ make_shared<TwsSendWorker>(webSend, pTwsClient) },
 		_pWebSend{webSend},
@@ -42,7 +42,7 @@ namespace Jde::Markets::TwsWebSocket
 				HandleRequest( std::move(*v) );
 		}
 	}
-#define ARG(x) {{{session}, x}, _pWebSend}
+#define ARG(x) {{{s}, x}, _pWebSend}
 	α WebRequestWorker::HandleRequest( QueueType&& msg )noexcept->void
 	{
 		try
@@ -60,33 +60,33 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	α ReceiveOptions( SessionKey s, Proto::Requests::RequestOptions o )noexcept->Task;
 #pragma warning(disable:4456)
-	α WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& session )noexcept->void
+	α WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& s )noexcept->void
 	{
 		while( transmission.messages().size() )
 		{
 			auto pMessage = sp<Proto::Requests::RequestUnion>( transmission.mutable_messages()->ReleaseLast() );
 			auto& message = *pMessage;
 			if( message.has_string_request() )
-				Receive( message.string_request().type(), move(*message.mutable_string_request()->mutable_name()), {session, message.string_request().id()} );
+				Receive( message.string_request().type(), move(*message.mutable_string_request()->mutable_name()), {s, message.string_request().id()} );
 			else if( message.has_options() )
-				ReceiveOptions( session, message.options() );
+				ReceiveOptions( s, message.options() );
 			else if( message.has_flex_executions() )
-				ReceiveFlex( session, message.flex_executions() );
+				ReceiveFlex( s, message.flex_executions() );
 			else if( message.has_edit_watch_list() )
 				WatchListData::Edit( message.edit_watch_list().file(), ARG(message.edit_watch_list().id()) );
 			else if( auto p=message.has_blockly() ? message.mutable_blockly() : nullptr; p )
-				_pBlocklyWorker->Push( { {session, p->id()}, up<string>{p->release_message()} } );
+				_pBlocklyWorker->Push( { {s, p->id()}, up<string>{p->release_message()} } );
 			else if( message.has_std_dev() )
 				ReceiveStdDev( message.std_dev().contract_id(), message.std_dev().days(), message.std_dev().start(), ARG(message.std_dev().id()) );
 			else if( auto p = message.has_reddit() ? message.mutable_reddit() : nullptr; p )
-				Reddit::Search( move(*p->mutable_symbol()), move(*p->mutable_sort()), make_unique<ProcessArg>(move(session), p->id(), _pWebSend) );
+				Reddit::Search( move(*p->mutable_symbol()), move(*p->mutable_sort()), make_unique<ProcessArg>(move(s), p->id(), _pWebSend) );
 			else
 			{
 				bool handled = false;
 				if( message.has_generic_requests() )
-					handled = ReceiveRequests( session, message.generic_requests() );
+					handled = ReceiveRequests( s, message.generic_requests() );
 				if( !handled )
-					_pTwsSend->Push( pMessage, session );
+					_pTwsSend->Push( pMessage, s );
 			}
 		}
 	}
@@ -212,14 +212,14 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}*/
 
-	bool WebRequestWorker::ReceiveRequests( const SessionKey& session, const Proto::Requests::GenericRequests& r )noexcept
+	bool WebRequestWorker::ReceiveRequests( const SessionKey& s, const Proto::Requests::GenericRequests& r )noexcept
 	{
 		bool handled = true;
 		var t = r.type();
 		if( t==ERequests::RequsetPrevOptionValues )
 			PreviousDayValues( r.ids(), ARG(r.id()) );
 		else if( t==ERequests::RequestFundamentalData )
-			RequestFundamentalData( r.ids(), {session, r.id()} );
+			RequestFundamentalData( r.ids(), {s, r.id()} );
 		else if( t==ERequests::Portfolios )
 			WatchListData::SendLists( true, ARG(r.id()) );
 		else if( t==ERequests::WatchLists )
@@ -227,7 +227,7 @@ namespace Jde::Markets::TwsWebSocket
 		else if( t==ERequests::Filings || t==ERequests::Investors )
 		{
 			if( r.ids().size()!=1 )
-				_pWebSend->Push( "Error in request", Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, r.ids().size()}, {{session}, r.id()} );
+				_pWebSend->Push( "Error in request", Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, r.ids().size()}, {{s}, r.id()} );
 			else
 			{
 				var contractId = r.ids()[0];
@@ -241,11 +241,11 @@ namespace Jde::Markets::TwsWebSocket
 			handled = false;//WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, request.type(), sessionId );
 		return handled;
 	}
-	α WebRequestWorker::ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept->void
+	α WebRequestWorker::ReceiveFlex( const SessionKey& s, const Proto::Requests::FlexExecutions& req )noexcept->void
 	{
 		var start = Chrono::BeginningOfDay( Clock::from_time_t(req.start()) );
 		var end = Chrono::EndOfDay( Clock::from_time_t(req.end()) );
-
+		LOG( "({}.{})Flex '{}'-'{}' account='{}'"sv, s.SessionId, req.id(), ToIsoString(start), ToIsoString(end), req.account_number() );
 		Flex::SendTrades( req.account_number(), start, end, ProcessArg ARG(req.id()) );
 	}
 
@@ -293,31 +293,27 @@ namespace Jde::Markets::TwsWebSocket
 		catch( const IException& e ){ delete pResults; WebSendGateway::PushS("Retreive Options failed", e, client); }
 	}
 
-	α WebRequestWorker::RequestFundamentalData( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ClientKey& key )noexcept->void
+	α WebRequestWorker::RequestFundamentalData( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey s )noexcept->Task
 	{
-		std::thread( [current=PreviousTradingDay(), contractIds, web=ProcessArg{key,_pWebSend}]()
+		for( var contractId : contractIds )
 		{
-			Threading::SetThreadDscrptn( "RatioReq" );
-			for( var contractId : contractIds )
+			try
 			{
-				try
-				{
-					//var pDetails = _sync.ReqContractDetails( contractId ).get(); THROW_IF( pDetails->size()!=1, IBException(format("{} has {} contracts", contractId, pDetails->size()), -1) );
-					var tick = TickManager::Ratios( contractId ).get();
-					auto fundamentals = tick.Ratios();
-					auto pRatios = make_unique<Proto::Results::Fundamentals>();
-					pRatios->set_request_id( web.ClientId );
-					for( var& [name,value] : fundamentals )
-						(*pRatios->mutable_values())[name] = value;
-					MessageType msg; msg.set_allocated_fundamentals( pRatios.release() );
-					web.Push( move(msg) );
-				}
-				catch( const IException& e )
-				{
-					return web.Push( "Request fundamentals failed", e );
-				}
+				var tick = ( co_await TickManager::Ratios(contractId) ).UP<Tick>();
+				WebSendGateway::PushS( ToRatioMessage(tick->Ratios(), s.ClientId), s.SessionId );
+				// auto fundamentals = tick.Ratios();
+				// auto pRatios = make_unique<Proto::Results::Fundamentals>();
+				// pRatios->set_request_id( web.ClientId );
+				// for( var& [name,value] : fundamentals )
+				// 	(*pRatios->mutable_values())[name] = value;
+				// MessageType msg; msg.set_allocated_fundamentals( pRatios.release() );
+				// web.Push( move(msg) );
 			}
-			web.Push( EResults::MultiEnd );
-		} ).detach();
+			catch( const IException& e )
+			{
+				WebSendGateway::PushS( format("Request fundamentals failed - {}", contractId), e, s );
+			}
+		}
+		WebSendGateway::PushS( EResults::MultiEnd, s );
 	}
 }

@@ -14,10 +14,10 @@ namespace Jde{  string OSApp::CompanyName()noexcept{ return "Jde-Cpp"; } }
 #endif
 namespace Jde::Markets::TwsWebSocket
 {
-	void Startup( bool initialCall=true )noexcept;
+	α Startup( bool initialCall=true )noexcept->void;
 }
 
-int main( int argc, char** argv )
+α main( int argc, char** argv )->int
 {
 	using namespace Jde;
 	int result = 1;//EXIT_SUCCESS;
@@ -40,7 +40,7 @@ int main( int argc, char** argv )
 
 namespace Jde::Markets
 {
-	void TwsWebSocket::Startup( bool initialCall )noexcept
+	α TwsWebSocket::Startup( bool initialCall )noexcept->void
 	{
 		//if( Settings::TryGet<bool>("um/use").value_or(false) ) currently need to configure um so meta is loaded.
 		{
@@ -50,6 +50,7 @@ namespace Jde::Markets
 			}
 			catch( const IException& e )
 			{
+				e.Log();
 				CRITICAL( "Could not configure user tables. - {}"sv, e.what() );
 				std::cerr << e.what() << std::endl;
 				std::this_thread::sleep_for( 1s );

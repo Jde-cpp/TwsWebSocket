@@ -37,7 +37,7 @@ namespace Jde::Markets::TwsWebSocket
 		α ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )noexcept->Task;
 		α Receive( Proto::Requests::ERequests type, string&& name, const ClientKey& arg )noexcept->void;
 		α ReceiveFlex( const SessionKey& session, const Proto::Requests::FlexExecutions& req )noexcept->void;
-		α RequestFundamentalData( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const ClientKey& key )noexcept->void;
+		α RequestFundamentalData( google::protobuf::RepeatedField<google::protobuf::int32> underlyingIds, ClientKey key )noexcept->Task;
 		α ReceiveRest( const ClientKey& arg, Proto::Requests::ERequests type, sv url, sv item )noexcept->void;
 		sp<Threading::InterruptibleThread> _pThread;
 		QueueMove<QueueType> _queue;

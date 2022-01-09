@@ -20,7 +20,7 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	static const LogTag& _logLevel = Logging::TagLevel( "app.webRequests" );
+	static const LogTag& _logLevel = Logging::TagLevel( "app-webRequests" );
 	α ManagedAccounts( sp<WebSendGateway> pWebClient, SessionKey key )noexcept->Task;
 
 	TwsSendWorker::TwsSendWorker( sp<WebSendGateway> webSendPtr, sp<TwsClientSync> pTwsClient )noexcept:
@@ -29,11 +29,11 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_pThread = make_shared<Threading::InterruptibleThread>( "TwsSendWorker", [&](){Run();} );
 	}
-	void TwsSendWorker::Push( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionInfo )noexcept
+	α TwsSendWorker::Push( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionInfo )noexcept->void
 	{
 		_queue.Push( {sessionInfo, pData} );
 	}
-	void TwsSendWorker::Run()noexcept
+	α TwsSendWorker::Run()noexcept->void
 	{
 		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.Empty() )
 		{
@@ -61,7 +61,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	void TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionKey )noexcept
+	α TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionKey )noexcept->void
 	{
 		ClientPK clientId{0};
 		auto& m = *pData;
@@ -114,13 +114,13 @@ namespace Jde::Markets::TwsWebSocket
 		return pDetails->contract;
 	}
 
-	void TwsSendWorker::CalculateImpliedVolatility( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedVolatility>& requests, const ClientKey& client )noexcept(false)
+	α TwsSendWorker::CalculateImpliedVolatility( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedVolatility>& requests, const ClientKey& client )noexcept(false)->void
 	{
 		for( var& r : requests )
 			TickManager::CalcImpliedVolatility( client.SessionId, client.ClientId, GetContract(r.contract_id()), r.option_price(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
 	}
 
-	void TwsSendWorker::CalculateImpliedPrice( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedPrice>& requests, const ClientKey& client )noexcept
+	α TwsSendWorker::CalculateImpliedPrice( const google::protobuf::RepeatedPtrField<Proto::Requests::ImpliedPrice>& requests, const ClientKey& client )noexcept->void
 	{
 		for( var& r : requests )
 			TickManager::CalculateOptionPrice( client.SessionId, client.ClientId, GetContract(r.contract_id()), r.volatility(), r.underlying_price(), [this](auto a, auto b){ _webSendPtr->PushTick(a,b);} );
@@ -226,7 +226,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			var pDetails = ( co_await Tws::ContractDetail(r.contract().id()) ).SP<::ContractDetails>();
 			var endDate = Chrono::ToDays( Clock::from_time_t(r.date()) );
-			LOG( "({})HistoricalData( '{}', '{}', {}, '{}', '{}', {} )", s.SessionId, pDetails->contract.symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
+			LOG( "({})HistoricalData( '{}', '{}', days={}, '{}', '{}', {} )", s.SessionId, pDetails->contract.symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
 			var pBars = ( co_await Tws::HistoricalData(ms<Contract>(*pDetails), endDate, r.days(), r.bar_size(), r.display(), r.use_rth()) ).SP<vector<::Bar>>();
 			auto p = mu<Proto::Results::HistoricalData>(); p->set_request_id( r.id() );
 			for( var& bar : *pBars )
@@ -296,7 +296,7 @@ namespace Jde::Markets::TwsWebSocket
 			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", s.SessionId, r.id(), r.type() );
 	}
 
-	void TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, const SessionKey& s )noexcept
+	α TwsSendWorker::Requests( const Proto::Requests::GenericRequests& r, const SessionKey& s )noexcept->void
 	{
 		if( !_twsPtr )
 			return _web.PushError( "Not connected to Tws.", {{s.SessionId}, r.id()} );
@@ -354,7 +354,7 @@ namespace Jde::Markets::TwsWebSocket
 			WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, r.type(), s.SessionId );
 	}
 
-	void TwsSendWorker::AccountUpdates( const Proto::Requests::RequestAccountUpdates& accountUpdates, const SessionKey& session )noexcept
+	α TwsSendWorker::AccountUpdates( const Proto::Requests::RequestAccountUpdates& accountUpdates, const SessionKey& session )noexcept->void
 	{
 		var& account = accountUpdates.account_number();
 		var subscribe = accountUpdates.subscribe();
@@ -364,7 +364,7 @@ namespace Jde::Markets::TwsWebSocket
 			_web.CancelAccountSubscription( account, session.SessionId );
 	}
 
-	void TwsSendWorker::AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& r, const SessionKey& session )noexcept
+	α TwsSendWorker::AccountUpdatesMulti( const Proto::Requests::RequestAccountUpdatesMulti& r, const SessionKey& session )noexcept->void
 	{
 		var reqId =  _web.AddRequestSession( {{session.SessionId},r.id()} );
 		var& account = r.account_number();
@@ -372,7 +372,7 @@ namespace Jde::Markets::TwsWebSocket
 		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )"sv, reqId, session.SessionId, account, r.id() );
 		_tws.reqAccountUpdatesMulti( reqId, account, r.model_code(), r.ledger_and_nlv() );
 	}
-	void TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, const SessionKey& session )noexcept
+	α TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, const SessionKey& session )noexcept->void
 	{
 		flat_set<Proto::Requests::ETickList> ticks;
 		std::for_each( r.tick_list().begin(), r.tick_list().end(), [&ticks]( auto item ){ ticks.emplace((Proto::Requests::ETickList)item); } );

@@ -25,9 +25,6 @@ namespace Jde
 
 			for( auto pItem=pRoot->FirstChildElement("entry"); pItem; pItem = pItem->NextSiblingElement("entry") )
 			{
-				auto p = pResults->add_values();
-				p->set_id( string{pItem->TryChildText("id")} );
-				p->set_title( string{pItem->TryChildText("title")} );
 				sv content = pItem->TryChildText( "content" );
 				constexpr sv txt{ "<a href=\"https://www.reddit.com/user/" };
 				string user;
@@ -36,8 +33,11 @@ namespace Jde
 					user = content.substr( i, content.substr(i).find('"') );
 					if( pBlockedUsers->contains(user) )
 						continue;
-					//p->set_user( user );
 				}
+				auto p = pResults->add_values();
+				p->set_id( string{pItem->TryChildText("id")} );
+				//p->set_user( user );
+				p->set_title( string{pItem->TryChildText("title")} );
 				p->set_content( string{content} );
 				p->set_link( string{pItem->TryChildAttribute("link", "href")} );
 				p->set_category( string{pItem->TryChildAttribute("category", "term")} );
@@ -55,11 +55,13 @@ namespace Jde
 	{
 		try
 		{
+			THROW_IF( user.empty(), "User is empty." );
 			auto pId = ( co_await DB::ScalerCo<PK>("select id from rdt_handles where name=?", {user}) ).UP<PK>();//todo create transaction
 			if( pId && *pId )
 				DB::Execute( "update rdt_handles set blocked=1 where id=?", {*pId} );
 			else
 				DB::Execute( "insert into rdt_handles(name,blocked) values( ?, 1 )", {move(user)} );
+			Cache::Clear( "rdt_blocked" );
 			pArg->Push( EResults::Success );
 		}
 		catch( IException& e )

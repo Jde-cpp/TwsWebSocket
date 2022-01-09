@@ -42,13 +42,14 @@ namespace Jde::Markets::TwsWebSocket
 		Ω PushErrorS( string errorString, const ClientKey& key, int errorCode=0 )noexcept->void;
 
 		Ω PushS( MessageType&& m, SessionPK id )noexcept->void;
-		α Push( MessageType&& m, SessionPK id )noexcept(false)->void;
+		α Push( MessageType&& m, SessionPK id )noexcept->void;
 		α TryPush( MessageType&& m, SessionPK id )noexcept(false)->void{ TRY( Push(move(m), id) ); }
 		α Push( vector<MessageType>&& m, SessionPK id )noexcept(false)->void;
 		α TryPush( vector<MessageType>&& m, SessionPK id )noexcept(false)->void{ Push( move(m), id); }
 		α PushTick( const vector<Proto::Results::MessageUnion>& messages, ContractPK contractId )noexcept(false)->void;
 
-		α Push( EResults eResults, const ClientKey& key )noexcept(false)->void;
+		Ω PushS( EResults eResults, const ClientKey& key )noexcept->void;
+		α Push( EResults eResults, const ClientKey& key )noexcept->void;
 		α Push( EResults eResults, TickerId ibReqId )noexcept->void;
 		α Push( EResults eResults, function<void(MessageType&, SessionPK)> set )noexcept->void;
 

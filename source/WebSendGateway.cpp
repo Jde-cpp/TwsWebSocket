@@ -120,7 +120,7 @@ namespace Jde::Markets::TwsWebSocket
 			_requestSessions.Insert( afterInsert, sendMessage, sp<UnorderedSet<SessionPK>>{new UnorderedSet<SessionPK>{}} );
 	}
 
-	bool WebSendGateway::UpdateAccountValue( sv key, sv value, sv currency, sv accountNumber )noexcept
+	α WebSendGateway::UpdateAccountValue( sv key, sv value, sv currency, sv accountNumber )noexcept->bool
 	{
 		Proto::Results::AccountUpdate update;
 		update.set_account( string{accountNumber} );
@@ -213,7 +213,7 @@ namespace Jde::Markets::TwsWebSocket
 			DBG( "Could not find session for messageId:  '{}' req:  '{}'."sv, messageId, ibReqId );
 	}
 
-	α WebSendGateway::Push( MessageType&& m, SessionPK id )noexcept(false)->void
+	α WebSendGateway::Push( MessageType&& m, SessionPK id )noexcept->void
 	{
 		_webSocket.AddOutgoing( move(m), id );
 	}
@@ -280,7 +280,7 @@ namespace Jde::Markets::TwsWebSocket
 		sessions.emplace( sessionId );
 	}
 
-	bool WebSendGateway::Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false)
+	α WebSendGateway::Push( TickerId id, function<void(MessageType&, ClientPK)> set )noexcept(false)->bool
 	{
 		var clientKey = GetClientRequest( id );
 		if( clientKey.SessionId )
@@ -335,7 +335,7 @@ namespace Jde::Markets::TwsWebSocket
 			_requestSession.erase( reqId );
 	}
 
-	bool WebSendGateway::AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept
+	α WebSendGateway::AccountRequest( str accountNumber, function<void(MessageType&)> setMessage )noexcept->bool
 	{
 		std::unique_lock<std::shared_mutex> l3( _accountSubscriptionMutex );
 		var pAccountNumberSessions = _accountSubscriptions.find(accountNumber);
@@ -360,7 +360,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		return haveSubscription;
 	}
-	bool WebSendGateway::PortfolioUpdate( const Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept
+	α WebSendGateway::PortfolioUpdate( const Proto::Results::PortfolioUpdate& porfolioUpdate )noexcept->bool
 	{
 		return AccountRequest( porfolioUpdate.account_number(), [&porfolioUpdate](MessageType& msg){msg.set_allocated_portfolio_update( new Proto::Results::PortfolioUpdate{porfolioUpdate});} );
 	}
@@ -381,10 +381,15 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α WebSendGateway::Push( EResults messageId, const ClientKey& key )noexcept(false)->void
+	α WebSendGateway::PushS( EResults eResults, const ClientKey& c )noexcept->void
 	{
-		auto pMessage = new MessageValue(); pMessage->set_int_value( key.ClientId ); pMessage->set_type( messageId );
+		Instance().Push( eResults, c );
+	}
+
+	α WebSendGateway::Push( EResults eResults, const ClientKey& c )noexcept->void
+	{
+		auto pMessage = new MessageValue(); pMessage->set_int_value( c.ClientId ); pMessage->set_type( eResults );
 		MessageType msg; msg.set_allocated_message( pMessage );
-		Push( move(msg), key.SessionId );
+		Push( move(msg), c.SessionId );
 	}
 }
