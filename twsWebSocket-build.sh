@@ -98,7 +98,7 @@ cd ..;
 echo --------------------------------------------------------------Start Setup--------------------------------------------------------------;
 ./setup.sh $clean $shouldFetch $buildPrivate; if [ $? -ne 0 ]; then echo setup.sh failed - $?; exit 1; fi;
 cd $scriptDir/jde/TwsWebSocket;
-./win-install.sh if [ $? -ne 0 ]; then echo win-install.sh failed - $?; exit 1; fi;
+./win-install.sh; if [ $? -ne 0 ]; then echo win-install.sh failed - $?; exit 1; fi;
 cd $scriptDir;
 echo ---------------------------------------------------------------End Setup---------------------------------------------------------------;
 #if ! $(findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/BuildTools/Common7/IDE' 0 ); then findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/Enterprise/Common7/IDE'; fi;

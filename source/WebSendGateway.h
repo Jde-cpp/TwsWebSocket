@@ -18,15 +18,15 @@ namespace Jde::Markets::TwsWebSocket
 
 		α Shutdown()noexcept{ _pThread->Interrupt(); _pThread->Join(); }
 		α EraseRequestSession( SessionPK id )noexcept->void;
-		α EraseAccountSubscription( SessionPK id, sv account={}, Handle handle=0 )noexcept->void;
+		α EraseAccountSubscription( SessionPK id, str account={}, Handle handle=0 )noexcept->void;
 		α EraseSession( SessionPK id )noexcept->void;
 		α AddExecutionRequest( SessionPK id ){ unique_lock l{_executionRequestMutex}; _executionRequests.emplace( id ); }
 		α AddOrderSubscription( OrderId orderId, SessionPK sessionId )noexcept->void;
 		α AddAccountSubscription( string ibId, SessionPK sessionId )noexcept->void;
-		α UpdateAccountValue( sv key, sv value, sv currency, sv accountName )noexcept->bool override;
+		α UpdateAccountValue( sv key, sv value, sv currency, str accountName )noexcept->bool override;
 		α AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept->void;
 		α RemoveMarketDataSubscription( ContractPK contractId, SessionPK sessionId, bool haveLock=false )noexcept->tuple<TickerId,flat_set<Proto::Requests::ETickList>>;
-		α CancelAccountSubscription( sv account, SessionPK sessionId )noexcept->void;
+		α CancelAccountSubscription( str account, SessionPK sessionId )noexcept->void;
 		α AddMultiRequest( const flat_set<TickerId>& ids, const ClientKey& key )->void;
 		α AddRequestSession( const ClientKey& key )noexcept{ const auto ib = _pClientSync->RequestId(); _requestSession.emplace(ib, key); return ib; }
 		α AddRequestSession( const ClientKey& key, TickerId ib )noexcept{ auto value = ib; if( value ) _requestSession.emplace(ib, key); else value = AddRequestSession(key); return value; }

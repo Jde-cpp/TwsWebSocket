@@ -69,7 +69,7 @@ namespace Jde::Markets::TwsWebSocket
 		} );
 	}
 
-	α WebSendGateway::EraseAccountSubscription( SessionPK id, sv account, Handle handle )noexcept->void
+	α WebSendGateway::EraseAccountSubscription( SessionPK id, str account, Handle handle )noexcept->void
 	{
 		DBG( "({})EraseAccountSubscription( '{}', '{}' )"sv, id, account, handle );
 
@@ -120,10 +120,10 @@ namespace Jde::Markets::TwsWebSocket
 			_requestSessions.Insert( afterInsert, sendMessage, sp<UnorderedSet<SessionPK>>{new UnorderedSet<SessionPK>{}} );
 	}
 
-	α WebSendGateway::UpdateAccountValue( sv key, sv value, sv currency, sv accountNumber )noexcept->bool
+	α WebSendGateway::UpdateAccountValue( sv key, sv value, sv currency, str accountNumber )noexcept->bool
 	{
 		Proto::Results::AccountUpdate update;
-		update.set_account( string{accountNumber} );
+		update.set_account( accountNumber );
 		update.set_key( string{key} );
 		update.set_value( string{value} );
 		update.set_currency( string{currency} );
@@ -166,7 +166,7 @@ namespace Jde::Markets::TwsWebSocket
 		else
 			Push( format("No access to {}.", move(ibId)), Exception{SRCE_CUR, _logLevel.Level, "No access to {}.", move(ibId)}, {{sessionId}} );
 	}
-	α WebSendGateway::CancelAccountSubscription( sv account, SessionPK sessionId )noexcept->void
+	α WebSendGateway::CancelAccountSubscription( str account, SessionPK sessionId )noexcept->void
 	{
 		DBG( "Account('{}') unsubscribe for sessionId='{}'"sv, account, sessionId );
 		EraseAccountSubscription( sessionId, account );

@@ -273,7 +273,7 @@ namespace Jde
 			for( uint i=0; i<10; i = nextToken.size() ? i+1 : 10 )
 			{
 				Coroutine::AwaitResult result2 = co_await Ssl::SslCo::Get( "api.twitter.com", format("/2/tweets/search/recent?query={}&tweet.fields=public_metrics,author_id,created_at{}{}", query, startTimeUrl, nextToken), format("Bearer {}", settings.BearerToken) );
-				var pResult = result2.SP<string>();
+				var pResult = result2.UP<string>();
 				json j;
 				try
 				{

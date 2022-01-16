@@ -48,7 +48,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		α Load( HCoroutine h )noexcept->Task
 		{
-			var _ = co_await CoLockKey( string{CacheName}, false ); //unique_lock l{ _cacheMutex };
+			var _ = ( co_await CoLockKey( string{CacheName}, false ) ).UP<CoLockGuard>(); //unique_lock l{ _cacheMutex };
 			flat_map<string,Proto::Results::Trade> trades;
 			flat_map<uint,Proto::Results::FlexOrder> orders;
 			DBG( "Flex::Load( '{}' )"sv, _root.string() );

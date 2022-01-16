@@ -136,11 +136,17 @@ namespace Jde::Markets::TwsWebSocket
 			const Contract contract{ r.contracts(i) };//303019419
 			try
 			{
-				var pDetails = !contract.Id && contract.SecType==SecurityType::Option
-					? ( co_await Tws::ContractDetail(ToIb(contract.Symbol, contract.Expiration, contract.Right)) ).SP<::ContractDetails>()
-					: ( co_await Tws::ContractDetail(*contract.ToTws()) ).SP<::ContractDetails>();
-
-				*pResult->add_details() = ToProto( *pDetails );
+				if( !contract.Id && contract.SecType==SecurityType::Option )
+				{
+					var pDetail = ( co_await Tws::ContractDetails(ToIb(contract.Symbol, contract.Expiration, contract.Right)) ).UP<vector<sp<::ContractDetails>>>();
+					for( var p : *pDetail )
+						*pResult->add_details() = ToProto( *p );
+				}
+				else
+				{
+					var pDetail = ( co_await Tws::ContractDetail(*contract.ToTws()) ).SP<::ContractDetails>();
+					*pResult->add_details() = ToProto( *pDetail );
+				}
 			}
 			catch( IException& )
 			{
@@ -186,9 +192,9 @@ namespace Jde::Markets::TwsWebSocket
 	α AverageVolume( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey c )noexcept->Task
 	{
 		LOG( "({})AverageVolume( '{}' )", c.SessionId, contractIds.size()<5 ? Str::AddCommas(contractIds) : std::to_string(contractIds.size()) );
-		try
+		for( var id : contractIds )
 		{
-			for( var id : contractIds )
+			try
 			{
 				var pDetails = ( co_await Tws::ContractDetail(id) ).SP<::ContractDetails>();
 				auto pContract = ms<Contract>( *pDetails );
@@ -203,20 +209,18 @@ namespace Jde::Markets::TwsWebSocket
 					average = sum*100/pBars->size();
 					Cache::SetDouble( move(cacheId), average, ExtendedBegin(*pContract, NextTradingDay(current)) );
 				}
-				auto p = mu<Proto::Results::ContractValue>(); p->set_type( EResults::AverageVolume ); p->set_request_id( c.ClientId ); p->set_value( average ); p->set_contract_id( id );
-				MessageType msg; msg.set_allocated_contract_value( p.release() );
-				_web.Push( move(msg), c.SessionId );
+				WebSendGateway::PushS( ToMessage(EResults::AverageVolume, c.ClientId, id, average), c.SessionId );
 			}
-			if( contractIds.size()>1 )
+			catch( IException& )
 			{
-				auto p = mu<Proto::Results::ContractValue>(); p->set_type( EResults::AverageVolume ); p->set_request_id( c.ClientId ); p->set_contract_id( 0 );
-				MessageType msg; 	msg.set_allocated_contract_value( p.release() );
-				_web.Push( move(msg), c.SessionId );
+				WebSendGateway::PushS( ToMessage(EResults::AverageVolume, c.ClientId, id, 0), c.SessionId );
 			}
 		}
-		catch( IException& e )
+		if( contractIds.size()>1 )
 		{
-			_web.Push( "Request failed", move(e), c );
+			auto p = mu<Proto::Results::ContractValue>(); p->set_type( EResults::AverageVolume ); p->set_request_id( c.ClientId ); p->set_contract_id( 0 );
+			MessageType msg; 	msg.set_allocated_contract_value( p.release() );
+			_web.Push( move(msg), c.SessionId );
 		}
 	}
 
@@ -402,7 +406,7 @@ namespace Jde::Markets::TwsWebSocket
 		for( var& account : *p )
 		{
 			if( Accounts::CanRead(account.IbName, key.UserId) )
-				(*accounts->mutable_values())[account.IbName] = account.Display;
+				(*accounts->mutable_values())[account.IbName.size() ? account.IbName : account.Display] = account.Display;
 		}
 		MessageType m; m.set_allocated_string_map( accounts.release() );
 		pWebClient->Push( move(m), key.SessionId );

@@ -60,3 +60,4 @@ setup/Release/*
 source/meta.json
 TwsWebSocket.json
 source/enc_temp_folder/*
+TwsWebSocket.md

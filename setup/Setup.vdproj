@@ -1647,7 +1647,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_080312EC5CAE403EA3E829B416BB865D"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\assets\\pink-bluegrey.css"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\pink-bluegrey.css"
             "TargetName" = "8:pink-bluegrey.css"
             "Tag" = "8:"
             "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
@@ -3167,8 +3167,8 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5B4745CD6CB2402B8F65290219BD2069"
             {
-            "SourcePath" = "8:..\\..\\Public\\stage\\release\\boost_thread-vc142-mt-x64-1_76.dll"
-            "TargetName" = "8:boost_thread-vc142-mt-x64-1_76.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\boost_thread-vc143-mt-x64-1_78.dll"
+            "TargetName" = "8:boost_thread-vc143-mt-x64-1_78.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
             "Condition" = "8:"
@@ -3767,8 +3767,8 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_85751FAF61CD468F918A24EC80EAEF7A"
             {
-            "SourcePath" = "8:..\\..\\Public\\stage\\release\\boost_context-vc142-mt-x64-1_76.dll"
-            "TargetName" = "8:boost_context-vc142-mt-x64-1_76.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\boost_context-vc143-mt-x64-1_78.dll"
+            "TargetName" = "8:boost_context-vc143-mt-x64-1_78.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
             "Condition" = "8:"
@@ -4067,8 +4067,8 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_990F7CF6DF1D4299B72271A0C5E97964"
             {
-            "SourcePath" = "8:..\\..\\Public\\stage\\release\\boost_coroutine-vc142-mt-x64-1_76.dll"
-            "TargetName" = "8:boost_coroutine-vc142-mt-x64-1_76.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\boost_coroutine-vc143-mt-x64-1_78.dll"
+            "TargetName" = "8:boost_coroutine-vc143-mt-x64-1_78.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
             "Condition" = "8:"
@@ -4107,7 +4107,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9A754FC58B5C499A96627ADB1B0FFF25"
             {
-            "SourcePath" = "8:..\\..\\Blockly\\source\\Blockly.h"
+            "SourcePath" = "8:..\\..\\Public\\jde\\blockly\\Blockly.h"
             "TargetName" = "8:Blockly.h"
             "Tag" = "8:"
             "Folder" = "8:_B7235D7B368246E2BA79A91099AA7F90"
@@ -4207,7 +4207,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9FA5B65F28B540DABF79240F6D0F1B48"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\assets\\purple-green.css"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\purple-green.css"
             "TargetName" = "8:purple-green.css"
             "Tag" = "8:"
             "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"
@@ -4227,7 +4227,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_A0DBEB9FD85B43F38E8DC1C7AFE1D88A"
             {
-            "SourcePath" = "8:..\\..\\..\\vcpkg\\packages\\zlib_x64-windows\\bin\\zlib1.dll"
+            "SourcePath" = "8:%REPO_DIR%\\vcpkg\\packages\\zlib_x64-windows\\bin\\zlib1.dll"
             "TargetName" = "8:zlib1.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
@@ -5747,7 +5747,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_FF0CA50C52F74C5D8304F269877C956E"
             {
-            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\assets\\purple-green.css"
+            "SourcePath" = "8:..\\..\\web\\TwsWebsite\\my-workspace\\dist\\my-workspace\\purple-green.css"
             "TargetName" = "8:purple-green.css"
             "Tag" = "8:"
             "Folder" = "8:_18B6943153E94C12BC88A50CBCBDB522"

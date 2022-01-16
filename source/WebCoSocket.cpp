@@ -4,6 +4,7 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/ssl.hpp>
 #include <boost/asio/spawn.hpp>
+#include <jde/markets/types/proto/ResultsMessage.h>
 #include "server_certificate.hpp"
 #include "../../Framework/source/db/Database.h"
 #include "../../MarketLibrary/source/OrderManager.h"
@@ -142,14 +143,26 @@ namespace Jde::Markets::TwsWebSocket
 		} );
 	}
 
-	α WebCoSocket::TryUserId( SessionPK sessionId )noexcept->UserPK
+	α WebCoSocket::TryUserId( SessionPK s )noexcept->UserPK
 	{
 		UserPK pk{};
 		if( auto pInstance = _pInstance; pInstance )
 		{
 			sl l{ pInstance->_sessionMutex };
-			var p = pInstance->_sessions.find( sessionId );
-			pk = p==pInstance->_sessions.end() ? 0 : p->second.UserId;
+			if( var p = pInstance->_sessions.find(s); p!=pInstance->_sessions.end() )
+			{
+				if( pk = p->second.UserId; !pk )
+				{
+					if( auto pEmail = Settings::Get<string>("um/user.email"); pEmail )
+					{
+						l.unlock();
+						SetLogin( {{s, 0}, 0}, EAuthType::Google, *pEmail, true, Settings::Get<string>("um/user.name").value_or(""), "", Clock::now()+std::chrono::hours(100 * 24), "key" );
+						l.lock();
+						if( var p2 = pInstance->_sessions.find(s); p2!=pInstance->_sessions.end() )
+							pk = p2->second.UserId;
+					}
+				}
+			}
 		}
 		return pk;
 	}
@@ -269,15 +282,15 @@ namespace Jde::Markets::TwsWebSocket
 			userId = settings.UserId = DB::TryScaler<UserPK>( "select id from um_users where name=? and authenticator_id=?", {email,(uint)type} ).value_or( 0 );
 		}
 
-		auto pValue = make_unique<Proto::Results::MessageValue>(); pValue->set_type( Proto::Results::EResults::Authentication );
-		if( userId )
-			pValue->set_int_value( client.ClientId );
-		else
+		if( auto p = _pInstance; p )
 		{
-			DBG( "({})Could not find user name='{}' for authenticator='{}'", client.SessionId, email, Str::FromEnum(AuthTypeStrings, type) );
-			pValue->set_string_value( std::to_string(client.ClientId) );
+			if( userId )
+				p->AddOutgoing( ToMessage(Proto::Results::EResults::Authentication, client.ClientId), client.SessionId );
+			else
+			{
+				DBG( "({})Could not find user name='{}' for authenticator='{}'", client.SessionId, email, Str::FromEnum(AuthTypeStrings, type) );
+				p->AddOutgoing( ToMessage(Proto::Results::EResults::Authentication, std::to_string(client.ClientId)), client.SessionId );
+			}
 		}
-		MessageType msg; msg.set_allocated_message( pValue.release() );
-		AddOutgoing( move(msg), client.SessionId );
 	}
 }

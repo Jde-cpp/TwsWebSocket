@@ -72,8 +72,8 @@ namespace Jde::Markets::TwsWebSocket
 
 		α HandleIncoming( WebRequestMessage&& data )noexcept{ _requestWorker.Push(move(data)); }
 		α WebSend()noexcept->sp<WebSendGateway>{ return _pWebSend; }
-		α SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept->void;;
-		Ω TryUserId( SessionPK sessionId )noexcept->UserPK;
+		Ω SetLogin( const ClientKey& client, EAuthType type, sv email, bool emailVerified, sv name, sv pictureUrl, TimePoint expiration, sv key )noexcept->void;;
+		Ω TryUserId( SessionPK s )noexcept->UserPK;
 
 		Ω SetLevel( ELogLevel l )noexcept->void;
 	private:
