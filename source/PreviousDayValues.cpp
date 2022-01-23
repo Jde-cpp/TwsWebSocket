@@ -7,13 +7,11 @@
 #define _socket TwsWebSocket::WebSocket::Instance()
 #define var const auto
 
-namespace Jde::Markets
+namespace Jde::Markets::TwsWebSocket
 {
-namespace TwsWebSocket
-{
-	α Previous( int32 contractId, Markets::TwsWebSocket::ProcessArg arg, bool sendMultiEnd )noexcept->Coroutine::Task
+	static const LogTag& _logLevel{ Logging::TagLevel("mrk-hist") };
+	α Previous( int32 contractId, Markets::TwsWebSocket::ProcessArg arg, bool sendMultiEnd )noexcept->Coroutine::Task//TODO wrap in Try.
 	{
-		//TODO wrap in Try.
 		sp<::ContractDetails> pDetails;
 		try
 		{
@@ -66,7 +64,7 @@ namespace TwsWebSocket
 					var previous = endDate<current;
 					var dayCount = !useRth ? 1 : useRth && previous ? std::max( (unsigned long)1u, (unsigned long)(count-1) ) : count;
 #define FETCH(x) ( co_await Tws::HistoricalData(pContract, endDate, dayCount, barSize, x, useRth) ).SP<vector<::Bar>>()
-					if( !IsOpen(*pContract) && (!previous || !isOption) )//don't need bid/ask for previous day (at least options, not sure why for stocks.).
+					if( !IsOpen(*pContract) && !previous /*|| !isOption*/ )//don't need bid/ask for previous day
 					{
 						var pAsks = FETCH( TwsDisplay::Enum::Ask );
 						set( *pAsks, []( Proto::Results::DaySummary& summary, double close ){ summary.set_ask( close ); } );
@@ -98,7 +96,7 @@ namespace TwsWebSocket
 								var trades2 = groupByDay( *pRth );
 								if( auto pIbBar2 = trades2.find(day); pIbBar2!=trades2.end() )
 									ibTrades = pIbBar2->second;
-								DBG( "endDate={}, open={}, close={}"sv, endDate, ibTrades.front().open, ibTrades.back().close );
+								LOG( "endDate={}, open={}, close={}"sv, endDate, ibTrades.front().open, ibTrades.back().close );
 								pBar->set_open( ibTrades.front().open );
 								pBar->set_close( ibTrades.back().close );
 							}
@@ -132,6 +130,8 @@ namespace TwsWebSocket
 			co_await load( !useRth, PreviousTradingDay(current), sendMultiEnd );
 	}
 }
+namespace Jde::Markets
+{
 	α TwsWebSocket::PreviousDayValues( ContractPK contractId )noexcept( false )->void//loads into cache for later
 	{
 		google::protobuf::RepeatedField<google::protobuf::int32> contractIds;

@@ -56,7 +56,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( IException& e )
 		{
-			string message = e.Code==451 ? e.What() : "Place order failed";
+			string message = e.Code==451 || e.Code==463 ? e.What() : "Place order failed";
 			WebSendGateway::PushS( message, e, {{s.SessionId}, r.id()} );
 		}
 	}
@@ -230,7 +230,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			var pDetails = ( co_await Tws::ContractDetail(r.contract().id()) ).SP<::ContractDetails>();
 			var endDate = Chrono::ToDays( Clock::from_time_t(r.date()) );
-			LOG( "({})HistoricalData( '{}', '{}', days={}, '{}', '{}', {} )", s.SessionId, pDetails->contract.symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
+			LOG( "({}.{})HistoricalData( '{}', '{}', days={}, '{}', '{}', {} )", s.SessionId, r.id(), pDetails->contract.symbol, DateDisplay(endDate), r.days(), BarSize::ToString(r.bar_size()), TwsDisplay::ToString(r.display()), r.use_rth() );
 			var pBars = ( co_await Tws::HistoricalData(ms<Contract>(*pDetails), endDate, r.days(), r.bar_size(), r.display(), r.use_rth()) ).SP<vector<::Bar>>();
 			auto p = mu<Proto::Results::HistoricalData>(); p->set_request_id( r.id() );
 			for( var& bar : *pBars )
