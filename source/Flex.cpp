@@ -76,7 +76,8 @@ namespace Jde::Markets::TwsWebSocket
 							value.set_order_type( string{e.Attr("orderType")} );
 
 							value.set_time( ToTimeT(e.Attr("dateTime")) );
-							value.set_order_time( ToTimeT(e.Attr("orderTime")) );
+							if( var orderTime{e.Attr("orderTime") }; orderTime.size() )
+								value.set_order_time( ToTimeT(orderTime) );
 							value.set_side( string{e.Attr("buySell")} );
 							value.set_shares( e.Attr<double>("quantity") );
 							value.set_price( e.Attr<double>("tradePrice") );
@@ -87,7 +88,7 @@ namespace Jde::Markets::TwsWebSocket
 						{
 							if( orders.find(orderId)!=orders.end() )
 								continue;
-							auto& value = orders.emplace( orderId, Proto::Results::FlexOrder{} ).first->second;
+							auto& value = orders.try_emplace( orderId ).first->second;
 							value.set_order_id( orderId );
 							setValues( value );
 						}

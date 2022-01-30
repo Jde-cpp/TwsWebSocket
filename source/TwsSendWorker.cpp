@@ -316,29 +316,31 @@ namespace Jde::Markets::TwsWebSocket
 			ManagedAccounts( _webSendPtr, s );
 		else if( r.type()==ERequests::RequestOpenOrders )
 		{
+			LOG( "({})RequestOpenOrders", s.SessionId );
 			_web.AddRequestSessions( s.SessionId, {EResults::OrderStatus_, EResults::OpenOrder_, EResults::OpenOrderEnd} );//TODO handle simultanious multiple requests
 			_tws.reqOpenOrders();
 		}
 		else if( r.type()==ERequests::CancelMarketData )
 		{
-			for( auto i=0; i<r.ids_size(); ++i )
+			for( var contractId : r.ids() )
 			{
-				var contractId = r.ids( i );
-				TickManager::CancelProto( s.SessionId , 0, contractId );
+				LOG( "({})CancelMarketData - {}", s.SessionId, contractId );
+				TickManager::CancelProto( s.SessionId, 0, contractId );
 			}
 		}
 		else if( r.type()==ERequests::CancelPositionsMulti )
 		{
-			for( auto i=0; i<r.ids_size(); ++i )
+			for( ClientPK clientId : r.ids() )
 			{
-				var ibId = _web.RequestFind( {{s.SessionId}, (ClientPK)r.ids(i)} );
+				LOG( "({})CancelPositionsMulti - {}", s.SessionId, clientId );
+				var ibId = _web.RequestFind( {{s.SessionId}, clientId} );
 				if( ibId )
 				{
 					_tws.cancelPositionsMulti( ibId );
 					_web.RequestErase( ibId );
 				}
 				else
-					WARN( "({})Could not find MktData clientID='{}'"sv, s.SessionId, r.ids(i) );
+					WARN( "({})Could not find MktData clientID='{}'"sv, s.SessionId, clientId );
 			}
 		}
 		else if( r.type()==ERequests::CancelOrder )
@@ -376,12 +378,19 @@ namespace Jde::Markets::TwsWebSocket
 		DBG( "reqAccountUpdatesMulti( reqId='{}' sessionId='{}', account='{}', clientId='{}' )"sv, reqId, session.SessionId, account, r.id() );
 		_tws.reqAccountUpdatesMulti( reqId, account, r.model_code(), r.ledger_and_nlv() );
 	}
-	α TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, const SessionKey& session )noexcept->void
+	α TwsSendWorker::MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& r, const SessionKey& s )noexcept->void
 	{
 		flat_set<Proto::Requests::ETickList> ticks;
 		std::for_each( r.tick_list().begin(), r.tick_list().end(), [&ticks]( auto item ){ ticks.emplace((Proto::Requests::ETickList)item); } );
-		_webSendPtr->AddMarketDataSubscription( session.SessionId, r.contract_id(), ticks );
-		TickManager::Subscribe( session.SessionId, 0, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
+		_webSendPtr->AddMarketDataSubscription( s.SessionId, r.contract_id(), ticks );
+		try
+		{
+			TickManager::Subscribe( s.SessionId, 0, r.contract_id(), ticks, r.snapshot(), [this](var& a, auto b){ _webSendPtr->PushTick(a,b);} );
+		}
+		catch( IException& e )
+		{
+			_webSendPtr->Push( "Market data request failed", e, {s,r.id()} );
+		}
 	}
 
 	α TwsSendWorker::RequestOptionParams( ClientPK clientId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task

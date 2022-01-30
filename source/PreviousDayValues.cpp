@@ -124,7 +124,7 @@ namespace Jde::Markets::TwsWebSocket
 				h.resume();
 			});
 		};
-		var useRth = count==1;
+		var useRth = isOption || count==1;
 		co_await load( useRth, current, useRth && sendMultiEnd );
 		if( !useRth )
 			co_await load( !useRth, PreviousTradingDay(current), sendMultiEnd );

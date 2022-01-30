@@ -1,4 +1,4 @@
-#include "WebCoSocket.h"
+﻿#include "WebCoSocket.h"
 #include "Flex.h"
 #include "../../MarketLibrary/source/client/TwsClientSync.h"
 #include "../../Framework/source/um/UM.h"
@@ -20,7 +20,7 @@ namespace Jde::Markets::TwsWebSocket
 α main( int argc, char** argv )->int
 {
 	using namespace Jde;
-	int result = 1;//EXIT_SUCCESS;
+	int result = 1;
 	try
 	{
 		OSApp::Startup( argc, argv, "TwsWebSocket", "Web socket service for Tws Gateway" );
