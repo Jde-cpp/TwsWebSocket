@@ -1,7 +1,10 @@
 #include "EdgarRequests.h"
+#include <jde/markets/types/proto/ResultsMessage.h>
 #include "../../../Private/source/markets/edgar/Edgar.h"
 #include "../../../Private/source/markets/edgar/Form13F.h"
 
+
+#define var const auto
 namespace Jde::Markets::TwsWebSocket
 {
 	void EdgarRequests::Filings( Cik cik, ProcessArg&& inputArg )noexcept
@@ -21,30 +24,18 @@ namespace Jde::Markets::TwsWebSocket
 		}).detach();
 	}
 
-	void Investors2( function<up<Edgar::Proto::Investors>()> f, ProcessArg&& inputArg )noexcept
+	α EdgarRequests::Investors( ContractPK contractId, ProcessArg arg_ )noexcept->Task
 	{
-		std::thread( [f, arg=move(inputArg)]()
+		var arg{ move(arg_) };
+		try
 		{
-			try
-			{
-				auto p = f(); p->set_request_id( arg.ClientId );
-				MessageType msg; msg.set_allocated_investors( p.release() );
-				arg.Push( move(msg) );
-			}
-			catch( IException& e )
-			{
-				arg.Push( "Could not load investors", e );
-			}
-		}).detach();
-	}
-
-	void EdgarRequests::Investors( ContractPK contractId, ProcessArg&& arg )noexcept
-	{
-		return Investors2( [contractId]()
+			auto pDetails = ( co_await Tws::ContractDetail(contractId) ).SP<::ContractDetails>();
+			auto p = Edgar::Form13F::LoadInvestors( pDetails->longName );//normally cached.
+			arg.Push( ToMessage(arg.ClientId, p.release()) );
+		}
+		catch( IException& e )
 		{
-			auto pDetails = SFuture<::ContractDetails>( Tws::ContractDetail(contractId) ).get();
-			//TwsClientSync::ReqContractDetails( contractId ).get(); CHECK( (pDetails->size()==1) );
-			return Edgar::Form13F::LoadInvestors( pDetails->longName );
-		}, move(arg) );
+			arg.Push( "Could not load investors", e );
+		}
 	}
 }

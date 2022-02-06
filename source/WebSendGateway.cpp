@@ -217,39 +217,11 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_webSocket.AddOutgoing( move(m), id );
 	}
-	α WebSendGateway::Push( vector<MessageType>&& messages, SessionPK id )noexcept(false)->void
-	{
-		_webSocket.AddOutgoing( move(messages), id );
-	}
+	// α WebSendGateway::Push( const vector<MessageType>& m, SessionPK s )noexcept->void
+	// {
+	// 	_webSocket.AddOutgoing( m, s );
+	// }
 
-	α WebSendGateway::PushTick( const vector<MessageUnion>& messages, ContractPK contractId )noexcept(false)->void
-	{
-		unique_lock l{ _marketSubscriptionMutex };
-		if( auto p=_marketSubscriptions.find(contractId); p!=_marketSubscriptions.end() )
-		{
-			if( p->second.empty() )
-			{
-				_marketSubscriptions.erase( p );
-				THROW( "Could not find any market subscriptions. contractId={}", contractId );
-			}
-			typedef flat_map<SessionPK,flat_set<Proto::Requests::ETickList>>::iterator X;
-			for( X pSession = p->second.begin(); pSession != p->second.end(); )
-			{
-				try
-				{
-					_webSocket.AddOutgoing( messages, pSession->first );
-					++pSession;
-				}
-				catch( const IException& )
-				{
-					LOG( "({}) Removing for contract id='{}'"sv, pSession->first, contractId );
-					pSession = p->second.erase( pSession );
-				}
-			}
-		}
-		else
-			THROW( "Could not find any market subscriptions." );
-	}
 
 	α WebSendGateway::PushS( MessageType&& m, SessionPK id )noexcept->void
 	{
@@ -292,12 +264,13 @@ namespace Jde::Markets::TwsWebSocket
 		return clientKey.SessionId;
 	}
 
-	α WebSendGateway::AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept->void
+/*	α WebSendGateway::AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept->void
 	{
 		unique_lock l{ _marketSubscriptionMutex };
 		auto& contractSubscriptions = _marketSubscriptions.try_emplace( contractId ).first->second;
 		contractSubscriptions[sessionId] = ticks;
 	}
+*/
 
 	α WebSendGateway::ContractDetails( up<Proto::Results::ContractDetailsResult> pDetails, ReqId reqId )noexcept->void
 	{
@@ -370,6 +343,9 @@ namespace Jde::Markets::TwsWebSocket
 		MessageValue value; value.set_type( EResults::AccountDownloadEnd ); value.set_string_value( string{accountNumber} );
 		AccountRequest( string{accountNumber}, [&value](MessageType& msg)mutable{msg.set_allocated_message( new MessageValue{value});} );
 	}
+
+	α WebSendGateway::Push( const vector<MessageType>& m, SessionPK s )noexcept(false)->void{ _webSocket.AddOutgoing(m, s); }
+	α WebSendGateway::Push( vector<MessageType>&& m, SessionPK s )noexcept->void{ _webSocket.AddOutgoing(move(m), s); }
 
 	α WebSendGateway::Push( const Proto::Results::CommissionReport& report )noexcept->void
 	{

@@ -28,8 +28,8 @@ namespace Jde
 	{
 		struct TwitterSettings
 		{
-#define $(x) Settings::Env(string{base}+x)
-			TwitterSettings()noexcept:
+#define $(x) Settings::Envɛ(string{base}+x)
+			TwitterSettings()noexcept(false):
 				ApiSecretKey{ $("apiSecretKey") },
 				ApiKey{ $("apiKey") },
 				AccessToken{ $("accessToken") },

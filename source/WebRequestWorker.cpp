@@ -75,7 +75,10 @@ namespace Jde::Markets::TwsWebSocket
 			else if( message.has_edit_watch_list() )
 				WatchListData::Edit( message.edit_watch_list().file(), ARG(message.edit_watch_list().id()) );
 			else if( auto p=message.has_blockly() ? message.mutable_blockly() : nullptr; p )
+			{
+				LOG( "({}.{})Blockly Request( size={} )"sv, s.SessionId, p->id(), p->message().size() );
 				_pBlocklyWorker->Push( { {s, p->id()}, up<string>{p->release_message()} } );
+			}
 			else if( message.has_std_dev() )
 				ReceiveStdDev( message.std_dev().contract_id(), message.std_dev().days(), message.std_dev().start(), ARG(message.std_dev().id()) );
 			else if( auto p = message.has_reddit() ? message.mutable_reddit() : nullptr; p )
@@ -226,13 +229,15 @@ namespace Jde::Markets::TwsWebSocket
 			WatchListData::SendLists( false, ARG(r.id()) );
 		else if( t==ERequests::Filings || t==ERequests::Investors )
 		{
-			if( r.ids().size()!=1 )
+			var contractId = r.ids().size()==1 ? r.ids()[0] : 0;
+			if( !contractId )
 				_pWebSend->Push( "Error in request", Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, r.ids().size()}, {{s}, r.id()} );
 			else
 			{
+				LOG( "({})EdgarRequest( {}, {} )", r.id(), t, contractId );
 				var contractId = r.ids()[0];
 				if( t==ERequests::Filings )
-					EdgarRequests::Filings( r.ids()[0], ARG(r.id()) );
+					EdgarRequests::Filings( contractId, ARG(r.id()) );
 				else if( t==ERequests::Investors )
 					EdgarRequests::Investors( contractId, ARG(r.id()) );
 			}

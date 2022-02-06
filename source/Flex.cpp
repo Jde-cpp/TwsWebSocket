@@ -49,9 +49,9 @@ namespace Jde::Markets::TwsWebSocket
 		α Load( HCoroutine h )noexcept->Task
 		{
 			var _ = ( co_await CoLockKey( string{CacheName}, false ) ).UP<CoLockGuard>(); //unique_lock l{ _cacheMutex };
-			flat_map<string,Proto::Results::Trade> trades;
+			flat_map<uint32,Proto::Results::Trade> trades;
 			flat_map<uint,Proto::Results::FlexOrder> orders;
-			DBG( "Flex::Load( '{}' )"sv, _root.string() );
+			LOG( "Flex::Load( '{}' )"sv, _root.string() );
 			try
 			{
 				for( var& entry : fs::directory_iterator(_root) )
@@ -59,6 +59,7 @@ namespace Jde::Markets::TwsWebSocket
 					var& path = entry.path();
 					if( path.extension()!=".xml" )
 						continue;
+					LOG( "Flex::Load( '{}' )"sv, path.string() );
 					var pContent = ( co_await IO::Read(path, false) ).SP<string>(); CONTINUE_IF( !pContent->size(), "{} is empty", path.string() );
 					tinyxml2::XMLDocument doc{ *pContent };
 					vector<sv> rg{ Str::Split("FlexQueryResponse,FlexStatements,FlexStatement,Trades") };
@@ -94,14 +95,14 @@ namespace Jde::Markets::TwsWebSocket
 						}
 						else
 						{
-							var execId = p->Attr( "ibExecID" );
-							if( trades.find(string{execId})!=trades.end() )
+							var tradeId = p->Attr<uint32>( "tradeID" );//ibExecID is null for expired options
+							if( trades.find(tradeId)!=trades.end() )
 								continue;
-							auto& value = trades.emplace( execId, Proto::Results::Trade{} ).first->second;
+							auto& value = trades.emplace( tradeId, Proto::Results::Trade{} ).first->second;
 							value.set_id( p->Attr<uint32>("tradeID") );
 							value.set_is_api( p->Attr("isAPIOrder")=="Y" );
 							value.set_order_id( orderId );
-							value.set_exec_id( string{execId} );
+							value.set_exec_id( string{p->Attr("ibExecID")} );
 							setValues( value );
 						}
 					}
@@ -122,6 +123,7 @@ namespace Jde::Markets::TwsWebSocket
 					*flex.add_orders() = order;
 				}
 				DirectoryCrc = _crc;
+				LOG( "Flex::~Load()"sv );
 				_pPromise->get_return_object().SetResult( Cache::Set<CacheType>(string{CacheName}, pValues) );
 			}
 			catch( IException& e )
