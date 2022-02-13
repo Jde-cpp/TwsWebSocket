@@ -153,10 +153,10 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				if( pk = p->second.UserId; !pk )
 				{
-					if( auto pEmail = Settings::Get<string>("um/user.email"); pEmail )
+					if( auto pEmail = Settings::Env("um/user.email"); pEmail )
 					{
 						l.unlock();
-						SetLogin( {{s, 0}, 0}, EAuthType::Google, *pEmail, true, Settings::Get<string>("um/user.name").value_or(""), "", Clock::now()+std::chrono::hours(100 * 24), "key" );
+						SetLogin( {{s, 0}, 0}, EAuthType::Google, *pEmail, true, *pEmail, "", Clock::now()+std::chrono::hours(100 * 24), "key" );
 						l.lock();
 						if( var p2 = pInstance->_sessions.find(s); p2!=pInstance->_sessions.end() )
 							pk = p2->second.UserId;

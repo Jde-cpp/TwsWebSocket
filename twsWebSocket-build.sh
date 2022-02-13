@@ -99,12 +99,14 @@ echo --------------------------------------------------------------Start Setup--
 ./setup.sh $clean $shouldFetch $buildPrivate; if [ $? -ne 0 ]; then echo setup.sh failed - $?; exit 1; fi;
 cd $scriptDir/jde/TwsWebSocket;
 ./win-install.sh; if [ $? -ne 0 ]; then echo win-install.sh failed - $?; exit 1; fi;
-cd $scriptDir;
+
 echo ---------------------------------------------------------------End Setup---------------------------------------------------------------;
-#if ! $(findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/BuildTools/Common7/IDE' 0 ); then findExecutable devenv.exe '/c/Program\ Files\ \(X86\)/Microsoft\ Visual\ Studio/2019/Enterprise/Common7/IDE'; fi;
+cd $JDE_BASH/Public/stage/release;
+mklink liblzma.dll $REPO_BASH/xz-5.2.5-windows/bin_x86-64;
+mklink zlib1.dll $REPO_BASH/vcpkg/buildtrees/zlib/x64-windows-rel;
+cd $scriptDir;
 findExecutable devenv.exe '/c/Program\ Files/Microsoft\ Visual\ Studio/2022/BuildTools/Common7/IDE' 0
 findExecutable devenv.exe '/c/Program\ Files/Microsoft\ Visual\ Studio/2022/Enterprise/Common7/IDE'
-
 echo -------------------------------------------------------------Start Install-------------------------------------------------------------;
 devenv.exe jde/TwsWebSocket/setup/Setup.vdproj //build release;
 echo --------------------------------------------------------------End Install--------------------------------------------------------------;

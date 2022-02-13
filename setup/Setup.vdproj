@@ -4227,7 +4227,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_A0DBEB9FD85B43F38E8DC1C7AFE1D88A"
             {
-            "SourcePath" = "8:%REPO_DIR%\\vcpkg\\packages\\zlib_x64-windows\\bin\\zlib1.dll"
+            "SourcePath" = "8:..\\..\\Public\\stage\\release\\zlib1.dll"
             "TargetName" = "8:zlib1.dll"
             "Tag" = "8:"
             "Folder" = "8:_CD0C9056B02D4F85AB8CEF0DCB55EBC7"
@@ -5647,7 +5647,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_FB7FC305FF3148AD8BBF140F8413AA6D"
             {
-            "SourcePath" = "8:..\\TwsWebSocket.json"
+            "SourcePath" = "8:TwsWebSocket.json"
             "TargetName" = "8:TwsWebSocket.json"
             "Tag" = "8:"
             "Folder" = "8:_F6F3920D2C154E7CA9CDE7F7B45932B5"

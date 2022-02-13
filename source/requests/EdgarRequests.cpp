@@ -1,4 +1,4 @@
-#include "EdgarRequests.h"
+﻿#include "EdgarRequests.h"
 #include <jde/markets/types/proto/ResultsMessage.h>
 #include "../../../Private/source/markets/edgar/Edgar.h"
 #include "../../../Private/source/markets/edgar/Form13F.h"

@@ -248,7 +248,7 @@
 		"columns": [
 			{ "name": "id", "sequence": true },
 			{ "name": "apiId", "type": "umApis" },
-			{ "name": "name", "type": "name?" }
+			{ "name": "name", "type": "name?", "qlAppend":"apiId", "description": "null=default, name=particular permission, api=um, name='change password'" }
 		],
 		"surrogateKey":["id"],
 		"naturalKey":["apiId","name"],

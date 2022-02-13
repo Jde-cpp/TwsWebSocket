@@ -1,4 +1,4 @@
-#include "../WebRequestWorker.h"
+﻿#include "../WebRequestWorker.h"
 
 namespace Jde::Markets::TwsWebSocket::EdgarRequests
 {
