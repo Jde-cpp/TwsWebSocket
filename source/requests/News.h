@@ -15,6 +15,6 @@ namespace Jde::Markets::TwsWebSocket::News
 	using THistoricalResult=Task;
 	α  RequestHistorical( ContractPK contractId, google::protobuf::RepeatedPtrField<string> providerCodes, uint limit, time_t start, time_t end, ProcessArg arg )noexcept->THistoricalResult;
 
-	using TGoogleResult=VectorPtr<sp<Proto::Results::GoogleNews>>; using TGoogleAsync=Task; using TGoogleCoResult=FunctionAwait;
+	using TGoogleResult=VectorPtr<sp<Proto::Results::GoogleNews>>; using TGoogleAsync=Task; using TGoogleCoResult=AsyncAwait;
 	α Google( const CIString& symbol )noexcept->TGoogleCoResult;
 }

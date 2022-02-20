@@ -304,7 +304,9 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			try
 			{
-				var tick = ( co_await TickManager::Ratios(contractId) ).UP<Tick>();
+				auto tick1 = TickManager::Ratios( contractId );
+				auto tick_ = co_await tick1;
+				var tick = tick_.UP<Tick>();
 				WebSendGateway::PushS( ToRatioMessage(tick->Ratios(), s.ClientId), s.SessionId );
 				// auto fundamentals = tick.Ratios();
 				// auto pRatios = make_unique<Proto::Results::Fundamentals>();

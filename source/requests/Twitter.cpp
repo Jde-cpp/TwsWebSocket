@@ -139,7 +139,7 @@ namespace Jde
 		Meta MetaData;
 	};
 #pragma endregion
-	α Block2( uint userId, const Twitter::TwitterSettings& settings )noexcept{ return Coroutine::FunctionAwait{ [=](auto h)->Task
+	α Block2( uint userId, const Twitter::TwitterSettings& settings )noexcept{ return Coroutine::AsyncAwait{ [=](auto h)->Task
 	{
 		var once = std::to_string( userId );
 		var url = "https://api.twitter.com/1.1/blocks/create.json"sv;
@@ -351,6 +351,8 @@ namespace Jde
 				if( !sent.contains( t.id() ) )
 				{
 					*pTweets->add_values() = t;
+					// if( t.author_id()==1272901726148976640 )
+					// 	BREAK;
 					authors.emplace( t.author_id() );
 				}
 			}
@@ -394,13 +396,13 @@ namespace Jde
 		auto pAuthorResults = make_unique<TweetAuthors>(); pAuthorResults->set_request_id( arg.ClientId );
 		if( authors.size() )
 		{
-			try
+			var add = [&authors,&pAuthorResults]( var& row ){ auto p = pAuthorResults->add_values(); p->set_id( row.GetUInt(0) ); p->set_screen_name( row.GetString(1) ); p->set_profile_url( row.GetString(2) ); authors.erase(p->id()); };
+			DB::SelectIds( "select id, screen_name, profile_image from twt_handles where id in ", authors, add );
+			LOG( "Adding {} users"sv, authors.size() );
+			for( var id : authors )
 			{
-				var add = [&authors,&pAuthorResults]( var& row ){ auto p = pAuthorResults->add_values(); p->set_id( row.GetUInt(0) ); p->set_screen_name( row.GetString(1) ); p->set_profile_url( row.GetString(2) ); authors.erase(p->id()); };
-				DB::SelectIds( "select id, screen_name, profile_image from twt_handles where id in ", authors, add );
-				for( var id : authors )
+				try
 				{
-					//LOG( "https://api.twitter.com/1.1/users/show.json?user_id={}", id );
 					auto pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).UP<string>();
 					var j = nlohmann::json::parse( *pResult );
 					User user;
@@ -409,8 +411,16 @@ namespace Jde
 					DB::ExecuteProc( "twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl} );
 					auto p = pAuthorResults->add_values(); p->set_id( id ); p->set_screen_name( user.ScreenName ); p->set_profile_url( user.ProfileImageUrl );
 				}
+				catch( const SslException& e )
+				{
+					if( string{e.what()}.find("User not found.")==string::npos )
+						break;
+				}
+				catch( IException& )
+				{
+					BREAK;
+				}
 			}
-			catch( const IException& ){}
 		}
 		MessageType m; m.set_allocated_tweet_authors( pAuthorResults.release() );
 		arg.Push( move(m) );

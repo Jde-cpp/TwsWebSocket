@@ -10,7 +10,7 @@
 namespace Jde::Markets::TwsWebSocket
 {
 	static const LogTag& _logLevel{ Logging::TagLevel("mrk-hist") };
-	α Previous( int32 contractId, Markets::TwsWebSocket::ProcessArg arg, bool sendMultiEnd )noexcept->Coroutine::Task//TODO wrap in Try.
+	α Previous( int32 contractId, Markets::TwsWebSocket::ProcessArg arg, sp<UnorderedSet<int32>> pContractIds={} )noexcept->Coroutine::Task//TODO wrap in Try.
 	{
 		sp<::ContractDetails> pDetails;
 		try
@@ -19,8 +19,11 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		catch( IException& e )
 		{
+			if( pContractIds )
+				pContractIds->erase( contractId );
 			co_return arg.Push( format("Could not load contract {}", contractId), e );
 		}
+		vector<uint> contracts{13909, 473973588, 69238858};
 		auto pContract = ms<Contract>( *pDetails );
 		var current = CurrentTradingDay( *pContract );
 		var isOption = pContract->SecType==SecurityType::Option;
@@ -32,9 +35,9 @@ namespace Jde::Markets::TwsWebSocket
 			auto pBar1 = make_unique<Proto::Results::DaySummary>(); pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
 			pBars->emplace( day, move(pBar1) );
 		}
-		auto load = [isOption,count,current,arg,pContract,pBars,isPreMarket]( bool useRth, DayIndex endDate, bool isEnd )->AWrapper
+		auto load = [isOption,count,current,arg,pContract,pBars,isPreMarket]( bool useRth, DayIndex endDate, sp<UnorderedSet<int32>> pContractIds )->AsyncAwait
 		{
-			return AWrapper( [=]( HCoroutine h )->Task
+			return AsyncAwait( [=]( HCoroutine h )->Task
 			{
 				try
 				{
@@ -114,20 +117,38 @@ namespace Jde::Markets::TwsWebSocket
 						if( arg.SessionId )
 							arg.WebSendPtr->Push( move(msg), arg.SessionId );
 					}
-					if( isEnd )
-						arg.Push( EResults::MultiEnd );
 				}
 				catch( IException& e )
 				{
 					h.promise().get_return_object().SetResult( e.Clone() );
 				}
+				if( pContractIds && pContractIds->erase(pContract->Id) && pContractIds->size()==0 )
+					arg.Push( EResults::MultiEnd );
+				// {
+				// 	static mutex m;
+				// 	lock_guard l{m};
+				// 	if( pContractIds && pContractIds->size()<=5 )
+				// 	{
+				// 		ostringstream os;
+				// 		pContractIds->ForEach( [&os](auto i){os << i << ", ";} );
+				// 		DBG( "size={} values={{{}}}", pContractIds->size(), os.str().substr(0, os.str().size()-2) );
+				// 	}
+				// }
 				h.resume();
 			});
 		};
 		var useRth = isOption || count==1;
-		co_await load( useRth, current, useRth && sendMultiEnd );
+		co_await load( useRth, current, useRth ? pContractIds : sp<UnorderedSet<int32>>{} );
+		if( std::find(contracts.begin(), contracts.end(), contractId)!=contracts.end() )
+			DBG( "({}){}", contractId, pDetails->contract.symbol );
 		if( !useRth )
-			co_await load( !useRth, PreviousTradingDay(current), sendMultiEnd );
+		{
+			co_await load( !useRth, PreviousTradingDay(current), pContractIds );
+			if( pContractIds->contains(contractId) )
+				ERR( "({}){}", contractId, pDetails->contract.symbol );
+			if( std::find(contracts.begin(), contracts.end(), contractId)!=contracts.end() )
+				DBG( "({}){}", contractId, pDetails->contract.symbol );
+		}
 	}
 }
 namespace Jde::Markets
@@ -136,13 +157,14 @@ namespace Jde::Markets
 	{
 		google::protobuf::RepeatedField<google::protobuf::int32> contractIds;
 		contractIds.Add( contractId );
-		Previous( contractId, {}, false );
+		Previous( contractId, {} );
 	}
 
 	α TwsWebSocket::PreviousDayValues( const google::protobuf::RepeatedField<google::protobuf::int32>& contractIds, const ProcessArg& arg )noexcept->void
 	{
-		uint i=0;
+		auto ids = ms<UnorderedSet<int32>>();
+		std::for_each( contractIds.begin(), contractIds.end(), [&ids](auto i){ ids->emplace(i); } );
 		for( var id : contractIds )
-			Previous( id, arg, ++i==contractIds.size() );
+			Previous( id, arg, ids );
 	}
 }
