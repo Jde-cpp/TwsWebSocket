@@ -217,11 +217,6 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		_webSocket.AddOutgoing( move(m), id );
 	}
-	// α WebSendGateway::Push( const vector<MessageType>& m, SessionPK s )noexcept->void
-	// {
-	// 	_webSocket.AddOutgoing( m, s );
-	// }
-
 
 	α WebSendGateway::PushS( MessageType&& m, SessionPK id )noexcept->void
 	{
@@ -263,14 +258,6 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		return clientKey.SessionId;
 	}
-
-/*	α WebSendGateway::AddMarketDataSubscription( SessionPK sessionId, ContractPK contractId, const flat_set<Proto::Requests::ETickList>& ticks )noexcept->void
-	{
-		unique_lock l{ _marketSubscriptionMutex };
-		auto& contractSubscriptions = _marketSubscriptions.try_emplace( contractId ).first->second;
-		contractSubscriptions[sessionId] = ticks;
-	}
-*/
 
 	α WebSendGateway::ContractDetails( up<Proto::Results::ContractDetailsResult> pDetails, ReqId reqId )noexcept->void
 	{
@@ -362,10 +349,8 @@ namespace Jde::Markets::TwsWebSocket
 		Instance().Push( eResults, c );
 	}
 
-	α WebSendGateway::Push( EResults eResults, const ClientKey& c )noexcept->void
+	α WebSendGateway::Push( EResults r, const ClientKey& c )noexcept->void
 	{
-		auto pMessage = new MessageValue(); pMessage->set_int_value( c.ClientId ); pMessage->set_type( eResults );
-		MessageType msg; msg.set_allocated_message( pMessage );
-		Push( move(msg), c.SessionId );
+		Push( ToMessage(r, c.ClientId), c.SessionId );
 	}
 }

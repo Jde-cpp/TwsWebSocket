@@ -2,6 +2,7 @@
 #include <jde/coroutine/Task.h>
 #include <jde/io/Crc.h>
 #include <jde/markets/types/proto/results.pb.h>
+#include <jde/markets/types/proto/ResultsMessage.h>
 #include "../../../Framework/source/Settings.h"
 #include "../../../Framework/source/collections/Collections.h"
 #include "../../../Framework/source/db/Syntax.h"
@@ -15,7 +16,7 @@ namespace Jde
 #pragma region Defines
 	using namespace Markets::TwsWebSocket;
 	using namespace Coroutine;
-	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task;
+	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken, uint callCount )->Coroutine::Task;
 	using Markets::Proto::Results::Tweets; using ProtoTweet=Markets::Proto::Results::Tweet;
 	using Markets::Proto::Results::TweetAuthors; using Markets::Proto::Results::TweetAuthor;
 	static const LogTag& _logLevel = Logging::TagLevel( "app-tweet" );
@@ -165,14 +166,19 @@ namespace Jde
 				<< "oauth_signature=\"" << Ssl::Encode( Ssl::RsaSign(os.str(), format("{}&{}", settings.ApiSecretKey, settings.AccessTokenSecret)) ) << "\"";//https://datatracker.ietf.org/doc/html/rfc5849#section-3.4
 
 		h.promise().get_return_object().SetResult( co_await Ssl::SslCo::SendEmpty("api.twitter.com", fmt::vformat(string(url.substr(23))+string("?user_id={}&skip_status=1"), fmt::make_format_args(userId)), osAuth.str()) );
+		CanBlock = h.promise().get_return_object().HasError();
 		h.resume();
 	}};}
-	α Twitter::Block( uint userId, ProcessArg arg )noexcept->Coroutine::Task
+
+	α Twitter::Block( uint id, ProcessArg arg )noexcept->Coroutine::Task
 	{
 		try
 		{
 			TwitterSettings settings; THROW_IF( !settings.CanBlock(), "Must specify in settings:  ApiSecretKey, ApiKey, AccessToken, AccessTokenSecret" );
-			( co_await Block2( userId, settings) ).CheckError();
+			if( CanBlock )
+				( co_await Block2( id, settings) );
+			if( !CanBlock )//above can update
+				( co_await *DB::ExecuteProcCo("twt_user_block(?)", {id}) ).CheckError();
 			arg.Push( EResults::Success );
 		}
 		catch( IException& e )
@@ -185,41 +191,36 @@ namespace Jde
 	{
 		var _ = ( co_await CoLockKey( format("Twitter::Search.{}", symbol), true) ).UP<CoLockGuard>();
 		set<uint> authors;
-		auto push = [=]( up<Tweets>&& p )
-		{
-			p->set_request_id( arg.ClientId );
-			LOG( "pushing {}", p->values_size() );
-			MessageType m; m.set_allocated_tweets( p.release() );
-			arg.Push( move(m) );
-		};
-		var time = std::time( nullptr );
 		TwitterSettings settings; if( !settings.BearerToken.size() ) co_return arg.PushError( "twitter credentials not set on server" );
+		uint callCount{ 0 };
 
-		auto pExisting = Cache::Get<Tweets>( format("Tweets.{}", symbol) );
-		var existingPath = IApplication::ApplicationDataFolder()/"tweets"/( symbol+".dat" );
+		auto pExisting{ Cache::Get<Tweets>(format("Tweets.{}", symbol)) };
+
+		var existingPath{ IApplication::ApplicationDataFolder()/"tweets"/(symbol+".dat") };
 		if( !pExisting )
 		{
-			pExisting = sp<Tweets>( IO::Proto::TryLoad<Tweets>(existingPath).release() );
-			LOG( "fetched from file {}", pExisting ? pExisting->values_size() : 0 );
-			if( !pExisting )
-			{
-				pExisting = ms<Tweets>();
-				if( !fs::exists(existingPath.parent_path()) )
-					fs::create_directory( existingPath.parent_path() );
-			}
+			auto pFile = IO::Proto::TryLoad<Tweets>( existingPath );
+			pExisting = pFile ? ms<Tweets>( *pFile ) : ms<Tweets>();
+			if( pFile )
+				LOG( "fetched from file {}", pFile->values_size() );
+			else if( !fs::exists(existingPath.parent_path()) )
+				fs::create_directory( existingPath.parent_path() );
 		}
-		else if( Clock::from_time_t(pExisting->update_time())>Clock::now()-20min )
+		var now = Clock::now();
+		var cutoff = now-20min;
+		var likeUpdateCutoff = now-12h;
+		LOG( "count={}, LastUpdate={} cutoff={}"sv, pExisting->values_size(), ToIsoString(Clock::from_time_t(pExisting->update_time())), ToIsoString(cutoff) );
+		if( pExisting->values_size() && Clock::from_time_t(pExisting->update_time())>cutoff )
 		{
 			LOG( "Pushing {} previously fetched", pExisting->values_size() );
-			push( make_unique<Tweets>(*pExisting) );
+			arg.Push( Markets::ToMessage( arg.ClientId, new Tweets(*pExisting)) );
 			for( auto& t : pExisting->values() )
 				authors.emplace( t.author_id() );
-			SendAuthors( authors, arg, settings.BearerToken );
+			SendAuthors( authors, arg, settings.BearerToken, callCount );
 			co_return;
 		}
 		else
 		{
-			LOG( "{}>{}"sv, ToIsoString(Clock::from_time_t(pExisting->update_time())), ToIsoString(Clock::now()-20min) );
 			auto pTemp = ms<Tweets>();
 			pTemp->set_update_time( pExisting->update_time() );
 			pTemp->set_earliest_time( pExisting->earliest_time() );
@@ -235,7 +236,7 @@ namespace Jde
 		for( auto& t : *pExisting->mutable_values() )
 			existing.emplace( t.created_at(), &t );
 
-		var once = std::to_string( Calc32RunTime(string{symbol}+std::to_string(time)) );
+		//var once = std::to_string( Calc32RunTime(string{symbol}+std::to_string(time)) );
 		var additional = DB::Scaler<string>( "select query from twt_queries where tag=?", {symbol} ).value_or( string{} );
 		var prefix = additional.size() ? format("{}%20{}", Ssl::Encode(symbol), Ssl::Encode(additional) ) : Ssl::Encode( symbol );
 		constexpr sv suffix = "%20-is:retweet%20lang:en"sv;
@@ -258,13 +259,12 @@ namespace Jde
 		var pBlockedUsers = ( co_await DB::SelectSet<uint>( "select id from twt_handles where blocked=1", {}, "twt_blocks") ).SP<flat_set<uint>>();
 		set<uint> newBlockedUsers;
 
-		var now = Clock::now();
 		var epoch = now-24h;
 		auto lastChecked = Clock::from_time_t(pExisting->update_time())>epoch ? Clock::from_time_t(pExisting->update_time()) : epoch;
 		LOG( "lastChecked={}"sv, ToIsoString(lastChecked) );
 		auto earliest = Clock::from_time_t(pExisting->earliest_time())>epoch ? Clock::from_time_t(pExisting->earliest_time()) : epoch;
 		string nextToken;
-		var startTime = lastChecked>epoch+12h ? epoch+12h : lastChecked>epoch ? lastChecked : epoch;//update likes over 12 hours.
+		var startTime = lastChecked>epoch+12h ? epoch+12h : lastChecked>epoch ? lastChecked : epoch;//update likes over 12 hours, but not over 24 hours.  less than 20minutes, handled above.
 		var startTimeUrl = format( "&start_time={}&max_results=100", ToIsoString(startTime) );
 		var require$Hash = ciSymbol=="SPY";
 		set<uint> sent;
@@ -272,6 +272,7 @@ namespace Jde
 		{
 			for( uint i=0; i<10; i = nextToken.size() ? i+1 : 10 )
 			{
+				++callCount;
 				Coroutine::AwaitResult result2 = co_await Ssl::SslCo::Get( "api.twitter.com", format("/2/tweets/search/recent?query={}&tweet.fields=public_metrics,author_id,created_at{}{}", query, startTimeUrl, nextToken), format("Bearer {}", settings.BearerToken) );
 				var pResult = result2.UP<string>();
 				json j;
@@ -331,7 +332,7 @@ namespace Jde
 						sent.emplace( p->id() );
 						*pTweets->add_values() = *p;
 					}
-					push( move(pTweets) );
+					arg.Push( Markets::ToMessage(arg.ClientId, pTweets.release()) );
 				}
 				nextToken = recent.MetaData.NextToken.size() ? format( "&next_token={}", recent.MetaData.NextToken ) : string{};
 			}
@@ -359,7 +360,7 @@ namespace Jde
 			pTweets->set_update_time( (uint32)Clock::to_time_t(lastChecked) ); pExisting->set_update_time( (uint32)Clock::to_time_t(lastChecked) );
 			pTweets->set_earliest_time( (uint32)Clock::to_time_t(earliest) );  pExisting->set_earliest_time( (uint32)Clock::to_time_t(earliest) );
 			if( pTweets->values_size() )
-				push( move(pTweets) );
+				arg.Push( Markets::ToMessage(arg.ClientId, pTweets.release()) );
 
 			if( newBlockedUsers.size() )
 			{
@@ -378,7 +379,7 @@ namespace Jde
 			}
 			IO::Proto::Save( *pExisting, existingPath );
 			Cache::Set<Tweets>( format("Tweets.{}", symbol), pExisting );
-			SendAuthors( authors, arg, settings.BearerToken );
+			SendAuthors( authors, arg, settings.BearerToken, callCount );
 		}
 		catch( IException& e )
 		{
@@ -391,9 +392,9 @@ namespace Jde
 		}
 	}
 #pragma region Other
-	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken )->Coroutine::Task
+	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken, uint callCount )->Coroutine::Task
 	{
-		auto pAuthorResults = make_unique<TweetAuthors>(); pAuthorResults->set_request_id( arg.ClientId );
+		auto pAuthorResults = make_unique<TweetAuthors>();
 		if( authors.size() )
 		{
 			var add = [&authors,&pAuthorResults]( var& row ){ auto p = pAuthorResults->add_values(); p->set_id( row.GetUInt(0) ); p->set_screen_name( row.GetString(1) ); p->set_profile_url( row.GetString(2) ); authors.erase(p->id()); };
@@ -401,20 +402,32 @@ namespace Jde
 			LOG( "Adding {} users"sv, authors.size() );
 			for( var id : authors )
 			{
+				if( callCount>=300 )
+					break;
 				try
 				{
+					++callCount;
 					auto pResult = ( co_await Ssl::SslCo::Get("api.twitter.com", format("/1.1/users/show.json?user_id={}", id), format("Bearer {}", bearerToken)) ).UP<string>();
 					var j = nlohmann::json::parse( *pResult );
 					User user;
 					User::from_json( j, user );
 					LOG( "twt_user_insert({},{},{})"sv, user.Id, user.ScreenName, user.ProfileImageUrl );
+				//	var count = DB::Scaler<uint>( "select count(*) from twt_handles" ).value();
 					DB::ExecuteProc( "twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl} );
+					//var name = DB::Scaler<string>( "select screen_name from twt_handles where id=?", {user.Id} );
+					//ASSERT( name );
+					//ASSERT( *DB::Scaler<uint>("select count(*) from twt_handles")==count+1 );
 					auto p = pAuthorResults->add_values(); p->set_id( id ); p->set_screen_name( user.ScreenName ); p->set_profile_url( user.ProfileImageUrl );
 				}
-				catch( const SslException& e )
+				catch( const NetException& e )
 				{
-					if( string{e.what()}.find("User not found.")==string::npos )
+					const string what{ e.what() };
+					if( what.find("User not found.")==string::npos && what.find("User has been suspended.")==string::npos )/*User has been suspended=code=63*/
+					{
+						if( what.find("Rate limit exceeded") )
+							e.Log( format("count={}", callCount) );
 						break;
+					}
 				}
 				catch( IException& )
 				{
@@ -422,8 +435,7 @@ namespace Jde
 				}
 			}
 		}
-		MessageType m; m.set_allocated_tweet_authors( pAuthorResults.release() );
-		arg.Push( move(m) );
+		arg.Push( Markets::ToMessage(arg.ClientId, pAuthorResults.release()) );
 	}
 #pragma endregion
 }

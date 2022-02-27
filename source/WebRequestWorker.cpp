@@ -10,6 +10,7 @@
 #include "./WebCoSocket.h"
 #include "./requests/EdgarRequests.h"
 #include "../../Framework/source/db/GraphQL.h"
+#include "../../Framework/source/io/ProtoUtilities.h"
 #include "../../MarketLibrary/source/data/HistoricalDataCache.h"
 #include "../../MarketLibrary/source/data/OptionData.h"
 #include "../../MarketLibrary/source/data/StatAwait.h"
@@ -22,6 +23,7 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
+	using namespace Proto::Requests;
 	static const LogTag& _logLevel = Logging::TagLevel( "app-webRequests" );
 	WebRequestWorker::WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept:
 		_pTwsSend{ make_shared<TwsSendWorker>(webSend, pTwsClient) },
@@ -39,56 +41,61 @@ namespace Jde::Markets::TwsWebSocket
 		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.empty() )
 		{
 			if( auto v =_queue.TryPop(5s); v )
-				HandleRequest( std::move(*v) );
+				HandleRequest( *v );
 		}
 	}
 #define ARG(x) {{{s}, x}, _pWebSend}
-	α WebRequestWorker::HandleRequest( QueueType&& msg )noexcept->void
+	α WebRequestWorker::HandleRequest( QueueType& msg )noexcept->void
 	{
 		try
 		{
-			Proto::Requests::RequestTransmission transmission;
-			var data = std::move( msg.Data );
-			if( google::protobuf::io::CodedInputStream stream{reinterpret_cast<const unsigned char*>(data.data()), (int)data.size()}; !transmission.MergePartialFromCodedStream(&stream) )
-				THROW( "transmission.MergePartialFromCodedStream returned false" );
-			HandleRequest( move(transmission), move(msg) );
+			HandleRequest( IO::Proto::Deserialize<RequestTransmission>(move(msg.Data)), {msg.SessionId,msg.UserId} );
 		}
 		catch( const IException& e )
 		{
-			_pWebSend->Push( "Request Failed", e, {msg, 0} );
+			WebSendGateway::PushS( "Request Failed", e, {msg, 0} );
 		}
 	}
 	α ReceiveOptions( SessionKey s, Proto::Requests::RequestOptions o )noexcept->Task;
 #pragma warning(disable:4456)
-	α WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& transmission, SessionKey&& s )noexcept->void
+	α WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& t, SessionKey s )noexcept->void
 	{
-		while( transmission.messages().size() )
+		while( t.messages().size() )
 		{
-			auto pMessage = sp<Proto::Requests::RequestUnion>( transmission.mutable_messages()->ReleaseLast() );
-			auto& message = *pMessage;
-			if( message.has_string_request() )
-				Receive( message.string_request().type(), move(*message.mutable_string_request()->mutable_name()), {s, message.string_request().id()} );
-			else if( message.has_options() )
-				ReceiveOptions( s, message.options() );
-			else if( message.has_flex_executions() )
-				ReceiveFlex( s, message.flex_executions() );
-			else if( message.has_edit_watch_list() )
-				WatchListData::Edit( message.edit_watch_list().file(), ARG(message.edit_watch_list().id()) );
-			else if( auto p=message.has_blockly() ? message.mutable_blockly() : nullptr; p )
+			auto pMessage = sp<Proto::Requests::RequestUnion>( t.mutable_messages()->ReleaseLast() );
+			auto& m = *pMessage;
+			if( m.has_string_request() )
+				Receive( m.string_request().type(), move(*m.mutable_string_request()->mutable_name()), {s, m.string_request().id()} );
+			else if( m.has_options() )
+				ReceiveOptions( s, m.options() );
+			else if( m.has_flex_executions() )
+				ReceiveFlex( s, m.flex_executions() );
+			else if( m.has_edit_watch_list() )
+				WatchListData::Edit( m.edit_watch_list().file(), ARG(m.edit_watch_list().id()) );
+			else if( auto p=m.has_blockly() ? m.mutable_blockly() : nullptr; p )
 			{
 				LOG( "({}.{})Blockly Request( size={} )"sv, s.SessionId, p->id(), p->message().size() );
 				_pBlocklyWorker->Push( { {s, p->id()}, up<string>{p->release_message()} } );
 			}
-			else if( message.has_std_dev() )
-				ReceiveStdDev( message.std_dev().contract_id(), message.std_dev().days(), message.std_dev().start(), ARG(message.std_dev().id()) );
-			else if( auto p = message.has_reddit() ? message.mutable_reddit() : nullptr; p )
-				Reddit::Search( move(*p->mutable_symbol()), move(*p->mutable_sort()), make_unique<ProcessArg>(move(s), p->id(), _pWebSend) );
+			else if( m.has_std_dev() )
+				ReceiveStdDev( m.std_dev().contract_id(), m.std_dev().days(), m.std_dev().start(), ARG(m.std_dev().id()) );
+			else if( auto p = m.has_reddit() ? m.mutable_reddit() : nullptr; p )
+				Jde::Reddit::Search( move(*p->mutable_symbol()), move(*p->mutable_sort()), mu<ProcessArg>(move(s), p->id(), _pWebSend) );
 			else
 			{
-				bool handled = false;
-				if( message.has_generic_requests() )
-					handled = ReceiveRequests( s, message.generic_requests() );
-				if( !handled )
+				if( m.has_generic_requests() )
+				{
+					up<GenericRequests> gr{ m.release_generic_requests() };
+					ReceiveRequests( s, gr );
+					if( gr )
+						m.set_allocated_generic_requests( gr.release() );
+				}
+				else if( m.has_generic_request() && m.generic_request().type()==ERequests::TwitterBlock )
+				{
+					up<GenericRequest> p{ m.release_generic_request() };
+					Twitter::Block( p->item_id(), ARG(p->id()) );
+				}
+				if( m.Value_case() )
 					_pTwsSend->Push( pMessage, s );
 			}
 		}
@@ -98,7 +105,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		if( type==ERequests::Query )
 		{
-			auto p = make_unique<Proto::Results::StringResult>(); p->set_id( arg.ClientId ); p->set_type( EResults::Query );
+			auto p = mu<Proto::Results::StringResult>(); p->set_id( arg.ClientId ); p->set_type( EResults::Query );
 			MessageType msg;
 			try
 			{
@@ -195,55 +202,41 @@ namespace Jde::Markets::TwsWebSocket
 		else if( type==ERequests::Tweets )
 			Twitter::Search( name, {arg, _pWebSend} );
 		else if( type==ERequests::RedditBlock )
-			Reddit::Block( move(name), mu<ProcessArg>(arg, _pWebSend) );
+			Jde::Reddit::Block( move(name), mu<ProcessArg>(arg, _pWebSend) );
 		//else if( type==ERequests::Investors )
 //			EdgarRequests::Investors( name, {arg, _pWebSend} );
 	}
 
-/*	α WebRequestWorker::ReceiveRest( const ClientKey& arg, Proto::Requests::ERequests type, sv url, sv item )noexcept->void
+	bool WebRequestWorker::ReceiveRequests( const SessionKey& s, up<GenericRequests>& r )noexcept
 	{
-		if( UM::IsTarget(url) )
-		{
-			if( type==ERequests::RestGet )
-				UM::Get( url, arg.UserId );
-			else if( type==ERequests::RestDelete )
-				UM::Delete( url, arg.UserId );
-			else if( type==ERequests::RestPatch )
-				UM::Patch( url, arg.UserId, item );
-			else if( type==ERequests::RestPost )
-				UM::Post( url, arg.UserId, item );
-		}
-	}*/
-
-	bool WebRequestWorker::ReceiveRequests( const SessionKey& s, const Proto::Requests::GenericRequests& r )noexcept
-	{
-		bool handled = true;
-		var t = r.type();
+		bool handled = true; var t = r->type(); auto& ids = *r->mutable_ids(); var id = r->id();
 		if( t==ERequests::RequsetPrevOptionValues )
-			PreviousDayValues( r.ids(), ARG(r.id()) );
+			PreviousDayValues( ids, ARG(id) );
 		else if( t==ERequests::RequestFundamentalData )
-			RequestFundamentalData( r.ids(), {s, r.id()} );
+			RequestFundamentalData( ids, {s, id} );
 		else if( t==ERequests::Portfolios )
-			WatchListData::SendLists( true, ARG(r.id()) );
+			WatchListData::SendLists( true, ARG(id) );
 		else if( t==ERequests::WatchLists )
-			WatchListData::SendLists( false, ARG(r.id()) );
+			WatchListData::SendLists( false, ARG(id) );
 		else if( t==ERequests::Filings || t==ERequests::Investors )
 		{
-			var contractId = r.ids().size()==1 ? r.ids()[0] : 0;
+			var contractId = ids.size()==1 ? ids[0] : 0;
 			if( !contractId )
-				_pWebSend->Push( "Error in request", Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, r.ids().size()}, {{s}, r.id()} );
+				_pWebSend->Push( "Error in request", Exception{SRCE_CUR, ELogLevel::Debug, "ids sent: {} expected 1."sv, ids.size()}, {{s}, id} );
 			else
 			{
-				LOG( "({})EdgarRequest( {}, {} )", r.id(), t, contractId );
-				var contractId = r.ids()[0];
+				LOG( "({})EdgarRequest( {}, {} )", id, t, contractId );
+				var contractId = ids[0];
 				if( t==ERequests::Filings )
-					EdgarRequests::Filings( contractId, ARG(r.id()) );
+					EdgarRequests::Filings( contractId, ARG(id) );
 				else if( t==ERequests::Investors )
-					EdgarRequests::Investors( contractId, ARG(r.id()) );
+					EdgarRequests::Investors( contractId, ARG(id) );
 			}
 		}
 		else
-			handled = false;//WARN( "Unknown message '{}' received from '{}' - not forwarding to tws."sv, request.type(), sessionId );
+			handled = false;
+		if( handled )
+			r = nullptr;
 		return handled;
 	}
 	α WebRequestWorker::ReceiveFlex( const SessionKey& s, const Proto::Requests::FlexExecutions& req )noexcept->void
@@ -309,7 +302,7 @@ namespace Jde::Markets::TwsWebSocket
 				var tick = tick_.UP<Tick>();
 				WebSendGateway::PushS( ToRatioMessage(tick->Ratios(), s.ClientId), s.SessionId );
 				// auto fundamentals = tick.Ratios();
-				// auto pRatios = make_unique<Proto::Results::Fundamentals>();
+				// auto pRatios = mu<Proto::Results::Fundamentals>();
 				// pRatios->set_request_id( web.ClientId );
 				// for( var& [name,value] : fundamentals )
 				// 	(*pRatios->mutable_values())[name] = value;

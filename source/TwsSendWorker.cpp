@@ -50,7 +50,7 @@ namespace Jde::Markets::TwsWebSocket
 		WebSendGateway::AddOrder( o.orderId, s.SessionId );
 		try
 		{
-			auto p = ( co_await Tws::PlaceOrder(pIbContract, move(o), r.block_id()) ).SP<Proto::Results::OpenOrder>();
+			auto p = ( co_await Tws::PlaceOrder(pIbContract, move(o), r.block_id(), r.stop(), r.stop_limit()) ).SP<Proto::Results::OpenOrder>();
 			p->set_request_id( r.id() );
 			WebSendGateway::PushS( ToMessage(new Proto::Results::OpenOrder{*p}), s.SessionId );
 		}
@@ -70,7 +70,9 @@ namespace Jde::Markets::TwsWebSocket
 			if( m.has_generic_requests() )
 				Requests( m.generic_requests(), sessionKey );
 			else if( m.has_generic_request() )
+			{
 				Request( m.generic_request(), sessionKey );
+			}
 			else if( m.has_account_updates() )
 				AccountUpdates( m.account_updates(), sessionKey );
 			else if( m.has_account_updates_multi() )
