@@ -17,6 +17,15 @@
 		"created": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false },
 		"updated": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false }
 	},
+	"$tinyValues":
+	{
+		"columns": [
+			{ "name": "id", "type": "tinyId", "sequence": true },
+			{ "name": "name", "type": "name" }
+		],
+		"surrogateKey":["id"],
+		"naturalKey":["name"]
+	},
 	"$smallValues":
 	{
 		"columns": [
@@ -90,8 +99,8 @@
 	},
 	"dgrForms":
 	{
-		"parent": "$smallValues",
-		"data": ["None", "10-K", "2-E", "3", "4", "5", "6-K", "7-M", "8-K", "9-M", "10-Q", "11-K", "12b-25", "13F-HR", {"id":114, "name":"114"} ]
+		"parent": "$tinyValues",
+		"data": ["None", "10-K", "2-E", "3", "4", "5", "6-K", "7-M", "8-K", "9-M", "10-Q", "11-K", "12b-25", "13F-HR", {"id":114, "name":"114"}, {"id":137, "name":"SC 13G/A"}, {"id":138, "name":"SC 13G"} ]
 	},
 	"ibAccounts":
 	{

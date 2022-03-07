@@ -40,7 +40,7 @@ namespace TwsWebSocket
 	};
 
 
-	struct Session: public boost::asio::coroutine, public std::enable_shared_from_this<Session>
+	struct Session: boost::asio::coroutine, std::enable_shared_from_this<Session>
 	{
     explicit Session( tcp::socket&& socket, ssl::context& ctx, const std::shared_ptr<std::string const>& doc_root ):
 	 	_stream(std::move(socket), ctx),
@@ -75,7 +75,7 @@ namespace TwsWebSocket
 };
 
 
-	struct Listener : public boost::asio::coroutine, public std::enable_shared_from_this<Listener>
+	struct Listener : boost::asio::coroutine, std::enable_shared_from_this<Listener>
 	{
     	Listener( net::io_context& ioc, ssl::context& ctx, tcp::endpoint endpoint )noexcept(false);
 		void Run()noexcept(false){ Loop(); }
