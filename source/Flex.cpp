@@ -61,7 +61,7 @@ namespace Jde::Markets::TwsWebSocket
 						continue;
 					LOG( "Flex::Load( '{}' )"sv, path.string() );
 					var pContent = ( co_await IO::Read(path, false) ).SP<string>(); CONTINUE_IF( !pContent->size(), "{} is empty", path.string() );
-					tinyxml2::XMLDocument doc{ *pContent };
+					Xml::XMLDocument doc{ *pContent, false };
 					vector<sv> rg{ Str::Split("FlexQueryResponse,FlexStatements,FlexStatement,Trades") };
 					var pTrades = doc.Find( std::span<sv>{rg} );
 					for( auto p = pTrades ? pTrades->FirstChildElement() : nullptr; p; p = p->NextSiblingElement() )

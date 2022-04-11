@@ -30,7 +30,7 @@ namespace Jde::Markets::TwsWebSocket
 		try
 		{
 			auto pDetails = ( co_await Tws::ContractDetail(contractId) ).SP<::ContractDetails>();
-			auto p = Edgar::Form13F::LoadInvestors( pDetails->longName );//normally cached.
+			auto p = Edgar::LoadInvestors( pDetails->longName );//normally cached.
 			arg.Push( ToMessage(arg.ClientId, p.release()) );
 		}
 		catch( IException& e )

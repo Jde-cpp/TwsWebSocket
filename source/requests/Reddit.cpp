@@ -8,7 +8,7 @@ namespace Jde
 {
 #pragma region Defines
 	using namespace Markets::TwsWebSocket;
-	using namespace tinyxml2;
+	using namespace Xml;
 	using Markets::Proto::Results::RedditEntries;
 #define var const auto
 #pragma endregion
@@ -19,7 +19,7 @@ namespace Jde
 			var pXml = ( co_await Ssl::SslCo::Get("www.reddit.com", format("/r/wallstreetbets/search.xml?q=${}&restrict_sr=on&limit=100&sort={}", symbol, sort.size() ? sort : "hot")) ).UP<string>();//TODOExample: User-Agent: android:com.example.myredditapp:v1.2.3 (by /u/kemitche)
 			auto pResults = make_unique<RedditEntries>(); pResults->set_request_id( arg->ClientId );
 
-			tinyxml2::XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "feed" ); CHECK( pRoot );
+			XMLDocument doc{ *pXml, false }; var pRoot = doc.FirstChildElement( "feed" ); CHECK( pRoot );
 			TRY( pResults->set_update_time((uint32)DateTime{pRoot->TryChildText("updated")}.TimeT()) );
 			var pBlockedUsers = ( co_await DB::SelectSet<string>("select name from rdt_handles where blocked=1", {}, "rdt_blocked") ).SP<flat_set<string>>();
 

@@ -12,7 +12,7 @@
 
 namespace Jde::Markets::TwsWebSocket
 {
-	using namespace tinyxml2;
+	using namespace Xml;
 
 	α News::RequestArticle( str providerCode, str articleId, ProcessArg arg )noexcept->Task
 	{
@@ -78,7 +78,7 @@ namespace Jde::Markets::TwsWebSocket
 			auto pXml = xml.UP<string>();
 
 			auto results = mu<vector<sp<Proto::Results::GoogleNews>>>();
-			tinyxml2::XMLDocument doc{ *pXml }; var pRoot = doc.FirstChildElement( "rss" ); CHECK( pRoot ); var pChannel = pRoot->FirstChildElement( "channel" ); CHECK( pChannel );
+			XMLDocument doc{ *pXml, false }; var pRoot = doc.FirstChildElement( "rss" ); CHECK( pRoot ); var pChannel = pRoot->FirstChildElement( "channel" ); CHECK( pChannel );
 			for( auto pItem=pChannel->FirstChildElement("item"); pItem; pItem = pItem->NextSiblingElement("item") )
 			{
 				auto p = make_shared<Proto::Results::GoogleNews>();

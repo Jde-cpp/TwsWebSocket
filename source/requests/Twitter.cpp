@@ -236,7 +236,6 @@ namespace Jde
 		for( auto& t : *pExisting->mutable_values() )
 			existing.emplace( t.created_at(), &t );
 
-		//var once = std::to_string( Calc32RunTime(string{symbol}+std::to_string(time)) );
 		var additional = DB::Scaler<string>( "select query from twt_queries where tag=?", {symbol} ).value_or( string{} );
 		var prefix = additional.size() ? format("{}%20{}", Ssl::Encode(symbol), Ssl::Encode(additional) ) : Ssl::Encode( symbol );
 		constexpr sv suffix = "%20-is:retweet%20lang:en"sv;
@@ -244,13 +243,13 @@ namespace Jde
 		auto pIgnoredTags = ms<flat_map<string,uint>>( *pExistingIgnoredTags );
 		flat_multimap<uint,string> ignoredSorted;
 		for_each( pExistingIgnoredTags->begin(), pExistingIgnoredTags->end(), [&ignoredSorted](var& i){ ignoredSorted.emplace(i.second,i.first);} );
-		ostringstream osIgnored; const CIString ciSymbol{ symbol };
+		ostringstream osIgnored; const String ciSymbol{ ToIV(symbol) };
 		for( auto p=ignoredSorted.rbegin(); p!=ignoredSorted.rend(); ++p )
 		{
 			var tag = p->second.starts_with("$") || p->second.starts_with("#") ? p->second.substr(1) : p->second;
 			if( prefix.size()+suffix.size()+tag.size()+osIgnored.str().size()+4>512 )
 				break;
-			if( tag.size()>1 && ciSymbol.find(tag)==string::npos )
+			if( tag.size()>1 && ciSymbol.find(ToIV(tag))==string::npos )
 			osIgnored << "%20-" << tag;
 		}
 		var query = format( "{}{}{}", prefix, osIgnored.str(), suffix );
@@ -295,7 +294,7 @@ namespace Jde
 					if( newBlockedUsers.contains(a) || pBlockedUsers->contains(a) )
 						continue;
 					vector<sv> tags = t.Tags( symbol );
-					if( require$Hash && find_if(tags.begin(), tags.end(), [&]( auto& x ){return x.size()==symbol.size()+1 && x.starts_with('$') && ciSymbol==x.substr(1);})==tags.end() )
+					if( require$Hash && find_if(tags.begin(), tags.end(), [&]( sv& x ){return x.size()==symbol.size()+1 && x.starts_with('$') && ciSymbol==ToIV(x.substr(1));})==tags.end() )
 						continue;
 					//DBG( "{}", t.Text );
 					if( tags.size()>4 )
@@ -352,8 +351,6 @@ namespace Jde
 				if( !sent.contains( t.id() ) )
 				{
 					*pTweets->add_values() = t;
-					// if( t.author_id()==1272901726148976640 )
-					// 	BREAK;
 					authors.emplace( t.author_id() );
 				}
 			}
@@ -412,11 +409,7 @@ namespace Jde
 					User user;
 					User::from_json( j, user );
 					LOG( "twt_user_insert({},{},{})"sv, user.Id, user.ScreenName, user.ProfileImageUrl );
-				//	var count = DB::Scaler<uint>( "select count(*) from twt_handles" ).value();
 					DB::ExecuteProc( "twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl} );
-					//var name = DB::Scaler<string>( "select screen_name from twt_handles where id=?", {user.Id} );
-					//ASSERT( name );
-					//ASSERT( *DB::Scaler<uint>("select count(*) from twt_handles")==count+1 );
 					auto p = pAuthorResults->add_values(); p->set_id( id ); p->set_screen_name( user.ScreenName ); p->set_profile_url( user.ProfileImageUrl );
 				}
 				catch( const NetException& e )
