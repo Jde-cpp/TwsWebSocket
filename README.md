@@ -10,6 +10,7 @@ Websocket for TWS API.
     * Extract [Intel Decimal Floating](https://www.intel.com/content/www/us/en/developer/articles/tool/intel-decimal-floating-point-math-library.html) point library to $REPO_DIR
         *  add environement variable INCLUDE=C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\ucrt;C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC\14.31.31103\include
         *  add to path "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.31.31103\bin\Hostx64\x64\"
+        *  edit $REPO_DIR/IntelRDFPMathLib20U2/LIBRARY/makefile.mak set DEBUG=/MD (lines 55/58) or DEBUG=/MDd (line 53)
         * `$REPO_DIR/IntelRDFPMathLib20U2/LIBRARY/nmake -fmakefile.mak CC=cl CALL_BY_REF=0 GLOBAL_RND=0 GLOBAL_FLAGS=0 UNCHANGED_BINARY_FLAGS=0`
     * Extract pre-built binaries from https://tukaani.org/xz/ to $REPO_DIR.
     * Download latest twsApi from https://interactivebrokers.github.io/
