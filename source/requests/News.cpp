@@ -3,7 +3,7 @@
 #include "../../../MarketLibrary/source/client/TwsClientCo.h"
 #include "../WebRequestWorker.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
-#include "../../../Framework/source/io/tinyxml2.h"
+#include <jde/io/tinyxml2.h>
 #include "../../../Ssl/source/SslCo.h"
 
 #define _sync TwsClientSync::Instance()
@@ -106,7 +106,7 @@ namespace Jde::Markets::TwsWebSocket
 				if( auto pSource=pItem->FirstChildElement("source"); pSource )
 				{
 					p->set_source_url( string{pSource->Attr("url")} );
-					p->set_source( pSource->GetText() );
+					p->set_source( string{pSource->Text()} );
 				}
 				results->push_back( move(p) );
 			}

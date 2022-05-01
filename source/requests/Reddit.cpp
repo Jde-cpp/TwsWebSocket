@@ -1,6 +1,6 @@
 ﻿#include "Reddit.h"
 #include "../WebRequestWorker.h"
-#include "../../../Framework/source/io/tinyxml2.h"
+#include <jde/io/tinyxml2.h>
 #include "../../../Framework/source/db/Database.h"
 #include "../../../Ssl/source/SslCo.h"
 

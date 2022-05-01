@@ -1,10 +1,9 @@
 ﻿#include "Flex.h"
 #include <jde/io/File.h>
+#include <jde/io/tinyxml2.h>
 #include <jde/markets/types/Contract.h>
 #include "../../Framework/source/Settings.h"
 #include "../../Framework/source/Cache.h"
-#include "../../Framework/source/io/tinyxml2.h"
-
 
 #define var const auto
 #define _socket WebSocket::Instance()
@@ -85,7 +84,7 @@ namespace Jde::Markets::TwsWebSocket
 							value.set_commission( e.Attr<double>("ibCommission") );
 						};
 						var orderId = p->Attr<uint32>( "ibOrderID" ); CONTINUE_IF( !orderId, "no order id" );
-						if( p->name()=="Order" )
+						if( p->Name()=="Order" )
 						{
 							if( orders.find(orderId)!=orders.end() )
 								continue;

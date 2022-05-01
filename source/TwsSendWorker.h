@@ -27,7 +27,7 @@ namespace Jde::Markets::TwsWebSocket
 		α MarketDataSmart( const Proto::Requests::RequestMrkDataSmart& request, const SessionKey& key )noexcept->void;
 		α OptionParams( const google::protobuf::RepeatedField<google::protobuf::int32>& underlyingIds, const SessionKey& key )noexcept->void;
 		α Positions( const Proto::Requests::RequestPositions& request, const SessionKey& key )noexcept->void;
-		α RequestOptionParams( ClientPK reqId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task;
+		α RequestOptionParams( google::protobuf::int32 underlyingId, ClientKey c )noexcept->Task;
 		α RequestAllOpenOrders( ClientKey client )noexcept->Task;
 		α GetContract( ContractPK contractId )noexcept(false)->const ::Contract&;
 		α Requests( const Proto::Requests::GenericRequests& request, const SessionKey& key )noexcept->void;

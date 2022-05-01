@@ -18,10 +18,10 @@ namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 #define var const auto
-
 namespace Jde::Markets::TwsWebSocket
 {
 	static const LogTag& _logLevel = Logging::TagLevel( "app.web" );
+	uint WebListenerThreadId{};
 
 	BeastException::BeastException( sv what, beast::error_code&& ec, ELogLevel level, const source_location& sl )noexcept:
 		IException{ {std::to_string(ec.value()), ec.message()}, format("{} returned ({{}}){{}}", what), sl, (uint)ec.value(), level },
@@ -84,6 +84,11 @@ namespace Jde::Markets::TwsWebSocket
 				f( s );
 		});
 	}
+	α WebCoSocket::CoSend( MessageType&& msg_, SessionPK id )noexcept->PoolAwait
+	{
+		return PoolAwait( [msg=move(msg_),id]()mutable{ Send(move(msg), id);} );
+	}
+
 	α WebCoSocket::RemoveConnection( SessionPK sessionId )noexcept->void
 	{
 		unique_lock l{ _sessionMutex };
@@ -122,16 +127,19 @@ namespace Jde::Markets::TwsWebSocket
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}
-		if( !pMutex )//not sure why this happens.
+		ASSERT( pMutex && GetCurrentThreadId()!=WebListenerThreadId );
+		if( !pMutex )
 			return;
 		while( pMutex->test_and_set(std::memory_order_acquire) )
 		{
          while( pMutex->test(std::memory_order_relaxed) )
 				std::this_thread::yield();
 		}
+		//LOGL( ELogLevel::Debug, "({})Lock - {:x}", id, GetCurrentThreadId() );
 		pStream->async_write( boost::asio::buffer(pBuffer->data(), pBuffer->size()), [size, id, pMutex2=pMutex, pBuffer]( const boost::system::error_code& ec, size_t bytesTransferred )noexcept
 		{
 			pMutex2->clear( std::memory_order_release );
+			//LOGL( ELogLevel::Debug, "({})UnLock - {:x}", id, GetCurrentThreadId() );
 			if( ec )
 			{
 				BeastException::LogCode( ec, _logLevel.Level, format("({})async_write - killing session", id) );
@@ -212,7 +220,8 @@ namespace Jde::Markets::TwsWebSocket
 	α Listen1( net::io_context& ioc, tcp::endpoint endpoint, net::yield_context yld )noexcept->void
 #endif
 	{
-		Threading::SetThreadDscrptn("WebListener");
+		WebListenerThreadId = GetCurrentThreadId();
+		Threading::SetThreadDscrptn( "WebListener" );
 		tcp::acceptor acceptor( ioc );
 		try
 		{
@@ -282,15 +291,12 @@ namespace Jde::Markets::TwsWebSocket
 			userId = settings.UserId = DB::TryScaler<UserPK>( "select id from um_users where name=? and authenticator_id=?", {email,(uint)type} ).value_or( 0 );
 		}
 
-		if( auto p = _pInstance; p )
+		if( userId )
+			CoSend( ToMessage(Proto::Results::EResults::Authentication, client.ClientId), client.SessionId );
+		else
 		{
-			if( userId )
-				p->AddOutgoing( ToMessage(Proto::Results::EResults::Authentication, client.ClientId), client.SessionId );
-			else
-			{
-				DBG( "({})Could not find user name='{}' for authenticator='{}'", client.SessionId, email, Str::FromEnum(AuthTypeStrings, type) );
-				p->AddOutgoing( ToMessage(Proto::Results::EResults::Authentication, std::to_string(client.ClientId)), client.SessionId );
-			}
+			DBG( "({})Could not find user name='{}' for authenticator='{}'", client.SessionId, email, Str::FromEnum(AuthTypeStrings, type) );
+			CoSend( ToMessage(Proto::Results::EResults::Authentication, std::to_string(client.ClientId)), client.SessionId );
 		}
 	}
 }

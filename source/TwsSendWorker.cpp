@@ -9,10 +9,8 @@
 #include "WebRequestWorker.h"
 #include "requests/News.h"
 
-
 #define var const auto
 #define _tws (*_twsPtr)
-//#define _web (*_webSendPtr)
 #define _web ( *WebCoSocket::Instance()->WebSend() )
 #define _cache (*static_pointer_cast<TwsClientCache>(_twsPtr))
 
@@ -45,14 +43,14 @@ namespace Jde::Markets::TwsWebSocket
 
 	α Order( const Proto::Requests::PlaceOrder r, SessionKey s )noexcept->Task
 	{
-		var pIbContract = Contract{ r.contract() }.ToTws();
+		const Contract c{ r.contract() };
 		MyOrder o{ Tws::RequestId(), r.order() };
+		LOG( "({}.{}) placeOrder {}", s.SessionId, r.id(), o.ToString(c.Display()) );
 		WebSendGateway::AddOrder( o.orderId, s.SessionId );
 		try
 		{
-			auto p = ( co_await Tws::PlaceOrder(pIbContract, move(o), r.block_id(), r.stop(), r.stop_limit()) ).SP<Proto::Results::OpenOrder>();
-			p->set_request_id( r.id() );
-			WebSendGateway::PushS( ToMessage(new Proto::Results::OpenOrder{*p}), s.SessionId );
+			auto p = ( co_await Tws::PlaceOrder(c.ToTws(), move(o), r.block_id(), r.stop(), r.stop_limit()) ).SP<Proto::Results::OpenOrder>();
+			WebSendGateway::PushS( ToMessage(r.id(), new Proto::Results::OpenOrder{*p}), s.SessionId );
 		}
 		catch( IException& e )
 		{
@@ -70,9 +68,7 @@ namespace Jde::Markets::TwsWebSocket
 			if( m.has_generic_requests() )
 				Requests( m.generic_requests(), sessionKey );
 			else if( m.has_generic_request() )
-			{
 				Request( m.generic_request(), sessionKey );
-			}
 			else if( m.has_account_updates() )
 				AccountUpdates( m.account_updates(), sessionKey );
 			else if( m.has_account_updates_multi() )
@@ -130,6 +126,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	α ContractDetails( Proto::Requests::RequestContractDetails r, SessionKey s )noexcept->Task
 	{
+		LOG( "({}.{}) ContractDetails count={}", s.SessionId, r.id(), r.contracts_size() );
 		auto threadId = std::this_thread::get_id();
 		vector<MessageType> messages; messages.reserve( r.contracts_size()+1 );
 		for( int i=0; i<r.contracts_size(); ++i )
@@ -171,6 +168,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	α TwsSendWorker::RequestAllOpenOrders( ClientKey t )noexcept->Task
 	{
+		LOG( "({}.{})RequestAllOpenOrders()", t.SessionId, t.ClientId );
 		try
 		{
 			var p = ( co_await Tws::RequestAllOpenOrders() ).UP<Proto::Results::Orders>();
@@ -178,11 +176,8 @@ namespace Jde::Markets::TwsWebSocket
 			for( var& order : p->orders() )
 				*pResults->add_orders() = order;
 			for( var& s : p->statuses() )
-			{
 				*pResults->add_statuses() = s;
-			}
-			MessageType m; m.set_allocated_orders( pResults.release() );
-			_webSendPtr->Push( move(m), t.SessionId );
+			_webSendPtr->Push( ToMessage(pResults.release()), t.SessionId );
 		}
 		catch( IException& e )
 		{
@@ -192,7 +187,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	α AverageVolume( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey c )noexcept->Task
 	{
-		LOG( "({})AverageVolume( '{}' )", c.SessionId, contractIds.size()<5 ? Str::AddCommas(contractIds) : std::to_string(contractIds.size()) );
+		LOG( "({}.{})AverageVolume( '{}' )", c.SessionId, c.ClientId, contractIds.size()<5 ? Str::AddCommas(contractIds) : std::to_string(contractIds.size()) );
 		for( var id : contractIds )
 		{
 			try
@@ -292,11 +287,14 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		var t = r.type();
 		if( t==ERequests::RequestOptionParams )
-			RequestOptionParams( r.id(), (int)r.item_id(), move(s) );
+			RequestOptionParams( (int)r.item_id(), {s, r.id()} );
 		else if( t==ERequests::RequestAllOpenOrders )
 			RequestAllOpenOrders( {s, r.id()} );
 		else if( t==ERequests::Order )
+		{
+			LOG( "({}.{})LatestOrder( {} )", s.SessionId, r.id(), r.item_id() );
 			LatestOrder( (::OrderId)r.item_id(), s.SessionId );
+		}
 		else
 			WARN( "({}.{})Unknown message '{}' - not forwarding to tws.", s.SessionId, r.id(), r.type() );
 	}
@@ -331,10 +329,10 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		else if( r.type()==ERequests::CancelPositionsMulti )
 		{
-			for( ClientPK clientId : r.ids() )
+			for( var clientId : r.ids() )
 			{
-				LOG( "({})CancelPositionsMulti - {}", s.SessionId, clientId );
-				var ibId = _web.RequestFind( {{s.SessionId}, clientId} );
+				LOG( "({}.{})CancelPositionsMulti", s.SessionId, clientId );
+				var ibId = _web.RequestFind( {{s.SessionId}, (ClientPK)clientId} );
 				if( ibId )
 				{
 					_tws.cancelPositionsMulti( ibId );
@@ -346,9 +344,10 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		else if( r.type()==ERequests::CancelOrder )
 		{
+			LOG( "({}.{})CancelOrders( {} )", s.SessionId, r.id(), Str::AddCommas(r.ids()) );
 			for( auto i=0; i<r.ids_size(); ++i )
 			{
-				var orderId = r.ids(i);
+				var orderId{ r.ids(i) };
 				_web.AddOrderSubscription( orderId, s.SessionId );
 				_tws.cancelOrder( orderId );
 			}
@@ -394,18 +393,17 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α TwsSendWorker::RequestOptionParams( ClientPK clientId, google::protobuf::int32 underlyingId, SessionKey key )noexcept->Task
+	α TwsSendWorker::RequestOptionParams( google::protobuf::int32 underlyingId, ClientKey c )ι->Task
 	{
+		LOG( "({}.{})RequestOptionParams( {} )", c.SessionId, c.ClientId, underlyingId );
 		try
 		{
 			auto p = ( co_await Tws::SecDefOptParams(underlyingId) ).SP<Proto::Results::OptionExchanges>();
-			p->set_request_id( clientId );
-			MessageType m; m.set_allocated_option_exchanges( new Proto::Results::OptionExchanges(*p) );
-			_web.Push( move(m), key.SessionId );
+			_web.Push( ToMessage(c.ClientId, new Proto::Results::OptionExchanges(*p)), c.SessionId );
 		}
 		catch( const IException& e )
 		{
-			_web.Push( "RequestOptionParams failed.", e, ClientKey{key,clientId} );
+			_web.Push( "RequestOptionParams failed.", e, c );
 		}
 	}
 

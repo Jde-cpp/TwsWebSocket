@@ -70,6 +70,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Edgar", "..\..\Private\sour
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7A626C15-A433-4416-96EA-0BD4D3753E82}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Jde.Blockly.Orders.1", "..\..\BlocklyBuild\build\1\Jde.Blockly.Orders.1.vcxproj", "{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -120,6 +122,10 @@ Global
 		{30ADF2AD-9EA2-4A2B-B86A-8FC2BE04D7FC}.Debug|x64.Build.0 = Debug|x64
 		{30ADF2AD-9EA2-4A2B-B86A-8FC2BE04D7FC}.Release|x64.ActiveCfg = Release|x64
 		{30ADF2AD-9EA2-4A2B-B86A-8FC2BE04D7FC}.Release|x64.Build.0 = Release|x64
+		{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}.Debug|x64.ActiveCfg = Debug|x64
+		{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}.Debug|x64.Build.0 = Debug|x64
+		{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}.Release|x64.ActiveCfg = Release|x64
+		{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -65,6 +65,7 @@ namespace Jde::Markets::TwsWebSocket
 		Ω CoForEachSession( function<void( const SessionInfo& x )> f )noexcept->PoolAwait;
 		α AddOutgoing( MessageType&& msg, SessionPK id )noexcept(false)->void;
 		Ω Send( MessageType&& msg, SessionPK id )noexcept->void;
+		Ω CoSend( MessageType&& msg, SessionPK id )noexcept->PoolAwait;
 		α AddOutgoing( const vector<Proto::Results::MessageUnion>& messages, SessionPK id )noexcept->void;
 
 		α AddConnection( sp<SocketStream> stream )noexcept->SessionPK;

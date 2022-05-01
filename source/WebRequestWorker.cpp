@@ -211,7 +211,10 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		bool handled = true; var t = r->type(); auto& ids = *r->mutable_ids(); var id = r->id();
 		if( t==ERequests::RequsetPrevOptionValues )
+		{
+			LOG( "({}.{})PreviousDayValues( {} )", s.SessionId, id, Str::AddCommas(ids) );
 			PreviousDayValues( ids, ARG(id) );
+		}
 		else if( t==ERequests::RequestFundamentalData )
 			RequestFundamentalData( ids, {s, id} );
 		else if( t==ERequests::Portfolios )
@@ -293,21 +296,13 @@ namespace Jde::Markets::TwsWebSocket
 
 	α WebRequestWorker::RequestFundamentalData( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey s )noexcept->Task
 	{
+		LOG( "({}.{})RequestFundamentalData( {} )", s.SessionId, s.ClientId, Str::AddCommas(contractIds) );
 		for( var contractId : contractIds )
 		{
 			try
 			{
-				auto tick1 = TickManager::Ratios( contractId );
-				auto tick_ = co_await tick1;
-				var tick = tick_.UP<Tick>();
+				auto tick = ( co_await TickManager::Ratios(contractId) ).UP<Tick>();
 				WebSendGateway::PushS( ToRatioMessage(tick->Ratios(), s.ClientId), s.SessionId );
-				// auto fundamentals = tick.Ratios();
-				// auto pRatios = mu<Proto::Results::Fundamentals>();
-				// pRatios->set_request_id( web.ClientId );
-				// for( var& [name,value] : fundamentals )
-				// 	(*pRatios->mutable_values())[name] = value;
-				// MessageType msg; msg.set_allocated_fundamentals( pRatios.release() );
-				// web.Push( move(msg) );
 			}
 			catch( const IException& e )
 			{

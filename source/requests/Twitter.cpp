@@ -287,6 +287,7 @@ namespace Jde
 
 				Recent recent;
 				Recent::from_json( j, recent );
+
 				vector<ProtoTweet*> toSend;
 				for( var& t : recent.Tweets )
 				{
@@ -324,7 +325,7 @@ namespace Jde
 				}
 				if( toSend.size() )
 				{
-					auto pTweets = make_unique<Tweets>();
+					auto pTweets = mu<Tweets>();
 					for( auto p : toSend )
 					{
 						authors.emplace( p->author_id() );
@@ -345,15 +346,29 @@ namespace Jde
 		}
 		try
 		{
-			auto pTweets = make_unique<Tweets>();
-			for( auto t : pExisting->values() )
+			auto pTweets = mu<Tweets>();
+			var now_t{ Clock::to_time_t(now) };
+			auto cmp = [now_t]( const ProtoTweet* a, const ProtoTweet* b )->bool
+			{ 
+				return a->like()/(a->created_at()-now_t)<b->like()/(b->created_at()-now_t);
+				//return a<b;
+			};
+			std::set<const ProtoTweet*, decltype(cmp)> sorted( cmp );
+			for( var& t : pExisting->values() )
 			{
-				if( !sent.contains( t.id() ) )
-				{
-					*pTweets->add_values() = t;
-					authors.emplace( t.author_id() );
-				}
+				if( sent.contains(t.id()) )
+					continue;
+				sorted.emplace( &t );
 			}
+
+			for( auto t : sorted )
+			{
+				if( pTweets->values_size()>300 )
+					break;
+				*pTweets->add_values() = *t;
+				authors.emplace( t->author_id() );
+			}
+
 			pTweets->set_update_time( (uint32)Clock::to_time_t(lastChecked) ); pExisting->set_update_time( (uint32)Clock::to_time_t(lastChecked) );
 			pTweets->set_earliest_time( (uint32)Clock::to_time_t(earliest) );  pExisting->set_earliest_time( (uint32)Clock::to_time_t(earliest) );
 			if( pTweets->values_size() )
@@ -391,7 +406,7 @@ namespace Jde
 #pragma region Other
 	α SendAuthors( set<uint> authors, ProcessArg arg, string bearerToken, uint callCount )->Coroutine::Task
 	{
-		auto pAuthorResults = make_unique<TweetAuthors>();
+		auto pAuthorResults = mu<TweetAuthors>();
 		if( authors.size() )
 		{
 			var add = [&authors,&pAuthorResults]( var& row ){ auto p = pAuthorResults->add_values(); p->set_id( row.GetUInt(0) ); p->set_screen_name( row.GetString(1) ); p->set_profile_url( row.GetString(2) ); authors.erase(p->id()); };
@@ -400,7 +415,10 @@ namespace Jde
 			for( var id : authors )
 			{
 				if( callCount>=300 )
+				{
+					LOG( "authors.size({})>300 - break;", authors.size() );
 					break;
+				}
 				try
 				{
 					++callCount;

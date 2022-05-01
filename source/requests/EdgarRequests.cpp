@@ -1,7 +1,7 @@
 ﻿#include "EdgarRequests.h"
 #include <jde/markets/types/proto/ResultsMessage.h>
-#include "../../../Private/source/markets/edgar/Edgar.h"
-#include "../../../Private/source/markets/edgar/Form13F.h"
+#include <jde/markets/edgar/Edgar.h>
+#include <jde/markets/edgar/types/Form13F.h>
 
 
 #define var const auto

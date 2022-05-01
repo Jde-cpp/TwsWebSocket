@@ -15,6 +15,7 @@ function myFetch
 	dir=$1;
 	script=$2;
 	if test ! -d jde; then mkdir jde; fi; cd jde;
+	JDE_BASH=`pwd`;
 	if test ! -d $dir; then
 		git clone https://github.com/Jde-cpp/$dir.git;
 		cd $dir;
@@ -32,9 +33,11 @@ if ! windows; then set disable-completion on; fi;
 
 $JDE_BASH/Framework/framework-build.sh $clean $shouldFetch $buildBoost; if [ $? -ne 0 ]; then echo framework-build.sh failed - $?; exit 1; fi;
 ######################################################
+echo framework-build.sh complete
 pushd `pwd`> /dev/null;
 cd $JDE_BASH/Public/jde/blockly/types/proto;
 blocklyProtoDir=`pwd`;
+echo blocklyProtoDir=$blocklyProtoDir
 if [ $clean -eq 1 ]; then
     rm *.pb.h > /dev/null;
 fi;
@@ -59,6 +62,7 @@ if [ $buildPrivate -eq 1 ]; then
 	cd ../..;
     build Blockly;
 fi;
+
 cd $JDE_BASH/..
 echo `pwd`
 echo myFetch MarketLibrary market-build.sh

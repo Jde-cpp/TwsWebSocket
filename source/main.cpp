@@ -7,11 +7,9 @@
 #include "PreviousDayValues.h"
 #include "WrapperWeb.h"
 #include "../../Ssl/source/Ssl.h"
-
+#include <jde/blockly/types/Proc.h>
 #define var const auto
-#ifndef _MSC_VER
-namespace Jde{  string OSApp::CompanyName()noexcept{ return "Jde-Cpp"; } }
-#endif
+
 namespace Jde::Markets::TwsWebSocket
 {
 	α Startup( bool initialCall=true )noexcept->void;
@@ -21,6 +19,7 @@ namespace Jde::Markets::TwsWebSocket
 {
 	using namespace Jde;
 	int result = 1;
+	{Jde::Markets::MBlockly::Price p{};}//make sure dll is in memory
 	try
 	{
 		OSApp::Startup( argc, argv, "TwsWebSocket", "Web socket service for Tws Gateway" );

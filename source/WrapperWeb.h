@@ -23,7 +23,7 @@ namespace Jde::Markets::TwsWebSocket
 		α execDetails( int reqId, const ::Contract& contract, const Execution& execution)noexcept->void override;
 		α execDetailsEnd( int reqId)noexcept->void override;
 
-		α error(int id, int errorCode, str errorString)noexcept->void override;
+		α error(int id, int errorCode, str errorString, str /*advancedOrderRejectJson*/ )noexcept->void override;
 		α nextValidId( ::OrderId orderId )noexcept->void override;
 		α orderStatus( ::OrderId orderId, str status, ::Decimal filled, ::Decimal remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, str whyHeld, double mktCapPrice )noexcept->void override;
 		α openOrder( ::OrderId orderId, const ::Contract&, const ::Order&, const ::OrderState&)noexcept->void override;

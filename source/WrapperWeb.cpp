@@ -50,7 +50,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		WrapperLog::orderStatus( orderId, status, filled,	remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice );
 		if( !_pWebSend ) return;
-		auto p = make_unique<Proto::Results::OrderStatus>();
+		auto p = make_unique<Proto::OrderStatus>();
 		p->set_order_id( orderId );
 		p->set_status( ToOrderStatus(status) );
 		p->set_filled( ToDouble(filled) );
@@ -64,7 +64,7 @@ namespace Jde::Markets::TwsWebSocket
 		p->set_market_cap_price( mktCapPrice );
 		try
 		{
-			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){ p->set_id( id ); msg.set_allocated_order_status( new Proto::Results::OrderStatus{*p});} );
+			_pWebSend->Push( orderId, [&p](MessageType& msg, ClientPK id){ p->set_id( id ); msg.set_allocated_order_status( new Proto::OrderStatus{*p});} );
 		}
 		catch( IException& ){}
 		AllOpenOrdersAwait::Push( move(p) );
@@ -119,7 +119,7 @@ namespace Jde::Markets::TwsWebSocket
 		auto pValue = new Proto::Results::MessageValue(); pValue->set_type( Proto::Results::EResults::PositionMultiEnd );// pValue->set_int_value( reqId );
 		_pWebSend->Push( reqId, [pValue](MessageType& msg, ClientPK id){ pValue->set_int_value(id); msg.set_allocated_message(pValue); } );
 	}
-	α WrapperWeb::error( int reqId, int errorCode, str errorString )noexcept->void
+	α WrapperWeb::error( int reqId, int errorCode, str errorString, str /*advancedOrderRejectJson*/ )noexcept->void
 	{
 		if( !WrapperSync::error2(reqId, errorCode, errorString) )
 		{
