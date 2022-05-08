@@ -323,7 +323,7 @@ namespace Jde::Markets::TwsWebSocket
 		{
 			for( var contractId : r.ids() )
 			{
-				LOG( "({})CancelMarketData - {}", s.SessionId, contractId );
+				LOG( "({}.{})CancelMarketData - {}", s.SessionId, r.id(), contractId );
 				TickManager::CancelProto( s.SessionId, 0, contractId );//~~~
 			}
 		}
