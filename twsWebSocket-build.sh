@@ -4,8 +4,6 @@ shouldFetch=${2:-1};
 buildPrivate=${3:-1};
 buildWeb=${4:-1};
 
-#baseDir=`pwd`; jdeRoot=jde;
-
 t=$(readlink -f "${BASH_SOURCE[0]}"); scriptName=$(basename "$t"); unset t;
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 echo $scriptName clean=$clean shouldFetch=$shouldFetch buildPrivate=$buildPrivate
@@ -30,11 +28,11 @@ function myFetch
 myFetch Framework framework-build.sh
 if [[ -z $sourceBuild ]]; then source jde/Framework/source-build.sh; fi;
 if ! windows; then set disable-completion on; fi;
-
+source $JDE_BASH/Framework/common.sh;
 $JDE_BASH/Framework/framework-build.sh $clean $shouldFetch $buildBoost; if [ $? -ne 0 ]; then echo framework-build.sh failed - $?; exit 1; fi;
 ######################################################
 echo framework-build.sh complete
-pushd `pwd`> /dev/null;
+# `pwd`> /dev/null;
 cd $JDE_BASH/Public/jde/blockly/types/proto;
 blocklyProtoDir=`pwd`;
 echo blocklyProtoDir=$blocklyProtoDir
@@ -43,14 +41,24 @@ if [ $clean -eq 1 ]; then
 fi;
 if [ ! -f blockly.pb.h ]; then
 	findProtoc; protoc --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto;
+	sed -i -e 's/JDE_BLOCKLY/ΓB/g' blockly.pb.h;sed -i '1s/^/\xef\xbb\xbf/' blockly.pb.h;
 	if windows; then
 		sed -i 's/PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT CopyDefaultTypeInternal _Copy_default_instance_;/PROTOBUF_ATTRIBUTE_NO_DESTROY CopyDefaultTypeInternal _Copy_default_instance_;/' blockly.pb.cc;
 		sed -i 's/PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT IdRequestDefaultTypeInternal _IdRequest_default_instance_;/PROTOBUF_ATTRIBUTE_NO_DESTROY IdRequestDefaultTypeInternal _IdRequest_default_instance_;/' blockly.pb.cc;
 		sed -i 's/PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT FunctionDefaultTypeInternal _Function_default_instance_;/PROTOBUF_ATTRIBUTE_NO_DESTROY FunctionDefaultTypeInternal _Function_default_instance_;/' blockly.pb.cc;
 	fi;
 fi;
-popd> /dev/null;
+cd $JDE_BASH/Public/jde/markets/types/proto;
+marketsProtoDir=`pwd`
+if [ ! -f blocklyResults.pb.h ]; then
+	findProtoc; protoc --cpp_out dllexport_decl=JDE_BLOCKLY_EXECUTOR:. blocklyResults.proto;
+	sed -i -e 's/JDE_BLOCKLY_EXECUTOR/ΓBE/g' blocklyResults.pb.h;sed -i '1s/^/\xef\xbb\xbf/' blocklyResults.pb.h;
+	if windows; then
+		sed -i 's/PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT FileEntryDefaultTypeInternal _FileEntry_default_instance_;/PROTOBUF_ATTRIBUTE_NO_DESTROY FileEntryDefaultTypeInternal _FileEntry_default_instance_;/' blocklyResults.pb.cc;
+	fi;
+fi;
 ######################################################
+echo 0
 if [ $buildPrivate -eq 1 ]; then
 	fetchDefault Blockly;
 	if [ ! -d types/proto ]; then cd types;mkdir proto; cd ..; fi;
@@ -59,8 +67,14 @@ if [ $buildPrivate -eq 1 ]; then
 		mv $blocklyProtoDir/blockly.pb.cc .;
 		mkklink blockly.pb.h $blocklyProtoDir;
 	fi;
+	if [ ! -f blocklyResults.pb.cc ]; then
+		echo b
+		mv $marketsProtoDir/blocklyResults.pb.cc .;
+		mklink blocklyResults.pb.h $marketsProtoDir;
+		mklink ib.pb.h $marketsProtoDir;
+	fi;
 	cd ../..;
-    build Blockly;
+	build Blockly;
 fi;
 
 cd $JDE_BASH/..
@@ -76,17 +90,11 @@ fetchBuild Google;
 if windows; then fetchBuild Odbc 0 Jde.DB.Odbc.dll; fi;
 
 if [ $buildPrivate -eq 1 ]; then
-	fetchDefault Blockly;
-	if [ ! -d types/proto ]; then cd types;mkdir proto; cd ..; fi;
-	if [ -f $blocklyProtoDir/blockly.pb.cc ]; then
-		mv $blocklyProtoDir/blockly.pb.cc ./types/proto/blockly.pb.cc;
-		ln -s $blocklyProtoDir/blockly.pb.h ./types/proto/blockly.pb.h;
-	fi;
-    #build Blockly;
-    build Blockly.Executor;
-    fetchDefault Private;
-    cd markets/edgar;
-    build Edgar 0 Jde.Markets.Edgar.dll
+	cd $JDE_BASH/Blockly/source;
+	build Blockly.Executor;
+	fetchDefault Private;
+	cd markets/edgar;
+	build Edgar 0 Jde.Markets.Edgar.dll
 fi;
 
 fetchDefault TwsWebSocket;
