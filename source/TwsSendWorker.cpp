@@ -252,14 +252,14 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, const SessionKey& session )noexcept->void
+	α TwsSendWorker::Executions( const Proto::Requests::RequestExecutions& r, const SessionKey& s )noexcept->void
 	{
-		_web.AddExecutionRequest( session.SessionId );
-
+		_web.AddExecutionRequest( s.SessionId );
 		DateTime time{ r.time() };
 		var timeString = format( "{}{:0>2}{:0>2} {:0>2}:{:0>2}:{:0>2} GMT", time.Year(), time.Month(), time.Day(), time.Hour(), time.Minute(), time.Second() );
 		ExecutionFilter filter; filter.m_clientId=r.client_id(); filter.m_acctCode=r.account_number(); filter.m_time=timeString; filter.m_symbol=r.symbol(); filter.m_secType=r.security_type(); filter.m_exchange=r.exchange(); filter.m_side=r.side();
-		_tws.reqExecutions( _web.AddRequestSession({{session.SessionId},r.id()}), filter );
+		LOG( "({}.{})Executions( '{}' )", s.SessionId, r.id(), timeString );
+		_tws.reqExecutions( _web.AddRequestSession({{s.SessionId},r.id()}), filter );
 	}
 
 	α TwsSendWorker::Positions( const Proto::Requests::RequestPositions& r, const SessionKey& session )noexcept->void

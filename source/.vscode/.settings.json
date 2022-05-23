@@ -110,7 +110,9 @@
 		"__availability": "cpp",
 		"__memory": "cpp",
 		"__bits": "cpp",
-		"signal.h": "c"
+		"signal.h": "c",
+		"compare": "cpp",
+		"concepts": "cpp"
 	},
 	"window.title": "Tws"
 }

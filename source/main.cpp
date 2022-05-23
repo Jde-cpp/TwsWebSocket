@@ -10,6 +10,12 @@
 #include <jde/blockly/types/Proc.h>
 #define var const auto
 
+namespace Jde
+{
+#ifndef _MSC_VER
+	α OSApp::ProductName()ι->sv{ return "TwsWebSocket"; }
+#endif
+}
 namespace Jde::Markets::TwsWebSocket
 {
 	α Startup( bool initialCall=true )noexcept->void;
@@ -19,7 +25,7 @@ namespace Jde::Markets::TwsWebSocket
 {
 	using namespace Jde;
 	int result = 1;
-	{Jde::Markets::MBlockly::Price p{};}//make sure dll is in memory
+	{Jde::Markets::MBlockly::Price{};}//make sure dll is in memory
 	try
 	{
 		OSApp::Startup( argc, argv, "TwsWebSocket", "Web socket service for Tws Gateway" );

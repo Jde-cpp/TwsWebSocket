@@ -21,7 +21,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace Jde::Markets::TwsWebSocket
 {
 	static const LogTag& _logLevel = Logging::TagLevel( "app.web" );
-	uint WebListenerThreadId{};
+	std::thread::id WebListenerThreadId{};
 
 	BeastException::BeastException( sv what, beast::error_code&& ec, ELogLevel level, const source_location& sl )noexcept:
 		IException{ {std::to_string(ec.value()), ec.message()}, format("{} returned ({{}}){{}}", what), sl, (uint)ec.value(), level },
@@ -127,7 +127,7 @@ namespace Jde::Markets::TwsWebSocket
 			pStream = p->second.StreamPtr;
 			pMutex = p->second.WriteLockPtr;
 		}
-		ASSERT( pMutex && GetCurrentThreadId()!=WebListenerThreadId );
+		ASSERT( pMutex && std::this_thread::get_id()!=WebListenerThreadId );
 		if( !pMutex )
 			return;
 		while( pMutex->test_and_set(std::memory_order_acquire) )
@@ -220,7 +220,7 @@ namespace Jde::Markets::TwsWebSocket
 	α Listen1( net::io_context& ioc, tcp::endpoint endpoint, net::yield_context yld )noexcept->void
 #endif
 	{
-		WebListenerThreadId = GetCurrentThreadId();
+		WebListenerThreadId = std::this_thread::get_id();
 		Threading::SetThreadDscrptn( "WebListener" );
 		tcp::acceptor acceptor( ioc );
 		try
