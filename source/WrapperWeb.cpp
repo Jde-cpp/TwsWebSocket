@@ -50,7 +50,7 @@ namespace Jde::Markets::TwsWebSocket
 	{
 		WrapperLog::orderStatus( orderId, status, filled,	remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice );
 		if( !_pWebSend ) return;
-		auto p = make_unique<Proto::OrderStatus>();
+		auto p = mu<Proto::OrderStatus>();
 		p->set_order_id( orderId );
 		p->set_status( ToOrderStatus(status) );
 		p->set_filled( ToDouble(filled) );
@@ -81,7 +81,7 @@ namespace Jde::Markets::TwsWebSocket
 	α WrapperWeb::positionMulti( int reqId, str account, str modelCode, const ::Contract& contract, ::Decimal pos, double avgCost )noexcept->void
 	{
 		WrapperLog::positionMulti( reqId, account, modelCode, contract, pos, avgCost );
-		auto pUpdate = make_unique<Proto::Results::PositionMulti>();
+		auto pUpdate = mu<Proto::Results::PositionMulti>();
 		pUpdate->set_account( account );
 		pUpdate->set_allocated_contract( Contract{contract}.ToProto().release() );
 		pUpdate->set_position( ToDouble(pos) );
@@ -99,7 +99,7 @@ namespace Jde::Markets::TwsWebSocket
 	α WrapperWeb::accountUpdateMulti( int reqId, str accountName, str modelCode, str key, str value, str currency )noexcept->void
 	{
 		WrapperLog::accountUpdateMulti( reqId, accountName, modelCode, key, value, currency );
-		auto pUpdate = make_unique<Proto::Results::AccountUpdateMulti>();
+		auto pUpdate = mu<Proto::Results::AccountUpdateMulti>();
 		pUpdate->set_request_id( reqId );
 		pUpdate->set_account( accountName );
 		pUpdate->set_key( key );
@@ -161,7 +161,7 @@ namespace Jde::Markets::TwsWebSocket
 			WrapperLog::contractDetails( reqId, contractDetails );
 			auto pReqDetails = _contractDetails.find( reqId );
 			if( ; pReqDetails==_contractDetails.end() )
-				pReqDetails = _contractDetails.emplace( reqId, make_unique<Proto::Results::ContractDetailsResult>() ).first;
+				pReqDetails = _contractDetails.emplace( reqId, mu<Proto::Results::ContractDetailsResult>() ).first;
 			*pReqDetails->second->add_details() = ToProto( contractDetails );
 		}
 	}
@@ -174,7 +174,7 @@ namespace Jde::Markets::TwsWebSocket
 			WrapperLog::contractDetailsEnd( reqId );
 			var p = _contractDetails.find( reqId );
 			var have = p !=_contractDetails.end();
-			_pWebSend->ContractDetails( have ? std::move(p->second) : make_unique<Proto::Results::ContractDetailsResult>(), reqId );
+			_pWebSend->ContractDetails( have ? std::move(p->second) : mu<Proto::Results::ContractDetailsResult>(), reqId );
 		}
 	}
 
@@ -185,7 +185,7 @@ namespace Jde::Markets::TwsWebSocket
 	}
 	α WrapperWeb::execDetails( int reqId, const ::Contract& contract, const ::Execution& ib )noexcept->void
 	{
-		auto p = make_unique<Execution>();
+		auto p = mu<Execution>();
 		p->set_exec_id( ib.execId );
 		var time = ib.time;
 		ASSERT( time.size()==18 );

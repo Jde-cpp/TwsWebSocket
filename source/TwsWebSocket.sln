@@ -32,8 +32,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XZ", "..\..\XZ\source\XZ.vc
 		{7FC3CC33-B345-423E-99B6-5D499E531FBF} = {7FC3CC33-B345-423E-99B6-5D499E531FBF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TwsSocketClient64", "..\..\..\libraries\tws-api\source\cppclient\client\TwsSocketClient64.vcxproj", "{E9C3126E-CEA8-41A8-A714-7644B016DB3C}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Blockly", "..\..\Blockly\source\Blockly.vcxproj", "{28D2771F-7721-402F-ADC9-38A0B255D5F5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{7FC3CC33-B345-423E-99B6-5D499E531FBF} = {7FC3CC33-B345-423E-99B6-5D499E531FBF}
@@ -70,6 +68,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Edgar", "..\..\Private\sour
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7A626C15-A433-4416-96EA-0BD4D3753E82}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TwsSocketClient64", "..\..\..\..\..\..\..\TWS API\source\CppClient\client\TwsSocketClient64.vcxproj", "{E9C3126E-CEA8-41A8-A714-7644B016DB3C}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Jde.Blockly.Orders.1", "..\..\BlocklyBuild\build\1\Jde.Blockly.Orders.1.vcxproj", "{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}"
 EndProject
 Global
@@ -94,10 +94,6 @@ Global
 		{8B49D7A7-4CB3-4610-8028-E9A179AE86F3}.Debug|x64.Build.0 = Debug|x64
 		{8B49D7A7-4CB3-4610-8028-E9A179AE86F3}.Release|x64.ActiveCfg = Release|x64
 		{8B49D7A7-4CB3-4610-8028-E9A179AE86F3}.Release|x64.Build.0 = Release|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x64.ActiveCfg = Debug|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x64.Build.0 = Debug|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x64.ActiveCfg = Release|x64
-		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x64.Build.0 = Release|x64
 		{28D2771F-7721-402F-ADC9-38A0B255D5F5}.Debug|x64.ActiveCfg = Debug|x64
 		{28D2771F-7721-402F-ADC9-38A0B255D5F5}.Debug|x64.Build.0 = Debug|x64
 		{28D2771F-7721-402F-ADC9-38A0B255D5F5}.Release|x64.ActiveCfg = Release|x64
@@ -122,6 +118,10 @@ Global
 		{30ADF2AD-9EA2-4A2B-B86A-8FC2BE04D7FC}.Debug|x64.Build.0 = Debug|x64
 		{30ADF2AD-9EA2-4A2B-B86A-8FC2BE04D7FC}.Release|x64.ActiveCfg = Release|x64
 		{30ADF2AD-9EA2-4A2B-B86A-8FC2BE04D7FC}.Release|x64.Build.0 = Release|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x64.ActiveCfg = Debug|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Debug|x64.Build.0 = Debug|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x64.ActiveCfg = Release|x64
+		{E9C3126E-CEA8-41A8-A714-7644B016DB3C}.Release|x64.Build.0 = Release|x64
 		{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}.Debug|x64.ActiveCfg = Debug|x64
 		{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}.Debug|x64.Build.0 = Debug|x64
 		{FA7FBD5A-3DA6-45A9-8456-5D97685B373E}.Release|x64.ActiveCfg = Release|x64

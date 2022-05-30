@@ -17,7 +17,7 @@ namespace Jde
 		try
 		{
 			var pXml = ( co_await Ssl::SslCo::Get("www.reddit.com", format("/r/wallstreetbets/search.xml?q=${}&restrict_sr=on&limit=100&sort={}", symbol, sort.size() ? sort : "hot")) ).UP<string>();//TODOExample: User-Agent: android:com.example.myredditapp:v1.2.3 (by /u/kemitche)
-			auto pResults = make_unique<RedditEntries>(); pResults->set_request_id( arg->ClientId );
+			auto pResults = mu<RedditEntries>(); pResults->set_request_id( arg->ClientId );
 
 			XMLDocument doc{ *pXml, false }; var pRoot = doc.FirstChildElement( "feed" ); CHECK( pRoot );
 			TRY( pResults->set_update_time((uint32)DateTime{pRoot->TryChildText("updated")}.TimeT()) );

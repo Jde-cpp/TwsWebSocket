@@ -32,7 +32,7 @@ namespace Jde::Markets::TwsWebSocket
 		var count = (isOption && IsOpen(SecurityType::Stock)) || (IsOpen(pContract->SecType) && !isPreMarket) ? 1u : 2u;
 		for( auto day=current; pBars->size()<count; day = PreviousTradingDay(day) )
 		{
-			auto pBar1 = make_unique<Proto::Results::DaySummary>(); pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
+			auto pBar1 = mu<Proto::Results::DaySummary>(); pBar1->set_request_id( arg.ClientId ); pBar1->set_contract_id( contractId ); pBar1->set_day( day );
 			pBars->emplace( day, move(pBar1) );
 		}
 		auto load = [isOption,count,current,arg,pContract,pBars,isPreMarket]( bool useRth, DayIndex endDate, sp<UnorderedSet<int32>> pContractIds )->AsyncAwait

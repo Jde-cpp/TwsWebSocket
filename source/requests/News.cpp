@@ -27,7 +27,7 @@ namespace Jde::Markets::TwsWebSocket
 		try
 		{
 			auto pProviders = (co_await Tws::NewsProviders()).SP<map<string,string>>();
-			auto pMap = make_unique<Proto::Results::StringMap>();
+			auto pMap = mu<Proto::Results::StringMap>();
 			pMap->set_result( EResults::NewsProviders );
 			for( var& [code,name] : *pProviders )
 				(*pMap->mutable_values())[code] = name;
@@ -51,7 +51,7 @@ namespace Jde::Markets::TwsWebSocket
 			auto pGoogle = (co_await Google( c.symbol) ).UP<vector<sp<Proto::Results::GoogleNews>>>();
 			auto pHistorical = (co_await pWait).UP<Proto::Results::NewsCollection>();
 
-			auto pResults = make_unique<Proto::Results::NewsCollection>( *pHistorical );
+			auto pResults = mu<Proto::Results::NewsCollection>( *pHistorical );
 			pResults->set_request_id( arg.ClientId );
 			for( var& p : *pGoogle )
 				*pResults->add_google() = *p;

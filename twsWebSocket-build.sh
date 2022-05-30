@@ -1,4 +1,5 @@
 #!/bin/bash
+##cls;source jde/Framework/common.sh;cd jde/TwsWebSocket; rm twsWebSocket-build.sh; mv ../../twsWebSocket-build.sh .;cd ../..;mklink twsWebSocket-build.sh jde/TwsWebSocket
 clean=${1:-0};
 shouldFetch=${2:-1};
 buildPrivate=${3:-1};
@@ -58,20 +59,19 @@ if [ ! -f blocklyResults.pb.h ]; then
 	fi;
 fi;
 ######################################################
-echo 0
 if [ $buildPrivate -eq 1 ]; then
 	fetchDefault Blockly;
 	if [ ! -d types/proto ]; then cd types;mkdir proto; cd ..; fi;
 	cd types/proto
 	if [ -f $blocklyProtoDir/blockly.pb.cc ]; then
 		mv $blocklyProtoDir/blockly.pb.cc .;
-		mkklink blockly.pb.h $blocklyProtoDir;
+		mklink blockly.pb.h $blocklyProtoDir;
 	fi;
 	if [ ! -f blocklyResults.pb.cc ]; then
-		echo b
+		echo make blockly proto dir.
 		mv $marketsProtoDir/blocklyResults.pb.cc .;
 		mklink blocklyResults.pb.h $marketsProtoDir;
-		mklink ib.pb.h $marketsProtoDir;
+	#	mklink ib.pb.h $marketsProtoDir;
 	fi;
 	cd ../..;
 	build Blockly;
@@ -91,6 +91,8 @@ if windows; then fetchBuild Odbc 0 Jde.DB.Odbc.dll; fi;
 
 if [ $buildPrivate -eq 1 ]; then
 	cd $JDE_BASH/Blockly/source;
+
+	mklink ib.pb.h $marketsProtoDir;  #TODO
 	build Blockly.Executor;
 	fetchDefault Private;
 	cd markets/edgar;

@@ -229,7 +229,7 @@ namespace Jde::Markets::TwsWebSocket
 
 	α WebSendGateway::PushError( string errorString, const ClientKey& key, int errorCode )noexcept->void
 	{
-		auto pError = make_unique<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code( errorCode==0 ? Calc32RunTime(errorString) : errorCode ); pError->set_message( move(errorString) );
+		auto pError = mu<Proto::Results::Error>(); pError->set_request_id(key.ClientId); pError->set_code( errorCode==0 ? Calc32RunTime(errorString) : errorCode ); pError->set_message( move(errorString) );
 		MessageUnion msg; msg.set_allocated_error( pError.release() );
 		try
 		{
