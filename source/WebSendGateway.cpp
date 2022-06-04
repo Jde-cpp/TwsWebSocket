@@ -49,7 +49,8 @@ namespace Jde::Markets::TwsWebSocket
 				WebCoSocket::Send( ToMessage(e->What(), e->RequestId, (int)e->Code), x.SessionId );
 		} );
 	}
-	α WebSendGateway::OnOrderChange( sp<const MyOrder> pOrder, sp<const Markets::Contract> pContract, sp<const OrderStatus> pStatus, sp<const OrderState> pState )noexcept->Task
+
+	α WebSendGateway::OnOrderChange( sp<const MyOrder> pOrder, sp<const Markets::Contract> pContract, sp<const OrderStatus> pStatus, sp<const ::OrderState> pState )noexcept->Task
 	{
 		co_await WebCoSocket::CoForEachSession( [=]( const SessionInfo& x )
 		{

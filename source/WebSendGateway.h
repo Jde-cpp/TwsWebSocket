@@ -65,7 +65,7 @@ namespace Jde::Markets::TwsWebSocket
 
 		α SetClientSync( sp<TwsClientSync> pClient )noexcept->void{ DBG( "WebSendGateway::SetClientSync"sv ); _pClientSync = pClient; }
 
-		α OnOrderChange( sp<const MyOrder> OrderPtr, sp<const Markets::Contract> ContractPtr, sp<const OrderStatus> StatusPtr, sp<const OrderState> StatePtr )noexcept->Task;
+		α OnOrderChange( sp<const MyOrder> pOrder, sp<const Markets::Contract> pContract, sp<const OrderStatus> pStatus, sp<const ::OrderState> pState )noexcept->Task;
 		α OnOrderException( string account, sp<const IBException> e )noexcept->Task;
 		α OnState( sp<const OrderState> p, sp<const MyOrder> pOrder )noexcept->void;
 

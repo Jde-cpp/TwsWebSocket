@@ -119,10 +119,13 @@
 	{
 		"columns": [
 			{ "name": "id", "type": "uint32" },
-			{ "name": "cusip", "type": "cusip" },
-			{ "name": "primary_exchange_id", "type": "tinyId" },
+			{ "name": "ath", "type": "price?" },
+			{ "name": "cusip", "type": "cusip?" },
 			{ "name": "name", "length": 255 },
-			{ "name": "symbol", "length": 10 }
+			{ "name": "primary_exchange_id", "type": "tinyId" },
+			{ "name": "pwl", "type": "price?" },
+			{ "name": "symbol", "length": 10 },
+			{ "name": "updated", "type": "updated" }
 		],
 		"surrogateKey":["id"]
 	},
