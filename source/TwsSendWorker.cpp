@@ -8,6 +8,7 @@
 #include "WebCoSocket.h"
 #include "WebRequestWorker.h"
 #include "requests/News.h"
+#include "requests/Stats.h"
 
 #define var const auto
 #define _tws (*_twsPtr)
@@ -93,6 +94,11 @@ namespace Jde::Markets::TwsWebSocket
 				CalculateImpliedVolatility( m.implied_volatility().contracts(), {sessionKey, clientId=m.implied_volatility().id()} );
 			else if( m.has_implied_price() )
 				CalculateImpliedPrice( m.implied_price().contracts(), {sessionKey, clientId=m.implied_price().id()} );
+			else if( m.has_request_stats() )
+			{
+				clientId=m.request_stats().id();
+				RequestStats::Handle( up<Proto::Requests::RequestStats>(m.release_request_stats()), ProcessArg{sessionKey, clientId, _webSendPtr} );
+			}
 			else
 				ERR( "Unknown Message '{}'", m.Value_case() );
 		}

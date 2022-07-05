@@ -13,6 +13,7 @@
 		"day": "uint16",
 		"cik": "uint32",
 		"crc": "uint32",
+		"price": "float",
 		"cusip":{ "type":"char", "length":8 },
 		"created": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false },
 		"updated": { "type": "dateTime", "default":"$now", "insertable":false, "updateable":false }
@@ -119,15 +120,32 @@
 	{
 		"columns": [
 			{ "name": "id", "type": "uint32" },
-			{ "name": "ath", "type": "price?" },
 			{ "name": "cusip", "type": "cusip?" },
+			{ "name": "headTimestamp", "type": "dateTime?" },
 			{ "name": "name", "length": 255 },
 			{ "name": "primary_exchange_id", "type": "tinyId" },
-			{ "name": "pwl", "type": "price?" },
-			{ "name": "symbol", "length": 10 },
-			{ "name": "updated", "type": "updated" }
+			{ "name": "symbol", "length": 10 }
 		],
 		"surrogateKey":["id"]
+	},
+	"mrkStatistics":
+	{
+		"columns": [
+		{ "name": "id", "type": "int8" },
+		{ "name": "name", "type": "name" }
+		],
+		"data": [ "LastUpdate", "ATL", {"id":-1, "name":"ATL Day"}, "ATH", {"id":-2, "name":"ATH Day"}, "52 week Low", {"id":-3, "name":"52 week Low Day"}, "52 week High", {"id":-4, "name":"52 week High Day"}, "Moving Average 100 day", "Pre-WuFlu" ],
+		"surrogateKey":["id"],
+		"naturalKey":["name"]
+	},
+	"mrkStatisticValues":
+	{
+		"columns": [
+			{ "name": "contract_id", "type": "ibStockContracts" },
+			{ "name": "statistics_id", "type": "mrkStatistics" },
+			{ "name": "value", "type": "float" }
+		],
+		"surrogateKey":["contract_id", "statistics_id"]
 	},
 	"mrkCusips":
 	{

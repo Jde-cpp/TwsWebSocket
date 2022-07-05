@@ -426,8 +426,9 @@ namespace Jde
 					var j = nlohmann::json::parse( *pResult );
 					User user;
 					User::from_json( j, user );
-					LOG( "twt_user_insert({},{},{})"sv, user.Id, user.ScreenName, user.ProfileImageUrl );
-					DB::ExecuteProc( "twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl} );
+					//LOG( "twt_user_insert({},{},{})"sv, user.Id, user.ScreenName, user.ProfileImageUrl );
+					( co_await *DB::ExecuteProcCo("twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl}) ).CheckError();
+					//DB::ExecuteProc( "twt_user_insert(?,?,?)", {user.Id, user.ScreenName, user.ProfileImageUrl} );
 					auto p = pAuthorResults->add_values(); p->set_id( id ); p->set_screen_name( user.ScreenName ); p->set_profile_url( user.ProfileImageUrl );
 				}
 				catch( const NetException& e )

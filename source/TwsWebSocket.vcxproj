@@ -131,6 +131,7 @@
     <ClCompile Include="requests\EdgarRequests.cpp" />
     <ClCompile Include="requests\News.cpp" />
     <ClCompile Include="requests\Reddit.cpp" />
+    <ClCompile Include="requests\Stats.cpp" />
     <ClCompile Include="requests\Twitter.cpp" />
     <ClCompile Include="TwsSendWorker.cpp" />
     <ClCompile Include="WatchListData.cpp" />
@@ -147,6 +148,10 @@
     <ClInclude Include="News.h" />
     <ClInclude Include="PreviousDayValues.h" />
     <ClInclude Include="requests\EdgarRequests.h" />
+    <ClInclude Include="requests\News.h" />
+    <ClInclude Include="requests\Reddit.h" />
+    <ClInclude Include="requests\Stats.h" />
+    <ClInclude Include="requests\Twitter.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="TwsSendWorker.h" />
     <ClInclude Include="TypeDefs.h" />

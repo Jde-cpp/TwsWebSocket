@@ -63,6 +63,18 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="requests\News.h">
+      <Filter>Header Files\requests</Filter>
+    </ClInclude>
+    <ClInclude Include="requests\Reddit.h">
+      <Filter>Header Files\requests</Filter>
+    </ClInclude>
+    <ClInclude Include="requests\Twitter.h">
+      <Filter>Header Files\requests</Filter>
+    </ClInclude>
+    <ClInclude Include="requests\Stats.h">
+      <Filter>Header Files\requests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -108,6 +120,9 @@
       <Filter>Source Files\requests</Filter>
     </ClCompile>
     <ClCompile Include="requests\Twitter.cpp">
+      <Filter>Source Files\requests</Filter>
+    </ClCompile>
+    <ClCompile Include="requests\Stats.cpp">
       <Filter>Source Files\requests</Filter>
     </ClCompile>
   </ItemGroup>
