@@ -16,6 +16,7 @@ Websocket for TWS API.
     * Download latest twsApi from https://interactivebrokers.github.io/
     * Win64 OpenSSL v1.1.1 from https://slproweb.com/products/Win32OpenSSL.html
     * [Visual Studio Installer Project](https://marketplace.visualstudio.com/items?itemName=VisualStudioClient.MicrosoftVisualStudio2022InstallerProjects)
+    * [CMake](https://cmake.org/download)
     * [git bash](https://git-scm.com/download/win)
     * [nodejs](https://nodejs.org)
     * `chocolatey install jq`  (as administrator)
