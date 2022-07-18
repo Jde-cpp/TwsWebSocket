@@ -2,20 +2,10 @@
 #include <jde/markets/Exports.h>
 
 DISABLE_WARNINGS
-//#pragma warning(disable:4100)
-//#pragma warning(disable:4127)
-//#pragma warning(disable:4244)
-//#pragma warning(disable:4996)
-//#pragma warning(disable:5054)
 #include <jde/markets/types/proto/ib.pb.h>
 #include <jde/markets/types/proto/requests.pb.h>
 #include <jde/markets/types/proto/results.pb.h>
 ENABLE_WARNINGS
-//#pragma warning(default:4100)
-//#pragma warning(default:4127)
-//#pragma warning(default:4244)
-//#pragma warning(default:4996)
-//#pragma warning(default:5054)
 
 
 namespace Jde::Markets::TwsWebSocket

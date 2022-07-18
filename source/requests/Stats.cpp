@@ -1,5 +1,4 @@
-﻿#pragma once
-#include "Stats.h"
+﻿#include "Stats.h"
 #include <jde/markets/types/proto/ResultsMessage.h>
 #include "../../../Framework/source/db/DataType.h"
 #include "../../../Framework/source/db/Database.h"
@@ -12,7 +11,7 @@ namespace Jde::Markets::TwsWebSocket
 	using namespace Proto::Requests;
 	using namespace Proto::Results;
 	α operator -(Stats s)ι->Stats{ return (Stats)-(int)s; }
-	α ToString( Stats s )ι->sv
+	α ToString( Stats s )ι->string
 	{
 		constexpr array<sv,7> values{ "LastUpdate", "ATH", "ATH_Day", "PWL", "YearLow", "YearHigh", "MA100" };
 		return Str::FromEnum( values, s );
@@ -42,7 +41,7 @@ namespace Jde::Markets::TwsWebSocket
 				}
 				dbParams.push_back( c );
 			}
-			
+
 			CHECK( dbParams.size() );
 			dbParams.push_back( (_int)Stats::UpdateDay );
 			for( var s : pRequest->stats() )
@@ -60,7 +59,7 @@ namespace Jde::Markets::TwsWebSocket
 				double v = r.GetDouble( 2 );
 				if( s==Stats::UpdateDay )
 				{
-					
+
 					if( (DayIndex)v<PreviousTradingDay(*contracts[c]->TradingHoursPtr) )
 						recalc.emplace( c );
 					return;
@@ -78,7 +77,7 @@ namespace Jde::Markets::TwsWebSocket
 			{
 				auto requested = [&]( Stats s_ )->bool{ return std::find_if(pRequest->stats().begin(), pRequest->stats().end(), [=](var& s){return s==s_;})!=pRequest->stats().end(); };
 				auto sentC = [&]( Stats s_, const ContractStats& coll )->bool{ return std::find_if(coll.stats().begin(), coll.stats().end(), [=](var& s){return s.contract_id()==c && s.stat()==s_;})!=coll.stats().end(); };
-				auto pStats = mu<ContractStats>(); 
+				auto pStats = mu<ContractStats>();
 				auto sent = [&]( Stats s )->bool{ return sentC( s, *pDBStats) || sentC( s, *pStats); };
 				if( requested(Stats::Pwl) && !sent(Stats::Pwl) )
 				{
@@ -108,16 +107,16 @@ namespace Jde::Markets::TwsWebSocket
 						if( !requested(s) )
 							return;
 
-						auto i=pStats->add_stats(); i->set_contract_id(c); i->set_stat(s); 
+						auto i=pStats->add_stats(); i->set_contract_id(c); i->set_stat(s);
 						if( s==Stats::MA100 )
-							i->set_value( pResult->Average ); 
+							i->set_value( pResult->Average );
 						else
 						{
 							var low = s==Stats::Atl || s==Stats::YearLow;
-							if( low ) 
-								i->set_value( pResult->Low ); 
+							if( low )
+								i->set_value( pResult->Low );
 							else
-								i->set_value( pResult->High ); 
+								i->set_value( pResult->High );
 							auto d=pStats->add_stats(); d->set_contract_id(c); d->set_stat(-s); d->set_value( low ? pResult->LowDay : pResult->HighDay );
 						}
 					};
