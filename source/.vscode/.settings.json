@@ -112,7 +112,9 @@
 		"__bits": "cpp",
 		"signal.h": "c",
 		"compare": "cpp",
-		"concepts": "cpp"
+		"concepts": "cpp",
+		"format": "cpp",
+		"numbers": "cpp"
 	},
 	"window.title": "Tws"
 }

@@ -53,11 +53,10 @@ namespace Jde::Markets
 			{
 				UM::Configure();
 			}
-			catch( const IException& e )
+			catch( IException& e )
 			{
-				e.Log();
-				CRITICAL( "Could not configure user tables. - {}"sv, e.what() );
 				std::cerr << e.what() << std::endl;
+				{auto e2=e.Move();}//destructor log.
 				std::this_thread::sleep_for( 1s );
 				std::terminate();
 			}
