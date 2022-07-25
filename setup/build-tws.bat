@@ -9,4 +9,4 @@ rem echo x;
 if not exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\%SubDir%\MSBuild\Current\Bin\" ( set SubDir=Enterprise)
 
 "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\%SubDir%\MSBuild\Current\Bin\MSBuild.exe" "%TwsPath%\TwsSocketClient64.vcxproj"  -p:Configuration=Release -p:Platform=x64
-copy "%TwsPath%\.bin\Release" .
+copy "%TwsPath%\.bin\Release" "%mypath:~0,-1%"

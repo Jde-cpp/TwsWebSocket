@@ -34,13 +34,13 @@ namespace Jde::Markets::TwsWebSocket
 				{
 					if( entry.is_regular_file() )
 					{
-						if constexpr( _msvc )
-							crcStream << entry.path().string() << ";"; //TODO:  << entry.last_write_time();
-						else
-						{
-							uint timet = std::chrono::file_clock::to_sys( entry.last_write_time() ).time_since_epoch().count()/std::nano::den;
-							crcStream << entry.path().string() << ";" << timet;// Clock::to_time_t( x );
-						}
+#ifdef _MSC_VER
+						uint timet = entry.last_write_time().time_since_epoch().count()/std::nano::den;
+						crcStream << entry.path().string() << ";" << timet;
+#else
+						uint timet = std::chrono::file_clock::to_sys( entry.last_write_time() ).time_since_epoch().count()/std::nano::den;
+						crcStream << entry.path().string() << ";" << timet;// Clock::to_time_t( x );
+#endif
 					}
 				}
 				_crc = Calc32RunTime( crcStream.str() );

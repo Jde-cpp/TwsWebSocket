@@ -98,7 +98,7 @@ namespace Jde::Markets::TwsWebSocket
 					{
 						pResult = ( co_await ReqAth(c, *(*pDBContracts)[c], s==Stats::Ath || s==Stats::Atl ? 0 : 365) ).UP<HistoricalDataCache::AthAwait::Result>();
 					}
-					catch( IException& e )
+					catch( IException& )
 					{
 						break;
 					}

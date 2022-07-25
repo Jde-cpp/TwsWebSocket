@@ -97,7 +97,7 @@
       <ModuleDefinitionFile>.\TwsSocketClient.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>Ws2_32.lib;libbid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(REPO_DIR)\IntelRDFPMathLib20U2\LIBRARY;$(ProgramFiles)\jde-cpp\TwsWebSocket;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(REPO_DIR)\IntelRDFPMathLib20U2\LIBRARY;"$(ProgramW6432)\jde-cpp\TwsWebSocket";%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
     <Bscmake>
