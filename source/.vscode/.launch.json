@@ -18,9 +18,9 @@
 			"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.31":"/home/duffyj/code/libraries/glibc-2.31" },
 			"preLaunchTask": "build",
 			"logging": {
-				"engineLogging": true,
-				"trace": true,
-				"traceResponse": true
+				"engineLogging": false,
+				"trace": false,
+				"traceResponse": false
 			}
 		},
 		{

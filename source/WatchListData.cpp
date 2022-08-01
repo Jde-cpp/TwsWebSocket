@@ -7,12 +7,12 @@
 //#define _socket WebSocket::Instance()
 namespace Jde::Markets::TwsWebSocket
 {
-	fs::path GetDir()noexcept(false)
+	fs::path GetDir()ε
 	{
 		var dir = Settings::Get<fs::path>( "twsWebSocket/watchDir" ).value_or( IApplication::Instance().ApplicationDataFolder()/"watches" ); THROW_IF( dir.empty(), "WatchDir not set" ); CHECK_PATH( dir, SRCE_CUR );
 		return dir;
 	}
-	vector<string> WatchListData::Names( optional<bool> portfolio )noexcept(false)//IOException - watch list dir may not exist.
+	vector<string> WatchListData::Names( optional<bool> portfolio )ε//IOException - watch list dir may not exist.
 	{
 		vector<string> names;
 		var dir = GetDir();
@@ -32,7 +32,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 		return names;
 	}
-	void WatchListData::SendLists( bool portfolio, const ProcessArg& inputArg )noexcept
+	α WatchListData::SendLists( bool portfolio, const ProcessArg& inputArg )ι->void
 	{
 		std::thread( [arg=inputArg, portfolio]//todo remove thread.
 		{
@@ -51,7 +51,7 @@ namespace Jde::Markets::TwsWebSocket
 		}).detach();
 	}
 
-	up<Proto::Watch::File> WatchListData::Content( str name )noexcept(false)
+	up<Proto::Watch::File> WatchListData::Content( str name )ε
 	{
 		THROW_IF( !name.size(), "did not specify a watch name value." );
 		var dir = GetDir();
@@ -59,7 +59,7 @@ namespace Jde::Markets::TwsWebSocket
 		return IO::Proto::Load<Proto::Watch::File>( file );
 	}
 
-	void WatchListData::SendList( str watchName, const ProcessArg& inputArg )noexcept
+	α WatchListData::SendList( str watchName, const ProcessArg& inputArg )ι->void
 	{
 		std::thread( [arg=inputArg, name=watchName]
 		{
@@ -78,7 +78,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}).detach();
 	}
-/*	void WatchListData::CreateList( const ClientKey& key, str watchName )noexcept
+/*	α WatchListData::CreateList( const ClientKey& key, str watchName )ι->void
 	{
 		std::thread( [sessionId, clientId, name=watchName]()
 		{
@@ -100,7 +100,7 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}).detach();
 	}*/
-	void WatchListData::Delete( str watchName, const ProcessArg& inputArg )noexcept
+	α WatchListData::Delete( str watchName, const ProcessArg& inputArg )ι->void
 	{
 		std::thread( [arg=inputArg, name=watchName]
 		{
@@ -117,25 +117,22 @@ namespace Jde::Markets::TwsWebSocket
 			}
 		}).detach();
 	}
-	void WatchListData::Edit( const Proto::Watch::File& inputFile, const ProcessArg& inputArg )noexcept
+	α WatchListData::Edit( Proto::Watch::File&& f, const ProcessArg& arg )ι->Task
 	{
-		std::thread( [arg=inputArg, file=inputFile]
+		try
 		{
-			try
-			{
-				var dir = GetDir();
-				var name = file.name();
-				THROW_IF( !name.size(), "need a watchlist name." );
+			var dir = GetDir();
+			var name = f.name(); THROW_IF( !name.size(), "need a watchlist name." );
 
-				var path = dir/Str::Replace( name+".watch", ' ', '_' );
+			var path_ = dir/Str::Replace( name+".watch", ' ', '_' );
+			( co_await PoolAwait( [path=move(path_), file=move(f)]
+			{
 				IO::Proto::Save( file, path );
-				arg.Push( EResults::Accept );
-			}
-			catch( IException& e )
-			{
-				arg.Push( "could not edit watchlist", e );
-			}
-		}).detach();
+			} ) ).CheckError();
+		}
+		catch( IException& e )
+		{
+			arg.Push( "could not edit watchlist", e );
+		}
 	}
-
 }

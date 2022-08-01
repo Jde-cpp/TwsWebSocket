@@ -25,18 +25,18 @@ namespace Jde::Markets::TwsWebSocket
 {
 	using namespace Proto::Requests;
 	static const LogTag& _logLevel = Logging::TagLevel( "app-webRequests" );
-	WebRequestWorker::WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )noexcept:
+	WebRequestWorker::WebRequestWorker( /*WebSocket& webSocketParent,*/ sp<WebSendGateway> webSend, sp<TwsClientSync> pTwsClient )ι:
 		_pTwsSend{ make_shared<TwsSendWorker>(webSend, pTwsClient) },
 		_pWebSend{webSend},
 		_pBlocklyWorker{ make_shared<BlocklyWorker>(_pWebSend) }
 	{
 		_pThread = make_shared<Threading::InterruptibleThread>( "WebRequestWorker", [&](){Run();} );
 	}
-	α WebRequestWorker::Push( QueueType&& msg )noexcept->void
+	α WebRequestWorker::Push( QueueType&& msg )ι->void
 	{
 		_queue.Push( std::move(msg) );
 	}
-	α WebRequestWorker::Run()noexcept->void
+	α WebRequestWorker::Run()ι->void
 	{
 		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.empty() )
 		{
@@ -45,7 +45,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 #define ARG(x) {{{s}, x}, _pWebSend}
-	α WebRequestWorker::HandleRequest( QueueType& msg )noexcept->void
+	α WebRequestWorker::HandleRequest( QueueType& msg )ι->void
 	{
 		try
 		{
@@ -56,9 +56,9 @@ namespace Jde::Markets::TwsWebSocket
 			WebSendGateway::PushS( "Request Failed", e, {msg, 0} );
 		}
 	}
-	α ReceiveOptions( SessionKey s, Proto::Requests::RequestOptions o )noexcept->Task;
+	α ReceiveOptions( SessionKey s, Proto::Requests::RequestOptions o )ι->Task;
 #pragma warning(disable:4456)
-	α WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& t, SessionKey s )noexcept->void
+	α WebRequestWorker::HandleRequest( Proto::Requests::RequestTransmission&& t, SessionKey s )ι->void
 	{
 		while( t.messages().size() )
 		{
@@ -71,7 +71,11 @@ namespace Jde::Markets::TwsWebSocket
 			else if( m.has_flex_executions() )
 				ReceiveFlex( s, m.flex_executions() );
 			else if( m.has_edit_watch_list() )
-				WatchListData::Edit( m.edit_watch_list().file(), ARG(m.edit_watch_list().id()) );
+			{
+				auto w = m.mutable_edit_watch_list(); auto f = move( w->file() );
+				LOG( "({}.{})WatchListData::Edit( {}, size={} )"sv, s.SessionId, w->id(), f.name(), f.securities().size() );
+				WatchListData::Edit( move(f), ARG(w->id()) );
+			}
 			else if( auto p=m.has_blockly() ? m.mutable_blockly() : nullptr; p )
 			{
 				LOG( "({}.{})Blockly Request( size={} )"sv, s.SessionId, p->id(), p->message().size() );
@@ -101,7 +105,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α WebRequestWorker::Receive( ERequests type, string&& name, const ClientKey& arg )noexcept->void
+	α WebRequestWorker::Receive( ERequests type, string&& name, const ClientKey& arg )ι->void
 	{
 		if( type==ERequests::Query )
 		{
@@ -207,7 +211,7 @@ namespace Jde::Markets::TwsWebSocket
 //			EdgarRequests::Investors( name, {arg, _pWebSend} );
 	}
 
-	bool WebRequestWorker::ReceiveRequests( const SessionKey& s, up<GenericRequests>& r )noexcept
+	bool WebRequestWorker::ReceiveRequests( const SessionKey& s, up<GenericRequests>& r )ι
 	{
 		bool handled = true; var t = r->type(); auto& ids = *r->mutable_ids(); var id = r->id();
 		if( t==ERequests::RequsetPrevOptionValues )
@@ -242,7 +246,7 @@ namespace Jde::Markets::TwsWebSocket
 			r = nullptr;
 		return handled;
 	}
-	α WebRequestWorker::ReceiveFlex( const SessionKey& s, const Proto::Requests::FlexExecutions& req )noexcept->void
+	α WebRequestWorker::ReceiveFlex( const SessionKey& s, const Proto::Requests::FlexExecutions& req )ι->void
 	{
 		var start = Chrono::BeginningOfDay( Clock::from_time_t(req.start()) );
 		var end = Chrono::EndOfDay( Clock::from_time_t(req.end()) );
@@ -250,7 +254,7 @@ namespace Jde::Markets::TwsWebSocket
 		Flex::SendTrades( req.account_number(), start, end, ProcessArg ARG(req.id()) );
 	}
 
-	α WebRequestWorker::ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )noexcept->Task
+	α WebRequestWorker::ReceiveStdDev( ContractPK contractId, double days, DayIndex start, ProcessArg inputArg )ι->Task
 	{
 		try
 		{
@@ -266,7 +270,7 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α ReceiveOptions( SessionKey s, Proto::Requests::RequestOptions o )noexcept->Task
+	α ReceiveOptions( SessionKey s, Proto::Requests::RequestOptions o )ι->Task
 	{
 		var underlyingId = o.contract_id(); var clientId = o.id();
 		ClientKey client{ {s.SessionId}, underlyingId };
@@ -294,7 +298,7 @@ namespace Jde::Markets::TwsWebSocket
 		catch( const IException& e ){ delete pResults; WebSendGateway::PushS("Retreive Options failed", e, client); }
 	}
 
-	α WebRequestWorker::RequestFundamentalData( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey s )noexcept->Task
+	α WebRequestWorker::RequestFundamentalData( google::protobuf::RepeatedField<google::protobuf::int32> contractIds, ClientKey s )ι->Task
 	{
 		LOG( "({}.{})RequestFundamentalData( {} )", s.SessionId, s.ClientId, Str::AddCommas(contractIds) );
 		for( var contractId : contractIds )

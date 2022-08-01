@@ -114,7 +114,8 @@
 		"compare": "cpp",
 		"concepts": "cpp",
 		"format": "cpp",
-		"numbers": "cpp"
+		"numbers": "cpp",
+		"regex": "cpp"
 	},
 	"window.title": "Tws"
 }

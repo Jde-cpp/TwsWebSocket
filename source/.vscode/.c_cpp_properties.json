@@ -5,19 +5,21 @@
             "includePath": [
 					 "${workspaceFolder}/**",
 					 "${workspaceFolder}/../../Public/**",
+					 "${env:REPO_DIR}/llvm-project/build/include/c++/v1",
 					 "${env:REPO_DIR}/llvm-project/libcxx/include",
 					 "${env:REPO_DIR}/boostorg/beast/include",
 					 "${env:REPO_DIR}/boostorg/asio/include",
-					 "${env:REPO_DIR}/boostorg/boost_1_74_0",
+					 "${env:REPO_DIR}/boostorg/boost_1_79_0",
 					 "${env:REPO_DIR}/spdlog/include",
 					 "${env:REPO_DIR}/json/include",
-					 "${env:REPO_DIR}/tws-api/source/cppclient/client"
+					 "${env:REPO_DIR}/tws-api/source/cppclient/client",
+					 "${env:REPO_DIR}/IntelRDFPMathLib20U2/LIBRARY/src"
             ],
 				"defines": [],
 				"forcedInclude": ["${workspaceFolder}/pc.h"],
             "compilerPath": "/usr/local/bin/clang++",
             "cppStandard": "c++20",
-            "intelliSenseMode": "clang-x64"
+            "intelliSenseMode": "linux-clang-x64"
         }
     ],
     "version": 4

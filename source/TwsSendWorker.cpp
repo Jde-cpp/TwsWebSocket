@@ -60,55 +60,56 @@ namespace Jde::Markets::TwsWebSocket
 		}
 	}
 
-	α TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& sessionKey )ι->void
+	α TwsSendWorker::HandleRequest( sp<Proto::Requests::RequestUnion> pData, const SessionKey& s )ι->void
 	{
 		ClientPK clientId{0};
 		auto& m = *pData;
 		try
 		{
 			if( m.has_generic_requests() )
-				Requests( m.generic_requests(), sessionKey );
+				Requests( m.generic_requests(), s );
 			else if( m.has_generic_request() )
-				Request( m.generic_request(), sessionKey );
+				Request( m.generic_request(), s );
 			else if( m.has_account_updates() )
-				AccountUpdates( m.account_updates(), sessionKey );
+				AccountUpdates( m.account_updates(), s );
 			else if( m.has_account_updates_multi() )
-				AccountUpdatesMulti( m.account_updates_multi(), sessionKey );
+				AccountUpdatesMulti( m.account_updates_multi(), s );
 			else if( m.has_market_data_smart() )
-				MarketDataSmart( m.market_data_smart(), sessionKey );
+				MarketDataSmart( m.market_data_smart(), s );
 			else if( m.has_contract_details() )
-				ContractDetails( move(m.contract_details()), move(sessionKey) );
+				ContractDetails( move(m.contract_details()), move(s) );
 			else if( m.has_historical_data() )
-				HistoricalData( move(*m.mutable_historical_data()), sessionKey );
+				HistoricalData( move(*m.mutable_historical_data()), s );
 			else if( m.has_place_order() )
-				Order( move(m.place_order()), move(sessionKey) );
+				Order( move(m.place_order()), move(s) );
 			else if( m.has_request_positions() )
-				Positions( m.request_positions(), sessionKey );
+				Positions( m.request_positions(), s );
 			else if( m.has_request_executions() )
-				Executions( m.request_executions(), sessionKey );
+				Executions( m.request_executions(), s );
 			else if( m.has_news_article_request() )
-				News::RequestArticle( m.news_article_request().provider_code(), m.news_article_request().article_id(), {sessionKey, clientId=m.news_article_request().id(), _webSendPtr} );
+				News::RequestArticle( m.news_article_request().provider_code(), m.news_article_request().article_id(), {s, clientId=m.news_article_request().id(), _webSendPtr} );
 			else if( m.has_historical_news_request() )
-				News::RequestHistorical( m.historical_news_request().contract_id(), m.historical_news_request().provider_codes(), m.historical_news_request().total_results(), m.historical_news_request().start(), m.historical_news_request().end(), {sessionKey, clientId=m.historical_news_request().id(), _webSendPtr} );
+				News::RequestHistorical( m.historical_news_request().contract_id(), m.historical_news_request().provider_codes(), m.historical_news_request().total_results(), m.historical_news_request().start(), m.historical_news_request().end(), {s, clientId=m.historical_news_request().id(), _webSendPtr} );
 			else if( m.has_implied_volatility() )
-				CalculateImpliedVolatility( m.implied_volatility().contracts(), {sessionKey, clientId=m.implied_volatility().id()} );
+				CalculateImpliedVolatility( m.implied_volatility().contracts(), {s, clientId=m.implied_volatility().id()} );
 			else if( m.has_implied_price() )
-				CalculateImpliedPrice( m.implied_price().contracts(), {sessionKey, clientId=m.implied_price().id()} );
+				CalculateImpliedPrice( m.implied_price().contracts(), {s, clientId=m.implied_price().id()} );
 			else if( m.has_request_stats() )
 			{
 				clientId=m.request_stats().id();
-				RequestStats::Handle( up<Proto::Requests::RequestStats>(m.release_request_stats()), ProcessArg{sessionKey, clientId, _webSendPtr} );
+				LOG( "({}.{})RequestStats", s.SessionId, clientId );
+				RequestStats::Handle( up<Proto::Requests::RequestStats>(m.release_request_stats()), ProcessArg{s, clientId, _webSendPtr} );
 			}
 			else
 				ERR( "Unknown Message '{}'", m.Value_case() );
 		}
 		catch( const IBException& e )
 		{
-			_webSendPtr->Push( "Request failed", e, {sessionKey, clientId} );
+			_webSendPtr->Push( "Request failed", e, {s, clientId} );
 		}
 		catch( const IException& e )
 		{
-			_webSendPtr->Push( "Request failed", e, {sessionKey, clientId} );
+			_webSendPtr->Push( "Request failed", e, {s, clientId} );
 		}
 	}
 

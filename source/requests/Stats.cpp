@@ -1,7 +1,9 @@
 ﻿#include "Stats.h"
 #include <jde/markets/types/proto/ResultsMessage.h>
+#include <jde/markets/types/proto/ib.pb.h>
 #include "../../../Framework/source/db/DataType.h"
 #include "../../../Framework/source/db/Database.h"
+#include "../../../Framework/source/db/Syntax.h"
 #include "../../../MarketLibrary/source/data/StatAwait.h"
 
 #define var const auto
@@ -10,7 +12,7 @@ namespace Jde::Markets::TwsWebSocket
 	using namespace Proto;
 	using namespace Proto::Requests;
 	using namespace Proto::Results;
-	α operator -(Stats s)ι->Stats{ return (Stats)-(int)s; }
+	α operator -(Jde::Markets::Proto::Stats s)ι->Stats{ return (Stats)-(int)s; }
 	α ToString( Stats s )ι->string
 	{
 		constexpr array<sv,7> values{ "LastUpdate", "ATH", "ATH_Day", "PWL", "YearLow", "YearHigh", "MA100" };
@@ -23,7 +25,7 @@ namespace Jde::Markets::TwsWebSocket
 		try
 		{
 			flat_map<ContractPK,sp<Markets::Contract>> contracts;
-			auto pDBContracts = ( co_await DB::SelectMap<ContractPK,optional<TimePoint>>( "select id, head_timestamp from ib_stock_contracts", "headTimestamps") ).SP<flat_map<ContractPK,optional<TimePoint>>>();
+			auto pDBContracts = ( co_await DB::SelectMap<ContractPK,optional<TimePoint>>( format("select id, {} from ib_stock_contracts", DB::DefaultSyntax().DateTimeSelect("head_timestamp")), "headTimestamps") ).SP<flat_map<ContractPK,optional<TimePoint>>>();
 			for( var c : pRequest->contract_ids() )
 			{
 				auto p = ( co_await Tws::ContractDetail(c) ).SP<::ContractDetails>();
@@ -36,8 +38,15 @@ namespace Jde::Markets::TwsWebSocket
 				}
 				if( !(*pDBContracts)[c] )
 				{
-					(*pDBContracts)[c] = *( co_await Tws::HeadTimestamp(pMyContract->ToTws(), "TRADES") ).UP<TimePoint>();
-					co_await *DB::ExecuteCo( "update ib_stock_contracts set head_timestamp=?", {*(*pDBContracts)[c]} );
+					try
+					{
+						(*pDBContracts)[c] = *( co_await Tws::HeadTimestamp(pMyContract->ToTws(), "TRADES") ).UP<TimePoint>();
+						co_await *DB::ExecuteCo( "update ib_stock_contracts set head_timestamp=? where id=?", {*(*pDBContracts)[c], c} );
+					}
+					catch( const IException& e )
+					{
+						DBG( "Could not load headtimestamp for '{}'.", pMyContract->Symbol );
+					}
 				}
 				dbParams.push_back( c );
 			}
@@ -75,23 +84,35 @@ namespace Jde::Markets::TwsWebSocket
 				client.Push( Markets::ToMessage(new ContractStats(*pDBStats), client.ClientId) );
 			for( var c : pRequest->contract_ids() )
 			{
+				DBG( "c={}", c );
+				auto headTimeStamp = (*pDBContracts)[c];
 				auto requested = [&]( Stats s_ )->bool{ return std::find_if(pRequest->stats().begin(), pRequest->stats().end(), [=](var& s){return s==s_;})!=pRequest->stats().end(); };
 				auto sentC = [&]( Stats s_, const ContractStats& coll )->bool{ return std::find_if(coll.stats().begin(), coll.stats().end(), [=](var& s){return s.contract_id()==c && s.stat()==s_;})!=coll.stats().end(); };
 				auto pStats = mu<ContractStats>();
 				auto sent = [&]( Stats s )->bool{ return sentC( s, *pDBStats) || sentC( s, *pStats); };
-				if( requested(Stats::Pwl) && !sent(Stats::Pwl) )
+				if( const DateTime date{ 2020, 2, 20 }; requested(Stats::Pwl) && !sent(Stats::Pwl) && headTimeStamp.has_value() )
 				{
-					auto pContract = ms<Markets::Contract>( *((co_await Tws::ContractDetail(c)).SP<::ContractDetails>()) );
-					auto pBars = ( co_await Tws::HistoricalData(pContract, Chrono::ToDays((TimePoint)DateTime{2020,2,20}), 1, EBarSize::Day, Proto::Requests::Display::Trades, true) ).SP<vector<::Bar>>();
-					double pwl{ pBars->size() ? (*pBars)[0].high : 0.0 };
-					co_await *DB::ExecuteCo( format("insert into mrk_statistic_values values( ?, {}, ? );", (int)Proto::Stats::Pwl), {(uint32_t)c, pwl} );
-					//std::this_thread::sleep_for( 1s );
-					auto i=pStats->add_stats(); i->set_contract_id(c); i->set_stat(Stats::Pwl); i->set_value( pwl );
+					auto i=pStats->add_stats(); i->set_contract_id( c ); i->set_stat( Stats::Pwl );
+					if( var day{Chrono::ToDays((TimePoint)date)}; Chrono::ToDays(headTimeStamp.value_or(TP{}))<day )
+					{
+						auto pContract = ms<Markets::Contract>( *((co_await Tws::ContractDetail(c)).SP<::ContractDetails>()) );
+						try
+						{
+							auto pBars = ( co_await Tws::HistoricalData(pContract, day, 1, EBarSize::Day, Proto::Requests::Display::Trades, true) ).SP<vector<::Bar>>();
+							double pwl{ pBars->size() ? (*pBars)[0].high : 0.0 };
+							co_await *DB::ExecuteCo( format("insert into mrk_statistic_values values( ?, {}, ? );", (int)Proto::Stats::Pwl), {(uint32_t)c, pwl} );
+							i->set_value( pwl );
+						}
+						catch( const IException& e )
+						{
+							DBG( "Could not load pwl for '{}' - {}", pContract->Symbol, e.what() );
+						}
+					}
 				}
 				for( auto s_ : pRequest->stats() )
 				{
 					var s = (Stats)s_;
-					if( sent(s) )
+					if( sent(s) || ((s==Stats::Ath || s==Stats::Atl) && (headTimeStamp.value_or(Clock::now())>(Clock::now()-24h*365))) )
 						continue;
 					up<HistoricalDataCache::AthAwait::Result> pResult;
 					try
