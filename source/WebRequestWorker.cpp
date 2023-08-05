@@ -186,7 +186,7 @@ namespace Jde::Markets::TwsWebSocket
 					var token = Ssl::Get<Google::TokenInfo>( "oauth2.googleapis.com", format("/tokeninfo?id_token={}", name) ); //TODO make async, or use library
 					THROW_IF( token.Aud!=Settings::Get<string>("GoogleAuthClientId"), "Invalid client id" );
 					THROW_IF( token.Iss!="accounts.google.com" && token.Iss!="https://accounts.google.com", "Invalid iss" );
-					var expiration = Clock::from_time_t( token.Expiration ); THROW_IF( expiration<Clock::now(), "token expired" );
+					var expiration = Clock::from_time_t( token.Expioration ); THROW_IF( expiration<Clock::now(), "token expired" );
 					USE(WebCoSocket::Instance())SetLogin( arg, EAuthType::Google, token.Email, token.EmailVerified, token.Name, token.PictureUrl, expiration, name );
 				}
 				// var expiration = Clock::now()+std::chrono::hours(100 * 24);
